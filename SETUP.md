@@ -166,10 +166,25 @@ npm run build
 - Carnet de bord (toutes les réponses de l'élève).
 - Webhook Systeme.io (octroi/révocation d'accès, idempotent).
 
+## Admin back-office (sprint 2, fait)
+
+Accessible sur `/admin` (réservé à ton email, cf. `lib/adminEmails.ts`).
+- Vue d'ensemble : élèves actifs, jours publiés/brouillon, complétions.
+- Jours : créer, éditer (titre, sous-titre, vidéo, contenu, résultat,
+  ressources), réordonner, publier/dépublier, dupliquer, supprimer,
+  prévisualiser.
+- Questions du quiz : types, intitulé, aide, options + tags, obligatoire,
+  ordre.
+- Vidéo : coller une URL OU uploader vers ton pipeline VPS (une fois les
+  vars vidéo renseignées et l'app `formaquiz` autorisée côté tus).
+- Élèves : liste, recherche, progression, accorder/révoquer l'accès.
+
+> Reste à brancher pour finir la vidéo uploadée : la lecture HLS signée
+> (URL de lecture mintée côté serveur, comme les popquiz). En attendant,
+> l'URL collée (YouTube ou lien direct) marche partout.
+
 ## ROADMAP (sprints suivants)
 
-- Admin back-office : CRUD jours/questions/ressources, upload vidéo,
-  gestion des élèves (cf. `specs/02-admin-back-office.md`).
 - Coach IA en bulle (contexte du jour + FAQ, garde-fous, rate limit).
 - Quiz de diagnostic d'entrée + segmentation.
 - Gamification (saisie des vrais chiffres + jalons/badges).
