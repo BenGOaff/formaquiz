@@ -1,0 +1,65 @@
+// lib/types.ts — types partagés du parcours FormaQuiz.
+
+export type QuestionType = "action" | "decision" | "self_eval" | "recall";
+
+export interface QuestionOption {
+  value: string;
+  label: string;
+  tag?: string;
+}
+
+export interface Question {
+  id: string;
+  day_id: string;
+  type: QuestionType;
+  prompt: string;
+  help_text: string | null;
+  options: QuestionOption[];
+  required: boolean;
+  sort_order: number;
+}
+
+export interface DayResource {
+  label: string;
+  url: string;
+  type?: string;
+}
+
+export interface Day {
+  id: string;
+  day_number: number;
+  slug: string | null;
+  title: string;
+  subtitle: string | null;
+  intro_html: string | null;
+  video_url: string | null;
+  video_id: string | null;
+  resources: DayResource[];
+  result_html: string | null;
+  status: "draft" | "published";
+  sort_order: number;
+}
+
+export type ProgressStatus = "locked" | "in_progress" | "completed";
+
+export interface DayWithProgress extends Day {
+  progress: ProgressStatus;
+  unlocked: boolean;
+  completed_at: string | null;
+}
+
+export interface Answer {
+  question_id: string;
+  value_text: string | null;
+  value_choice: string | null;
+}
+
+export interface Profile {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  niche: string | null;
+  level: string | null;
+  objective: string | null;
+  tiquiz_account_url: string | null;
+}

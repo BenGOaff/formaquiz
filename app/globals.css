@@ -1,0 +1,140 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════════════
+   FORMAQUIZ DESIGN SYSTEM
+   Répliqué de Tiquiz. Couleur d'accent (indigo #5D6CDB) centralisée
+   dans --primary / --ring : changer ces deux lignes suffit à
+   différencier FormaQuiz plus tard.
+   ═══════════════════════════════════════════════════════════════════ */
+
+@layer base {
+  :root {
+    color-scheme: light;
+
+    --background: 0 0% 100%;          /* #FFFFFF — fond de page */
+    --foreground: 231 41% 31%;        /* #2E386E — bleu encre */
+
+    --card: 225 33% 97%;              /* #F4F5FA — surface gris-bleu */
+    --card-foreground: 231 41% 31%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 231 41% 31%;
+
+    /* ── Accent FormaQuiz (= indigo Tiquiz) ── */
+    --primary: 233 64% 61%;           /* #5D6CDB */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 33% 96%;
+    --secondary-foreground: 230 41% 28%;
+
+    --muted: 220 33% 96%;
+    --muted-foreground: 236 16% 50%;
+
+    --accent: 236 79% 96%;
+    --accent-foreground: 230 41% 28%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 56% 42%;
+    --success-foreground: 0 0% 100%;
+
+    --border: 220 13% 92%;
+    --input: 220 13% 92%;
+    --ring: 233 64% 61%;
+
+    --surface: 225 33% 97%;
+    --surface-muted: 225 33% 95%;
+    --surface-soft: 233 64% 96%;
+
+    --radius: 0.75rem;
+
+    --gradient-primary: linear-gradient(135deg, hsl(233 64% 61%) 0%, hsl(194 79% 52%) 100%);
+
+    --shadow-soft: 0 1px 2px hsl(220 13% 50% / 0.05), 0 1px 3px hsl(220 13% 50% / 0.07);
+    --shadow-card: 0 1px 2px hsl(220 13% 50% / 0.05), 0 6px 16px hsl(220 13% 50% / 0.10);
+    --shadow-card-hover: 0 2px 4px hsl(220 13% 50% / 0.06), 0 12px 28px hsl(220 13% 50% / 0.14);
+  }
+
+  .dark {
+    --background: 230 50% 12%;
+    --foreground: 0 0% 95%;
+    --card: 230 41% 18%;
+    --card-foreground: 0 0% 95%;
+    --popover: 230 41% 18%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 233 64% 65%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 230 41% 22%;
+    --secondary-foreground: 0 0% 95%;
+    --muted: 230 41% 22%;
+    --muted-foreground: 0 0% 65%;
+    --accent: 233 64% 61%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 152 46% 46%;
+    --success-foreground: 0 0% 100%;
+    --border: 230 30% 30%;
+    --input: 230 30% 30%;
+    --ring: 233 64% 65%;
+    --surface: 230 41% 18%;
+    --surface-muted: 230 41% 22%;
+    --surface-soft: 230 41% 24%;
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    /* Pas de voile gris natif au tap mobile : le feedback de sélection
+       est rendu par nos propres styles (cf. Tiquiz). */
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Scrollbar discrète */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted));
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Contenu riche des jours (intro, sections). Images responsives,
+   espacement des paragraphes préservé. */
+.fq-rich img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 0.75rem auto;
+}
+.fq-rich p { margin: 0.6em 0; }
+.fq-rich ul { list-style: disc outside; padding-left: 1.25rem; margin: 0.6em 0; }
+.fq-rich ol { list-style: decimal outside; padding-left: 1.5rem; margin: 0.6em 0; }
+.fq-rich li { margin: 0.25em 0; }
+.fq-rich a { color: hsl(var(--primary)); text-decoration: underline; }
+.fq-rich h2 { font-size: 1.25rem; font-weight: 700; margin: 1em 0 0.35em; }
+.fq-rich h3 { font-size: 1.05rem; font-weight: 600; margin: 0.85em 0 0.3em; }
+.fq-rich strong { font-weight: 600; }
