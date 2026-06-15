@@ -1,0 +1,63 @@
+// app/api/admin/days/[id]/route.ts — éditer / supprimer un jour.
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { requireAdmin } from "@/lib/adminGuard";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+const resourceSchema = z.object({
+  label: z.string().max(200),
+  url: z.string().max(2000),
+  type: z.string().max(40).optional(),
+});
+
+const patchSchema = z.object({
+  day_number: z.number().int().optional(),
+  slug: z.string().max(120).nullable().optional(),
+  title: z.string().min(1).max(200).optional(),
+  subtitle: z.string().max(300).nullable().optional(),
+  intro_html: z.string().max(50000).nullable().optional(),
+  video_url: z.string().max(2000).nullable().optional(),
+  video_id: z.string().uuid().nullable().optional(),
+  resources: z.array(resourceSchema).optional(),
+  result_html: z.string().max(50000).nullable().optional(),
+  status: z.enum(["draft", "published"]).optional(),
+  sort_order: z.number().int().optional(),
+});
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ ok: false, reason: "forbidden" }, { status: 403 });
+
+  const { id } = await params;
+  const parsed = patchSchema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) {
+    return NextResponse.json({ ok: false, reason: "bad_body" }, { status: 400 });
+  }
+
+  const { error } = await supabaseAdmin
+    .from("days")
+    .update({ ...parsed.data, updated_at: new Date().toISOString() })
+    .eq("id", id);
+
+  if (error) {
+    const reason = error.code === "23505" ? "duplicate" : "db";
+    return NextResponse.json({ ok: false, reason }, { status: 400 });
+  }
+  return NextResponse.json({ ok: true });
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ ok: false, reason: "forbidden" }, { status: 403 });
+
+  const { id } = await params;
+  const { error } = await supabaseAdmin.from("days").delete().eq("id", id);
+  if (error) return NextResponse.json({ ok: false, reason: "db" }, { status: 400 });
+  return NextResponse.json({ ok: true });
+}
