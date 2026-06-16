@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -17,9 +20,34 @@ export interface StudentRow {
 }
 
 export function StudentsTable({ initialRows }: { initialRows: StudentRow[] }) {
+  const router = useRouter();
   const [rows, setRows] = useState<StudentRow[]>(initialRows);
   const [query, setQuery] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviting, setInviting] = useState(false);
+
+  async function invite(e: React.FormEvent) {
+    e.preventDefault();
+    if (!inviteEmail.trim()) return;
+    setInviting(true);
+    const res = await fetch("/api/admin/students/invite", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: inviteEmail.trim() }),
+    });
+    setInviting(false);
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      toast.error(json.reason === "bad_email" ? "Email invalide." : "Invitation impossible.");
+      return;
+    }
+    toast.success(
+      json.created ? "Invitation envoyee, acces accorde." : "Acces accorde (compte deja existant).",
+    );
+    setInviteEmail("");
+    router.refresh();
+  }
 
   const filtered = rows.filter(
     (r) =>
@@ -49,6 +77,30 @@ export function StudentsTable({ initialRows }: { initialRows: StudentRow[] }) {
 
   return (
     <div className="flex flex-col gap-4">
+      <Card>
+        <CardContent className="py-5">
+          <form onSubmit={invite} className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <div className="flex flex-1 flex-col gap-1.5">
+              <Label htmlFor="invite">Inviter un élève (accès offert ou test)</Label>
+              <Input
+                id="invite"
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="email@exemple.com"
+              />
+            </div>
+            <Button type="submit" disabled={inviting}>
+              <UserPlus />
+              {inviting ? "Envoi..." : "Inviter"}
+            </Button>
+          </form>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Crée le compte si besoin (email d'invitation envoyé) et accorde l'accès tout de suite.
+          </p>
+        </CardContent>
+      </Card>
+
       <Input
         value={query}
         onChange={(e) => setQuery(e.target.value)}
