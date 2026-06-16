@@ -223,8 +223,12 @@ const tus = new Server({
     if (!c) throw httpError(401, "Missing claims");
     return relPathFromClaims(c);
   },
-  generateUrl(_req, { proto, host, baseUrl, path: p, id }) {
-    return `${proto}://${host}${baseUrl}${p}/${encodeURIComponent(id)}`;
+  generateUrl(_req, { proto, host, id }) {
+    // On force le mount connu ("/files") au lieu de dependre de baseUrl,
+    // qui peut etre undefined selon la version de @tus/server (sinon l'URL
+    // de suivi devient "host" + "undefined" + "/files/..."). Robuste pour
+    // toutes les apps (popquiz inclus).
+    return `${proto}://${host}/files/${encodeURIComponent(id)}`;
   },
   getFileIdFromRequest(req) {
     const u = req.url || "";
