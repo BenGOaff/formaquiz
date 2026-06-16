@@ -88,14 +88,16 @@ pm2 save
 pm2 logs formaquiz-prod --lines 20 --nostream   # doit montrer "Ready on ... :3002"
 ```
 
-> Plus tard, pour déployer une mise à jour (même geste que Tiquiz) :
+> Plus tard, pour déployer une mise à jour :
 > ```bash
 > cd /home/tipote/formaquiz
 > git pull origin main
 > npm ci
 > npm run build
-> pm2 restart formaquiz-prod --update-env
+> pm2 restart formaquiz-prod   # vise bien formaquiz, pas tiquiz
 > ```
+> Le port 3002 est fixé dans le start script (`next start -p 3002`),
+> donc pas besoin de `--update-env`.
 
 ---
 
