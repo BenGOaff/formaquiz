@@ -29,7 +29,7 @@ export default async function DashboardPage() {
   const firstName = viewer.profile?.full_name?.split(" ")[0] ?? null;
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-8">
+    <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-2">
         <h1 className="font-display text-2xl font-bold sm:text-3xl">
           {firstName ? `Salut ${firstName}, on continue ?` : "Ton parcours FormaQuiz"}
