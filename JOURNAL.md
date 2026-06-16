@@ -30,18 +30,23 @@ git checkout main && git pull origin main
 git checkout origin/claude/laughing-gauss-qh8sua -- .
 git add . && git commit -m "maj formaquiz" && git push origin main
 
-# 2. Sur le VPS
+# 2. Sur le VPS (ATTENTION : bien viser formaquiz, pas tiquiz)
 cd /home/tipote/formaquiz
 git pull origin main
 npm ci
 npm run build
-pm2 restart formaquiz-prod --update-env
+pm2 restart formaquiz-prod      # le port 3002 est fige dans le start script
 
-# Si jamais le process doit être recréé (port 3002) :
+# Si jamais le process doit etre recree :
 #   pm2 delete formaquiz-prod
-#   PORT=3002 pm2 start npm --name formaquiz-prod -- start
+#   pm2 start npm --name formaquiz-prod -- start
 #   pm2 save
 ```
+
+> Piege a eviter : ne JAMAIS lancer `pm2 restart tiquiz-prod` depuis le
+> dossier formaquiz (c'est une commande du memo Tiquiz). Et pas besoin de
+> `--update-env` : le port est dans le start script, les autres vars sont
+> lues depuis .env au demarrage.
 
 ---
 
