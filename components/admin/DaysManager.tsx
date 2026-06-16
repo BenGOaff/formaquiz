@@ -17,6 +17,7 @@ export interface AdminDayRow {
   subtitle: string | null;
   status: "draft" | "published";
   sort_order: number;
+  is_bonus: boolean;
 }
 
 export function DaysManager({ initialDays }: { initialDays: AdminDayRow[] }) {
@@ -168,8 +169,9 @@ export function DaysManager({ initialDays }: { initialDays: AdminDayRow[] }) {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Jour {d.day_number}
+                    {d.is_bonus ? "Bonus" : `Jour ${d.day_number}`}
                   </span>
+                  {d.is_bonus && <Badge variant="secondary">Bonus</Badge>}
                   <Badge variant={d.status === "published" ? "success" : "muted"}>
                     {d.status === "published" ? "Publié" : "Brouillon"}
                   </Badge>

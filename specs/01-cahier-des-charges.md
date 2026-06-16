@@ -64,13 +64,13 @@ Tu codes l'espace membre, donc tu as deux options pour les quiz quotidiens du pa
 6. Page de résultat du jour : son plan d'action du jour + le bouton qui débloque le jour suivant (drip : disponible le lendemain, ou immédiat selon ton choix, voir section 7).
 7. S'il bloque à tout moment, il ouvre la bulle coach.
 8. Au fil des jours, son carnet se remplit, ses livrables se génèrent (section 8), ses vrais chiffres montent (section 10).
-9. Jour 4 : son quiz lead-magnet est publié sur le vrai Tiquiz. Jour 7 : parcours terminé, bilan, suite proposée. Les bonus restent accessibles ensuite.
+9. Jour 7 : son quiz lead-magnet est publié sur le vrai Tiquiz. Jour 14 : parcours terminé, bilan, suite proposée.
 
 ---
 
 ## 6. Anatomie d'une journée (la page type)
 
-Une seule template de page, réutilisée pour tous les jours (J0 à J7) et les bonus, alimentée par les données du jour :
+Une seule template de page, réutilisée pour les 14 jours, alimentée par les données du jour :
 
 - **En-tête** : numéro du jour, titre, barre de progression du parcours.
 - **Vidéo** : le lecteur (la vidéo du jour, hébergée où tu veux). C'est elle qui enseigne.
@@ -204,7 +204,7 @@ Migrations : IF NOT EXISTS, NOTIFY pgrst en fin, RLS sur tout. Comme d'habitude 
 **MVP (lance la première promo avec ça) :**
 - Auth + accès via webhook Systeme.io.
 - Quiz de diagnostic d'entrée + segmentation.
-- Les 8 jours du parcours (J0 à J7) : page type (vidéo + ressources + quiz natif), déblocage progressif. Plus les 4 bonus.
+- Les 14 jours : page type (vidéo + ressources + quiz natif), déblocage progressif.
 - Capture des réponses (carnet brut, sans génération auto).
 - Coach IA basique (contexte du jour + FAQ, garde-fous).
 - Gamification MVP : saisie manuelle des chiffres + jalons.
@@ -250,4 +250,4 @@ Ce que tu construis là n'est pas un espace membre de plus. C'est la démonstrat
 
 Tout le contenu déjà écrit dans ce dossier s'emboîte : les scripts deviennent les vidéos du jour, les missions deviennent les questions des quiz, les pépites et les hacks restent, les séquences email restent. On ne jette rien.
 
-Prochaine étape : le prototype complet du Jour 1 (la page, la vidéo, les questions exactes du quiz, la page de résultat, les ressources), pour valider le modèle avant de décliner les 7 jours.
+Prochaine étape : le prototype complet du Jour 1 (la page, la vidéo, les questions exactes du quiz, la page de résultat, les ressources), pour valider le modèle avant de décliner les 14.

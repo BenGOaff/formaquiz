@@ -22,6 +22,7 @@ const patchSchema = z.object({
   result_html: z.string().max(50000).nullable().optional(),
   status: z.enum(["draft", "published"]).optional(),
   sort_order: z.number().int().optional(),
+  is_bonus: z.boolean().optional(),
 });
 
 export async function PATCH(
