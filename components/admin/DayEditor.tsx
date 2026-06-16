@@ -6,10 +6,10 @@ import { toast } from "sonner";
 import { Plus, Trash2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { VideoField } from "@/components/admin/VideoField";
+import { RichTextEditor } from "@/components/admin/RichTextEditor";
 import type { Day, DayResource } from "@/lib/types";
 
 export function DayEditor({ day }: { day: Day }) {
@@ -86,28 +86,27 @@ export function DayEditor({ day }: { day: Day }) {
         <VideoField value={form.video_url} onChange={(v) => set("video_url", v)} />
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="intro">Contenu du jour</Label>
+          <Label>Contenu du jour</Label>
           <p className="text-xs text-muted-foreground">
-            Le texte affiché sous la vidéo. HTML simple accepté (titres, listes, gras).
+            Le texte affiché sous la vidéo. Mets en forme avec la barre d'outils, et insère un
+            schéma si ça aide à comprendre.
           </p>
-          <Textarea
-            id="intro"
+          <RichTextEditor
             value={form.intro_html}
-            onChange={(e) => set("intro_html", e.target.value)}
-            rows={8}
+            onChange={(v) => set("intro_html", v)}
+            placeholder="Ecris le contenu du jour..."
           />
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="result">Page de résultat (fin de jour)</Label>
+          <Label>Page de résultat (fin de jour)</Label>
           <p className="text-xs text-muted-foreground">
-            Le récap affiché une fois le quiz validé. HTML simple accepté.
+            Le récap affiché une fois le quiz validé.
           </p>
-          <Textarea
-            id="result"
+          <RichTextEditor
             value={form.result_html}
-            onChange={(e) => set("result_html", e.target.value)}
-            rows={5}
+            onChange={(v) => set("result_html", v)}
+            placeholder="Ecris le recap de fin de jour..."
           />
         </div>
 
