@@ -109,10 +109,10 @@ export function RichTextEditor({
           <Pilcrow />
         </Btn>
         <span className="mx-1 h-5 w-px bg-border" />
-        <Btn title="Liste a puces" onClick={() => exec("insertUnorderedList")}>
+        <Btn title="Liste à puces" onClick={() => exec("insertUnorderedList")}>
           <List />
         </Btn>
-        <Btn title="Liste numerotee" onClick={() => exec("insertOrderedList")}>
+        <Btn title="Liste numérotée" onClick={() => exec("insertOrderedList")}>
           <ListOrdered />
         </Btn>
         <Btn title="Lien" onClick={insertLink}>
@@ -125,7 +125,7 @@ export function RichTextEditor({
         <div className="flex items-center gap-1">
           <ImagePlus className="size-4 text-muted-foreground" />
           <select
-            aria-label="Inserer un schema"
+            aria-label="Insérer un schéma"
             defaultValue=""
             onChange={(e) => {
               insertFigure(e.target.value);
@@ -134,7 +134,7 @@ export function RichTextEditor({
             className="h-7 rounded-md border border-input bg-background px-1.5 text-xs outline-none"
           >
             <option value="" disabled>
-              Inserer un schema
+              Insérer un schéma
             </option>
             {FIGURE_OPTIONS.map((f) => (
               <option key={f.key} value={f.key}>

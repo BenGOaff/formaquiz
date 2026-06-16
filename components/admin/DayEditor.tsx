@@ -94,7 +94,7 @@ export function DayEditor({ day }: { day: Day }) {
           <RichTextEditor
             value={form.intro_html}
             onChange={(v) => set("intro_html", v)}
-            placeholder="Ecris le contenu du jour..."
+            placeholder="Écris le contenu du jour..."
           />
         </div>
 
@@ -106,7 +106,7 @@ export function DayEditor({ day }: { day: Day }) {
           <RichTextEditor
             value={form.result_html}
             onChange={(v) => set("result_html", v)}
-            placeholder="Ecris le recap de fin de jour..."
+            placeholder="Écris le récap de fin de jour..."
           />
         </div>
 

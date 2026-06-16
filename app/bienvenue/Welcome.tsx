@@ -65,7 +65,7 @@ export function Welcome() {
   async function setNewPassword(e: React.FormEvent) {
     e.preventDefault();
     if (password.length < 8) {
-      toast.error("Choisis un mot de passe d'au moins 8 caracteres.");
+      toast.error("Choisis un mot de passe d'au moins 8 caractères.");
       return;
     }
     setSaving(true);
@@ -73,10 +73,10 @@ export function Welcome() {
     const { error } = await supabase.auth.updateUser({ password });
     setSaving(false);
     if (error) {
-      toast.error("Le mot de passe n'a pas pu etre enregistre. Reessaie.");
+      toast.error("Le mot de passe n'a pas pu être enregistré. Réessaie.");
       return;
     }
-    toast.success("Mot de passe enregistre. Bienvenue !");
+    toast.success("Mot de passe enregistré. Bienvenue !");
     router.replace("/dashboard");
     router.refresh();
   }
@@ -91,7 +91,7 @@ export function Welcome() {
         {phase === "loading" && (
           <Card>
             <CardContent className="py-8 text-center text-sm text-muted-foreground">
-              On prepare ton acces, un instant...
+              On prépare ton accès, un instant...
             </CardContent>
           </Card>
         )}
@@ -100,10 +100,10 @@ export function Welcome() {
           <Card>
             <CardContent className="flex flex-col gap-4 py-8 text-center">
               <p className="text-sm text-muted-foreground">
-                Ce lien a expire ou a deja ete utilise. Tu peux te connecter directement.
+                Ce lien a expiré ou a déjà été utilisé. Tu peux te connecter directement.
               </p>
               <Button asChild>
-                <Link href="/login">Aller a la connexion</Link>
+                <Link href="/login">Aller à la connexion</Link>
               </Button>
             </CardContent>
           </Card>
@@ -127,7 +127,7 @@ export function Welcome() {
                     autoComplete="new-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Au moins 8 caracteres"
+                    placeholder="Au moins 8 caractères"
                   />
                 </div>
                 <Button type="submit" size="lg" disabled={saving}>

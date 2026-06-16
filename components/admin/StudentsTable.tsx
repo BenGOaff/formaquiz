@@ -43,7 +43,7 @@ export function StudentsTable({ initialRows }: { initialRows: StudentRow[] }) {
       return;
     }
     toast.success(
-      json.created ? "Invitation envoyee, acces accorde." : "Acces accorde (compte deja existant).",
+      json.created ? "Invitation envoyée, accès accordé." : "Accès accordé (compte déjà existant).",
     );
     setInviteEmail("");
     router.refresh();

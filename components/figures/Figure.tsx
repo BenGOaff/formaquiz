@@ -34,10 +34,10 @@ function QuizMaths() {
 }
 
 function Chaine() {
-  const steps = ["Resultat", "Tag", "Segment", "Offre"];
+  const steps = ["Résultat", "Tag", "Segment", "Offre"];
   return (
-    <Frame caption="La chaine qui fait qu'un quiz rapporte : chaque resultat mene a une offre.">
-      <svg viewBox="0 0 340 70" className="w-full" role="img" aria-label="Chaine resultat tag segment offre">
+    <Frame caption="La chaîne qui fait qu'un quiz rapporte : chaque résultat mène à une offre.">
+      <svg viewBox="0 0 340 70" className="w-full" role="img" aria-label="Chaîne résultat tag segment offre">
         {steps.map((s, i) => {
           const x = 10 + i * 84;
           return (
@@ -57,14 +57,14 @@ function Chaine() {
 
 function PageResultat() {
   const temps = [
-    "Le miroir : voici ou tu en es",
-    "La cause cachee : pourquoi tu bloques",
+    "Le miroir : voici où tu en es",
+    "La cause cachée : pourquoi tu bloques",
     "Le chemin : quoi faire maintenant",
     "Le pont vers l'offre",
   ];
   return (
-    <Frame caption="Structure d'une page de resultat qui convertit, sans forcer.">
-      <svg viewBox="0 0 320 168" className="w-full" role="img" aria-label="Page de resultat en quatre temps">
+    <Frame caption="Structure d'une page de résultat qui convertit, sans forcer.">
+      <svg viewBox="0 0 320 168" className="w-full" role="img" aria-label="Page de résultat en quatre temps">
         {temps.map((t, i) => {
           const y = 6 + i * 40;
           return (
@@ -83,14 +83,14 @@ function PageResultat() {
 
 function CapturePic() {
   return (
-    <Frame caption="Place la demande d'email juste avant le resultat, quand la curiosite est au sommet.">
-      <svg viewBox="0 0 320 120" className="w-full" role="img" aria-label="Capture au pic de curiosite">
+    <Frame caption="Place la demande d'email juste avant le résultat, quand la curiosité est au sommet.">
+      <svg viewBox="0 0 320 120" className="w-full" role="img" aria-label="Capture au pic de curiosité">
         <path d="M20 100 Q 160 -10 300 100" fill="none" stroke="hsl(var(--primary))" strokeWidth="2" />
         <line x1="250" y1="20" x2="250" y2="100" stroke="hsl(var(--muted-foreground))" strokeWidth="1.5" strokeDasharray="4 3" />
         <circle cx="250" cy="30" r="5" fill="hsl(var(--primary))" />
         <text x="250" y="16" textAnchor="middle" fontSize="10" fill="hsl(var(--foreground))">Email ici</text>
-        <text x="30" y="114" fontSize="9" fill="hsl(var(--muted-foreground))">Debut</text>
-        <text x="280" y="114" fontSize="9" fill="hsl(var(--muted-foreground))">Resultat</text>
+        <text x="30" y="114" fontSize="9" fill="hsl(var(--muted-foreground))">Début</text>
+        <text x="280" y="114" fontSize="9" fill="hsl(var(--muted-foreground))">Résultat</text>
       </svg>
     </Frame>
   );
