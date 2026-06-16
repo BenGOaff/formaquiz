@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { ArrowRight, ArrowLeft, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
@@ -41,27 +42,31 @@ const OBJECTIVE_LABEL: Record<Objective, string> = {
   vendre: "vendre directement",
 };
 
-export function Diagnostic({ firstName }: { firstName: string | null }) {
+export function Diagnostic({ firstName: initialFirstName }: { firstName: string | null }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
+  const [name, setName] = useState(initialFirstName ?? "");
   const [level, setLevel] = useState<Level | null>(null);
   const [niche, setNiche] = useState("");
   const [objective, setObjective] = useState<Objective | null>(null);
   const [phase, setPhase] = useState<"quiz" | "plan">("quiz");
   const [saving, setSaving] = useState(false);
 
-  const total = 3;
+  const total = 4;
   const canContinue =
-    (step === 0 && level) || (step === 1 && niche.trim()) || (step === 2 && objective);
+    (step === 0 && name.trim()) ||
+    (step === 1 && level) ||
+    (step === 2 && niche.trim()) ||
+    (step === 3 && objective);
 
   async function finish() {
-    if (!level || !objective || !niche.trim()) return;
+    if (!name.trim() || !level || !objective || !niche.trim()) return;
     setSaving(true);
     try {
       const res = await fetch("/api/me/diagnostic", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ level, niche: niche.trim(), objective }),
+        body: JSON.stringify({ firstName: name.trim(), level, niche: niche.trim(), objective }),
       });
       if (!res.ok) throw new Error("save failed");
       setPhase("plan");
@@ -75,7 +80,7 @@ export function Diagnostic({ firstName }: { firstName: string | null }) {
 
   function next() {
     if (!canContinue) {
-      toast.error("Choisis une réponse pour continuer.");
+      toast.error("Réponds pour continuer.");
       return;
     }
     if (step < total - 1) setStep(step + 1);
@@ -91,7 +96,10 @@ export function Diagnostic({ firstName }: { firstName: string | null }) {
               <Sparkles className="size-5" />
               <span className="font-semibold">Ton plan personnalisé</span>
             </div>
-            <p className="text-sm leading-relaxed">{level && PLAN_BY_LEVEL[level]}</p>
+            <p className="text-sm leading-relaxed">
+              {name.trim() ? `${name.trim()}, ` : ""}
+              {level && PLAN_BY_LEVEL[level]}
+            </p>
             <div className="rounded-lg bg-surface-soft px-4 py-3 text-sm">
               <p>
                 Ta niche : <strong>{niche.trim()}</strong>
@@ -116,11 +124,9 @@ export function Diagnostic({ firstName }: { firstName: string | null }) {
   return (
     <div className="mx-auto max-w-2xl py-6">
       <header className="mb-6 flex flex-col gap-1 text-center">
-        <h1 className="font-display text-2xl font-bold sm:text-3xl">
-          {firstName ? `Bienvenue ${firstName} !` : "Bienvenue !"}
-        </h1>
+        <h1 className="font-display text-2xl font-bold sm:text-3xl">Bienvenue !</h1>
         <p className="text-sm text-muted-foreground">
-          3 questions rapides pour adapter ton parcours et ton coach à TON projet.
+          4 questions rapides pour adapter ton parcours et ton coach à TON projet.
         </p>
       </header>
 
@@ -146,6 +152,24 @@ export function Diagnostic({ firstName }: { firstName: string | null }) {
           <div key={step} className="flex animate-quiz-step-in flex-col gap-4">
             {step === 0 && (
               <>
+                <h2 className="font-display text-lg font-semibold">Comment tu t'appelles ?</h2>
+                <p className="text-sm text-muted-foreground">
+                  Ton prénom, pour qu'on se parle vraiment tout au long du parcours.
+                </p>
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ton prénom"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") next();
+                  }}
+                />
+              </>
+            )}
+
+            {step === 1 && (
+              <>
                 <h2 className="font-display text-lg font-semibold">Où en es-tu aujourd'hui ?</h2>
                 <div className="flex flex-col gap-2">
                   {LEVEL_OPTIONS.map((opt) => (
@@ -160,7 +184,7 @@ export function Diagnostic({ firstName }: { firstName: string | null }) {
               </>
             )}
 
-            {step === 1 && (
+            {step === 2 && (
               <>
                 <h2 className="font-display text-lg font-semibold">
                   C'est quoi ton domaine ? Tu aides qui à faire quoi ?
@@ -178,7 +202,7 @@ export function Diagnostic({ firstName }: { firstName: string | null }) {
               </>
             )}
 
-            {step === 2 && (
+            {step === 3 && (
               <>
                 <h2 className="font-display text-lg font-semibold">
                   Ton objectif n°1 avec ton futur quiz ?

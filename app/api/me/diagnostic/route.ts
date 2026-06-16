@@ -7,6 +7,7 @@ import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 const schema = z.object({
+  firstName: z.string().min(1).max(80),
   level: z.enum(["debutant", "intermediaire", "avance"]),
   niche: z.string().min(1).max(300),
   objective: z.enum(["capter", "qualifier", "segmenter", "vendre"]),
@@ -28,6 +29,7 @@ export async function POST(req: NextRequest) {
     {
       id: user.id,
       email: user.email ?? null,
+      full_name: parsed.data.firstName.trim(),
       level: parsed.data.level,
       niche: parsed.data.niche.trim(),
       objective: parsed.data.objective,
