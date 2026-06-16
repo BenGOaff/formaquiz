@@ -10,6 +10,10 @@ import crypto from "node:crypto";
 
 export const FORMAQUIZ_APP = "formaquiz" as const;
 
+// Secret JWT partagé avec le serveur tus du VPS. Même nom des deux côtés
+// (FORMAQUIZ_JWT_SECRET) pour qu'il soit évident qu'ils doivent être égaux.
+const JWT_SECRET_ENV = "FORMAQUIZ_JWT_SECRET";
+
 const UPLOAD_TOKEN_TTL_SECONDS = 60 * 60; // 1 h, large pour un gros upload
 
 function b64url(input: Buffer | string): string {
@@ -48,7 +52,7 @@ export function signUploadToken(
   claims: UploadClaims,
   ttlSec = UPLOAD_TOKEN_TTL_SECONDS,
 ): { token: string; expiresAt: number } {
-  const secret = requireEnv("POPQUIZ_TUS_JWT_SECRET");
+  const secret = requireEnv(JWT_SECRET_ENV);
   const now = Math.floor(Date.now() / 1000);
   const exp = now + ttlSec;
   const header = b64url(JSON.stringify({ alg: "HS256", typ: "JWT" }));

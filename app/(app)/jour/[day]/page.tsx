@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, Download, LinkIcon } from "lucide-react";
 import { getViewer, getDayDetail, getDaysWithProgress } from "@/lib/parcours";
 import { isAdminEmail } from "@/lib/adminEmails";
+import { resolveDayVideoSrc } from "@/lib/video/playback";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { RichContent } from "@/components/RichContent";
 import { NoAccess } from "@/components/NoAccess";
@@ -40,6 +41,7 @@ export default async function DayPage({
     idx >= 0 && idx + 1 < allDays.length ? allDays[idx + 1].day_number : null;
 
   const resources = d.resources ?? [];
+  const { src: videoSrc } = await resolveDayVideoSrc(d);
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
@@ -59,7 +61,7 @@ export default async function DayPage({
         {d.subtitle && <p className="text-muted-foreground">{d.subtitle}</p>}
       </header>
 
-      <VideoPlayer src={d.video_url} />
+      <VideoPlayer src={videoSrc} />
 
       {d.intro_html && (
         <Card>
