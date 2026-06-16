@@ -62,4 +62,5 @@ export interface Profile {
   level: string | null;
   objective: string | null;
   tiquiz_account_url: string | null;
+  diagnostic_completed_at: string | null;
 }

@@ -13,6 +13,8 @@ export default async function DashboardPage() {
   const viewer = await getViewer();
   if (!viewer) redirect("/login");
   if (!viewer.enrolled) return <NoAccess email={viewer.email} />;
+  // Premiere connexion : on passe par le diagnostic d'entree avant le parcours.
+  if (!viewer.profile?.diagnostic_completed_at) redirect("/diagnostic");
 
   const days = await getDaysWithProgress(viewer.userId);
   const completed = days.filter((d) => d.progress === "completed").length;
