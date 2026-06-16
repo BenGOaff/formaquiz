@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { MessageCircle, X, Send, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CoachMarkdown } from "@/components/CoachMarkdown";
 
 interface Msg {
   role: "user" | "assistant";
@@ -106,10 +107,10 @@ export function CoachBubble() {
                   "max-w-[85%] rounded-2xl px-3 py-2 text-sm",
                   m.role === "user"
                     ? "ml-auto bg-primary text-primary-foreground"
-                    : "mr-auto whitespace-pre-wrap bg-surface-soft text-foreground",
+                    : "mr-auto bg-surface-soft text-foreground",
                 )}
               >
-                {m.content}
+                {m.role === "assistant" ? <CoachMarkdown content={m.content} /> : m.content}
               </div>
             ))}
             {sending && (
