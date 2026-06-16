@@ -10,9 +10,9 @@ export interface FigureOption {
 
 export const FIGURE_OPTIONS: FigureOption[] = [
   { key: "quiz-maths", label: "Maths du quiz (2% contre 30%)" },
-  { key: "chaine-resultat", label: "Chaine resultat tag segment offre" },
-  { key: "page-resultat", label: "Page de resultat en 4 temps" },
-  { key: "capture-pic", label: "Capture au pic de curiosite" },
+  { key: "chaine-resultat", label: "Chaîne résultat, tag, segment, offre" },
+  { key: "page-resultat", label: "Page de résultat en 4 temps" },
+  { key: "capture-pic", label: "Capture au pic de curiosité" },
 ];
 
 export const FIGURE_KEYS = FIGURE_OPTIONS.map((f) => f.key);

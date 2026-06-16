@@ -6,6 +6,11 @@ sur le VPS de Béné. On ne modifie JAMAIS le code de Tiquiz ni Tipote.
 ## Règles non négociables
 
 - **Tutoiement** partout dans l'interface et le contenu.
+- **Accents français obligatoires** dans tout contenu user-visible (UI,
+  seed, schémas). On écrit "déjà", "accès", "réponse", pas "deja",
+  "acces", "reponse". La seule contrainte typographique, c'est le tiret
+  long interdit, JAMAIS les accents. Ne jamais retirer un accent "par
+  sécurité".
 - **Zéro tiret long** (`—` / `–`) dans tout contenu user-visible. Avant
   un commit qui touche au contenu :
   ```bash
