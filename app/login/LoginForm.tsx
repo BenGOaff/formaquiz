@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
@@ -84,7 +85,7 @@ export function LoginForm() {
             {loading ? "Un instant..." : "Se connecter"}
           </Button>
         </form>
-        <div className="mt-4 text-center">
+        <div className="mt-4 flex flex-col items-center gap-2 text-center">
           <button
             type="button"
             onClick={sendMagicLink}
@@ -93,6 +94,12 @@ export function LoginForm() {
           >
             Recevoir un lien de connexion par email
           </button>
+          <Link
+            href="/mot-de-passe-oublie"
+            className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+          >
+            Mot de passe oublié ?
+          </Link>
         </div>
       </CardContent>
     </Card>
