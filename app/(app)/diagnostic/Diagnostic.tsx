@@ -69,8 +69,12 @@ export function Diagnostic({ firstName: initialFirstName }: { firstName: string 
         body: JSON.stringify({ firstName: name.trim(), level, niche: niche.trim(), objective }),
       });
       if (!res.ok) throw new Error("save failed");
+      // On NE rafraichit PAS la route ici : le diagnostic est desormais
+      // marque comme complete cote serveur, donc un router.refresh()
+      // relancerait la page /diagnostic qui redirige aussitot vers le
+      // dashboard, et l'eleve ne verrait jamais son plan. On garde l'ecran
+      // de plan, et le bouton "Commencer" navigue vers le dashboard.
       setPhase("plan");
-      router.refresh();
     } catch {
       toast.error("On n'a pas pu enregistrer. Réessaie dans un instant.");
     } finally {
