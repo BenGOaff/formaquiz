@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   if (!admin) return NextResponse.json({ ok: false, reason: "forbidden" }, { status: 403 });
 
   const endpoint = process.env.FORMAQUIZ_TUS_ENDPOINT;
-  if (!endpoint || !process.env.POPQUIZ_TUS_JWT_SECRET) {
+  if (!endpoint || !process.env.FORMAQUIZ_JWT_SECRET) {
     // Pipeline pas encore branché : l'admin utilise le champ URL vidéo.
     return NextResponse.json({ ok: false, reason: "pipeline_not_configured" }, { status: 503 });
   }

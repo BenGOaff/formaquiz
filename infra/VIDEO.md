@@ -1,0 +1,88 @@
+# FormaQuiz : activer l'upload vidéo auto-hébergé
+
+On réutilise ton pipeline popquiz du VPS : serveur tus (uploads) + Caddy
+(lecture signée) + stockage `/srv/popquiz-videos`. FormaQuiz s'y ajoute
+comme app `formaquiz`. Pas de transcodage : on lit le fichier mp4
+directement via une URL signée (suffisant pour des vidéos de cours).
+
+Le code app est déjà prêt. Il reste 3 choses à faire côté serveur. C'est
+additif : ça ne change rien au comportement de Tiquiz/Tipote.
+
+---
+
+## 1. Génère 2 secrets (une fois)
+
+Sur le VPS, génère deux chaînes aléatoires :
+```bash
+openssl rand -hex 32   # -> FORMAQUIZ_JWT_SECRET
+openssl rand -hex 32   # -> FORMAQUIZ_VIDEO_SECRET
+```
+Garde-les, ils doivent être IDENTIQUES côté app et côté serveur tus.
+
+## 2. Côté app FormaQuiz
+
+Dans `/home/tipote/formaquiz/.env`, ajoute :
+```
+FORMAQUIZ_JWT_SECRET=<le 1er secret>
+FORMAQUIZ_VIDEO_SECRET=<le 2e secret>
+FORMAQUIZ_TUS_ENDPOINT=https://tus.tipote.com/files
+FORMAQUIZ_VIDEO_PLAYBACK_BASE=https://videos.tipote.com
+```
+(Utilise les mêmes hôtes `tus.*` / `videos.*` que ceux déjà servis par ta
+Caddy pour les popquiz. Si chez toi c'est `tus.quiz.tipote.com` /
+`videos.quiz.tipote.com`, mets ceux-là.)
+
+Puis rebuild + restart (ton process habituel) :
+```bash
+cd /home/tipote/formaquiz && git pull origin main && npm ci && npm run build && pm2 restart formaquiz-prod
+```
+
+## 3. Côté serveur tus (/opt/popquiz-tus)
+
+```bash
+# Sauvegarde d'abord (rollback en 1 commande si besoin)
+cp /opt/popquiz-tus/server.mjs /opt/popquiz-tus/server.mjs.bak
+
+# Remplace par la version qui connait "formaquiz"
+cp /home/tipote/formaquiz/infra/tus-server/server.mjs /opt/popquiz-tus/server.mjs
+
+# Ajoute les 2 MEMES secrets dans /opt/popquiz-tus/.env
+#   FORMAQUIZ_JWT_SECRET=<le 1er secret>
+#   FORMAQUIZ_VIDEO_SECRET=<le 2e secret>
+nano /opt/popquiz-tus/.env
+
+# Redémarre et vérifie
+pm2 restart popquiz-tus
+pm2 logs popquiz-tus --lines 20 --nostream   # doit afficher "[tus] listening on 127.0.0.1:1080"
+```
+
+Vérifie aussi que Tiquiz/Tipote vidéo marchent toujours (ouvre un popquiz
+existant). Si quoi que ce soit cloche :
+```bash
+cp /opt/popquiz-tus/server.mjs.bak /opt/popquiz-tus/server.mjs && pm2 restart popquiz-tus
+```
+
+> Caddy : aucun changement. Le vhost `videos.*` sert déjà tout
+> `/srv/popquiz-videos` (donc `/formaquiz/...`) et délègue la validation
+> de signature au serveur tus, qui connait maintenant `formaquiz`.
+
+---
+
+## 4. Tester
+
+1. `/admin` → un jour → "Uploader" une vidéo mp4. Attends 100%.
+2. "Enregistrer le jour".
+3. "Prévisualiser" : la vidéo se lit (URL signée, valable 6 h).
+
+Si l'upload renvoie "pipeline non branché", c'est que `FORMAQUIZ_JWT_SECRET`
+ou `FORMAQUIZ_TUS_ENDPOINT` manque côté app (étape 2).
+
+## Comment ça marche (résumé)
+
+- L'admin demande un token d'upload (`/api/admin/video/upload-token`),
+  signé avec `FORMAQUIZ_JWT_SECRET`.
+- tus-js-client envoie le fichier à `tus.*/files` ; le serveur tus valide
+  le token et range le fichier dans `/srv/popquiz-videos/formaquiz/raw/...`.
+- La page du jour génère une URL de lecture signée
+  (`md5` + `expires`, secret `FORMAQUIZ_VIDEO_SECRET`) que Caddy sert
+  après validation. Un lien volé expire en 6 h.
