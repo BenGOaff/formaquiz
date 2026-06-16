@@ -35,11 +35,16 @@ export default async function DayPage({
 
   const { day: d, questions, answers } = detail;
 
-  // Jour suivant (pour le bouton de déblocage en fin de quiz).
+  // Jour suivant (pour le bouton de déblocage en fin de quiz). On chaine
+  // uniquement dans le parcours ; les bonus ne s'enchainent pas.
   const allDays = await getDaysWithProgress(viewer.userId);
-  const idx = allDays.findIndex((x) => x.day_number === d.day_number);
-  const nextDayNumber =
-    idx >= 0 && idx + 1 < allDays.length ? allDays[idx + 1].day_number : null;
+  const parcoursDays = allDays.filter((x) => !x.is_bonus);
+  let nextDayNumber: number | null = null;
+  if (!d.is_bonus) {
+    const idx = parcoursDays.findIndex((x) => x.day_number === d.day_number);
+    nextDayNumber =
+      idx >= 0 && idx + 1 < parcoursDays.length ? parcoursDays[idx + 1].day_number : null;
+  }
 
   const resources = d.resources ?? [];
   const { src: videoSrc } = await resolveDayVideoSrc(d);
@@ -61,7 +66,7 @@ export default async function DayPage({
 
       <header className="flex flex-col gap-1">
         <span className="text-xs font-medium uppercase tracking-wide text-primary">
-          Jour {d.day_number}
+          {d.is_bonus ? "Bonus" : `Jour ${d.day_number}`}
         </span>
         <h1 className="font-display text-2xl font-bold sm:text-3xl">{d.title}</h1>
         {d.subtitle && <p className="text-muted-foreground">{d.subtitle}</p>}
@@ -111,6 +116,7 @@ export default async function DayPage({
         alreadyCompleted={d.progress === "completed"}
         resultHtml={resultHtml}
         nextDayNumber={nextDayNumber}
+        isBonus={d.is_bonus}
       />
     </div>
   );

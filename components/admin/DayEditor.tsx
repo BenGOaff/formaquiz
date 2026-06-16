@@ -23,6 +23,7 @@ export function DayEditor({ day }: { day: Day }) {
     video_id: day.video_id ?? (null as string | null),
     intro_html: day.intro_html ?? "",
     result_html: day.result_html ?? "",
+    is_bonus: day.is_bonus ?? false,
   });
   const [resources, setResources] = useState<DayResource[]>(day.resources ?? []);
 
@@ -44,6 +45,7 @@ export function DayEditor({ day }: { day: Day }) {
         video_url: form.video_id ? null : form.video_url || null,
         intro_html: form.intro_html || null,
         result_html: form.result_html || null,
+        is_bonus: form.is_bonus,
         resources: resources.filter((r) => r.label.trim() && r.url.trim()),
       }),
     });
@@ -85,6 +87,22 @@ export function DayEditor({ day }: { day: Day }) {
             placeholder="Une phrase qui situe le jour"
           />
         </div>
+
+        <label className="flex items-start gap-3 rounded-lg border border-border bg-surface-soft px-4 py-3">
+          <input
+            type="checkbox"
+            checked={form.is_bonus}
+            onChange={(e) => set("is_bonus", e.target.checked)}
+            className="mt-0.5 size-4 accent-primary"
+          />
+          <span className="flex flex-col gap-0.5">
+            <span className="text-sm font-medium">Contenu bonus</span>
+            <span className="text-xs text-muted-foreground">
+              Un bonus est accessible à tout moment, hors de la séquence quotidienne. Il ne
+              débloque pas le jour suivant.
+            </span>
+          </span>
+        </label>
 
         <VideoField
           videoUrl={form.video_url}

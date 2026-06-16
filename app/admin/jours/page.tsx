@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminJoursPage() {
   const { data } = await supabaseAdmin
     .from("days")
-    .select("id, day_number, title, subtitle, status, sort_order")
+    .select("id, day_number, title, subtitle, status, sort_order, is_bonus")
     .order("sort_order", { ascending: true });
 
   return (

@@ -67,12 +67,14 @@ export async function getDaysWithProgress(userId: string): Promise<DayWithProgre
   );
 
   const result: DayWithProgress[] = [];
-  let previousCompleted = true; // le premier jour est toujours débloqué
+  let previousCompleted = true; // le premier jour du parcours est toujours débloqué
 
   for (const d of (days ?? []) as Day[]) {
     const p = progressByDay.get(d.id);
     const isCompleted = p?.status === "completed";
-    const unlocked = previousCompleted;
+    // Les bonus sont accessibles a tout moment (hors de la sequence
+    // quotidienne) ; les jours du parcours se debloquent en cascade.
+    const unlocked = d.is_bonus ? true : previousCompleted;
     const status = isCompleted ? "completed" : unlocked ? "in_progress" : "locked";
 
     result.push({
@@ -83,7 +85,8 @@ export async function getDaysWithProgress(userId: string): Promise<DayWithProgre
       completed_at: (p?.completed_at as string) ?? null,
     });
 
-    previousCompleted = isCompleted;
+    // Seuls les jours du parcours font avancer la cascade de deblocage.
+    if (!d.is_bonus) previousCompleted = isCompleted;
   }
 
   return result;

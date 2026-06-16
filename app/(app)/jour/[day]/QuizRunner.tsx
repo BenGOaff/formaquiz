@@ -25,6 +25,7 @@ export function QuizRunner({
   alreadyCompleted,
   resultHtml,
   nextDayNumber,
+  isBonus = false,
 }: {
   dayNumber: number;
   questions: Question[];
@@ -32,6 +33,7 @@ export function QuizRunner({
   alreadyCompleted: boolean;
   resultHtml: string | null;
   nextDayNumber: number | null;
+  isBonus?: boolean;
 }) {
   const router = useRouter();
   const [phase, setPhase] = useState<"quiz" | "result">(
@@ -127,7 +129,7 @@ export function QuizRunner({
         <CardContent className="flex flex-col gap-5 py-6">
           <div className="flex items-center gap-2 text-success">
             <CheckCircle2 className="size-5" />
-            <span className="font-semibold">Jour {dayNumber} validé</span>
+            <span className="font-semibold">{isBonus ? "Bonus terminé" : `Jour ${dayNumber} validé`}</span>
           </div>
           {resultHtml ? (
             <RichContent html={resultHtml} />

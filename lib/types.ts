@@ -38,6 +38,7 @@ export interface Day {
   result_html: string | null;
   status: "draft" | "published";
   sort_order: number;
+  is_bonus: boolean;
 }
 
 export type ProgressStatus = "locked" | "in_progress" | "completed";
