@@ -10,9 +10,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSignatureMode, verifySioSignature } from "@/lib/sioWebhookSig";
+import { grantAccessByEmail, revokeAccessByEmail } from "@/lib/access/grantAccess";
 
 const WEBHOOK_SECRET = process.env.SYSTEME_IO_WEBHOOK_SECRET;
-const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://formaquiz.tipote.com").trim();
 
 // Événements qui terminent un accès payé : on révoque l'enrollment.
 const TERMINAL_EVENT_RE = /CANCEL|REFUND|EXPIR|CHARGEBACK/i;
@@ -36,22 +36,6 @@ function extractStr(body: unknown, paths: string[]): string | null {
   for (const p of paths) {
     const v = deepGet(body, p);
     if (v != null && String(v).trim()) return String(v).trim();
-  }
-  return null;
-}
-
-async function findUserByEmail(email: string): Promise<{ id: string } | null> {
-  const lower = email.toLowerCase();
-  const perPage = 1000;
-  let page = 1;
-  while (page <= 50) {
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
-    if (error) throw error;
-    const users = (data?.users ?? []) as Array<{ id: string; email?: string | null }>;
-    const found = users.find((u) => typeof u.email === "string" && u.email.toLowerCase() === lower);
-    if (found) return { id: found.id };
-    if (users.length < perPage) return null;
-    page += 1;
   }
   return null;
 }
@@ -133,13 +117,7 @@ export async function POST(req: NextRequest) {
 
   // ── Révocation (remboursement / annulation) ──
   if (eventType && TERMINAL_EVENT_RE.test(eventType) && !TRANSIENT_FAILURE_RE.test(eventType)) {
-    const user = await findUserByEmail(email);
-    if (user) {
-      await supabaseAdmin
-        .from("enrollments")
-        .update({ status: "revoked", revoked_at: new Date().toISOString() })
-        .eq("user_id", user.id);
-    }
+    await revokeAccessByEmail(email);
     return NextResponse.json({ ok: true, action: "revoked" });
   }
 
@@ -148,35 +126,9 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Octroi d'accès (achat confirmé) ──
-  let user = await findUserByEmail(email);
-  if (!user) {
-    // Nouveau client : on l'invite (il fixe son mot de passe via l'email).
-    const { data: invited, error: inviteErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(
-      email,
-      { redirectTo: `${APP_URL}/auth/callback?next=/dashboard` },
-    );
-    if (inviteErr || !invited?.user) {
-      return NextResponse.json({ ok: false, reason: "invite_failed" });
-    }
-    user = { id: invited.user.id };
+  const result = await grantAccessByEmail(email, "systeme_io", contactId);
+  if (!result.ok) {
+    return NextResponse.json({ ok: false, reason: result.reason });
   }
-
-  // Profil (idempotent) + enrollment actif.
-  await supabaseAdmin.from("profiles").upsert(
-    { id: user.id, email, updated_at: new Date().toISOString() },
-    { onConflict: "id" },
-  );
-  await supabaseAdmin.from("enrollments").upsert(
-    {
-      user_id: user.id,
-      status: "active",
-      source: "systeme_io",
-      sio_contact_id: contactId,
-      granted_at: new Date().toISOString(),
-      revoked_at: null,
-    },
-    { onConflict: "user_id" },
-  );
-
-  return NextResponse.json({ ok: true, action: "granted" });
+  return NextResponse.json({ ok: true, action: "granted", created: result.created });
 }
