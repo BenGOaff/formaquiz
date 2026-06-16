@@ -75,12 +75,12 @@ export default async function DashboardPage() {
         <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Le parcours
         </h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {parcours.map((d, i) => (
             <DayCard key={d.id} day={d} prev={i > 0 ? parcours[i - 1] : null} />
           ))}
           {parcours.length === 0 && (
-            <Card className="sm:col-span-2">
+            <Card className="sm:col-span-3">
               <CardContent className="py-8 text-center text-sm text-muted-foreground">
                 Le parcours arrive très vite.
               </CardContent>
@@ -96,7 +96,7 @@ export default async function DashboardPage() {
             <Gift className="size-4" />
             Bonus, quand tu veux
           </h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {bonus.map((d) => (
               <BonusCard key={d.id} day={d} />
             ))}
