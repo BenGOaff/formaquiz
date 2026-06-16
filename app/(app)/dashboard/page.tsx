@@ -70,17 +70,17 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Section parcours : cartes "gaming" */}
+      {/* Section parcours : cartes facon "jeu de cartes" */}
       <section className="flex flex-col gap-3">
         <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Le parcours
         </h2>
-        <div className="flex flex-col gap-3">
-          {parcours.map((d) => (
-            <DayCard key={d.id} day={d} />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {parcours.map((d, i) => (
+            <DayCard key={d.id} day={d} prev={i > 0 ? parcours[i - 1] : null} />
           ))}
           {parcours.length === 0 && (
-            <Card>
+            <Card className="sm:col-span-2">
               <CardContent className="py-8 text-center text-sm text-muted-foreground">
                 Le parcours arrive très vite.
               </CardContent>
@@ -96,7 +96,7 @@ export default async function DashboardPage() {
             <Gift className="size-4" />
             Bonus, quand tu veux
           </h2>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {bonus.map((d) => (
               <BonusCard key={d.id} day={d} />
             ))}
@@ -111,86 +111,123 @@ function dayLabel(d: DayWithProgress): string {
   return `J${d.day_number}`;
 }
 
-function DayCard({ day: d }: { day: DayWithProgress }) {
+/** Carte de jour facon carte a jouer : badge de niveau, etat colore, CTA. */
+function DayCard({ day: d, prev }: { day: DayWithProgress; prev: DayWithProgress | null }) {
   const locked = d.progress === "locked";
   const done = d.progress === "completed";
   const current = d.progress === "in_progress";
 
-  const card = (
-    <Card
+  const inner = (
+    <div
       className={cn(
-        "transition-shadow",
-        locked && "opacity-60",
-        current && "ring-2 ring-primary",
-        !locked && "hover:shadow-card-hover",
+        "group relative flex h-full flex-col overflow-hidden rounded-2xl border bg-card transition-all",
+        locked && "border-border opacity-70 grayscale",
+        done && "border-success/40",
+        current && "border-primary/60 shadow-card-hover ring-2 ring-primary",
+        !locked && !current && "border-border",
+        !locked && "hover:-translate-y-0.5 hover:shadow-card-hover",
       )}
     >
-      <CardContent className="flex items-center gap-4 py-4">
-        {/* Pastille de niveau facon jeu */}
-        <div
-          className={cn(
-            "flex size-12 shrink-0 items-center justify-center rounded-2xl text-base font-bold",
-            done && "bg-success text-success-foreground",
-            current && "bg-primary text-primary-foreground",
-            locked && "bg-muted text-muted-foreground",
-          )}
-        >
-          {done ? (
-            <CheckCircle2 className="size-6" />
-          ) : locked ? (
-            <Lock className="size-5" />
-          ) : (
-            `J${d.day_number}`
-          )}
-        </div>
+      {/* Bandeau haut colore selon l'etat */}
+      <div
+        className={cn(
+          "h-1.5 w-full",
+          done && "bg-success",
+          current && "bg-primary",
+          locked && "bg-muted",
+          !done && !current && !locked && "bg-primary/30",
+        )}
+      />
 
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Jour {d.day_number}
-            </span>
-            {done && <Badge variant="success">Terminé</Badge>}
-            {current && <Badge>À faire</Badge>}
+      <div className="flex flex-1 flex-col gap-3 p-4">
+        <div className="flex items-start justify-between">
+          {/* Pastille de niveau */}
+          <div
+            className={cn(
+              "flex size-12 shrink-0 items-center justify-center rounded-2xl text-lg font-bold shadow-sm",
+              done && "bg-success text-success-foreground",
+              current && "bg-primary text-primary-foreground",
+              locked && "bg-muted text-muted-foreground",
+              !done && !current && !locked && "bg-primary/10 text-primary",
+            )}
+          >
+            {done ? (
+              <CheckCircle2 className="size-6" />
+            ) : locked ? (
+              <Lock className="size-5" />
+            ) : (
+              `J${d.day_number}`
+            )}
           </div>
-          <p className="truncate font-medium">{d.title}</p>
-          {d.subtitle && <p className="truncate text-sm text-muted-foreground">{d.subtitle}</p>}
+          {done && <Badge variant="success">Terminé</Badge>}
+          {current && <Badge>À faire</Badge>}
+          {locked && <Badge variant="muted">Verrouillé</Badge>}
         </div>
 
-        {!locked && <Play className="size-5 shrink-0 text-primary" />}
-      </CardContent>
-    </Card>
+        <div className="flex flex-1 flex-col gap-0.5">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Jour {d.day_number}
+          </span>
+          <p className="font-display font-semibold leading-snug">{d.title}</p>
+          {d.subtitle && <p className="text-sm text-muted-foreground">{d.subtitle}</p>}
+        </div>
+
+        {/* Pied : appel a l'action ou indice de deblocage */}
+        <div className="flex items-center gap-1.5 text-sm font-medium">
+          {locked ? (
+            <span className="text-muted-foreground">
+              {prev ? `Se débloque en finissant J${prev.day_number}` : "Bientôt disponible"}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 text-primary">
+              {done ? "Revoir" : current ? "Commencer" : "Ouvrir"}
+              <Play className="size-4 transition-transform group-hover:translate-x-0.5" />
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
   );
 
   return locked ? (
     <div aria-disabled className="cursor-not-allowed">
-      {card}
+      {inner}
     </div>
   ) : (
-    <Link href={`/jour/${d.day_number}`} className="block">
-      {card}
+    <Link href={`/jour/${d.day_number}`} className="block h-full">
+      {inner}
     </Link>
   );
 }
 
+/** Carte bonus : volontairement distincte (pointilles, degrade, cadeau). */
 function BonusCard({ day: d }: { day: DayWithProgress }) {
   const done = d.progress === "completed";
   return (
-    <Link href={`/jour/${d.day_number}`} className="block">
-      <Card className="border-dashed border-primary/40 bg-surface-soft transition-shadow hover:shadow-card-hover">
-        <CardContent className="flex items-start gap-3 py-4">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
-            <Gift className="size-5" />
+    <Link href={`/jour/${d.day_number}`} className="block h-full">
+      <div className="group flex h-full flex-col gap-3 rounded-2xl border border-dashed border-primary/40 bg-gradient-to-br from-surface-soft to-card p-4 transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-card-hover">
+        <div className="flex items-start justify-between">
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary shadow-sm">
+            <Gift className="size-6" />
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary">Bonus</Badge>
-              {done && <CheckCircle2 className="size-4 text-success" />}
-            </div>
-            <p className="mt-1 font-medium leading-snug">{d.title}</p>
-            {d.subtitle && <p className="text-sm text-muted-foreground">{d.subtitle}</p>}
-          </div>
-        </CardContent>
-      </Card>
+          {done ? (
+            <Badge variant="success">Terminé</Badge>
+          ) : (
+            <Badge variant="secondary">Bonus</Badge>
+          )}
+        </div>
+        <div className="flex flex-1 flex-col gap-0.5">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-primary/70">
+            Bonus
+          </span>
+          <p className="font-display font-semibold leading-snug">{d.title}</p>
+          {d.subtitle && <p className="text-sm text-muted-foreground">{d.subtitle}</p>}
+        </div>
+        <span className="inline-flex items-center gap-1 text-sm font-medium text-primary">
+          {done ? "Revoir" : "Découvrir"}
+          <Play className="size-4 transition-transform group-hover:translate-x-0.5" />
+        </span>
+      </div>
     </Link>
   );
 }
