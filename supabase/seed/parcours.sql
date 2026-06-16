@@ -62,6 +62,7 @@ values
 </ul>
 <h2>Les maths qui changent tout</h2>
 <p>Une page de capture classique : 1 a 3 leads pour 100 visiteurs. Un bon quiz : couramment 20 a 50 leads pour 100 visiteurs. Ce sont des fourchettes, ca depend de ton quiz et de ta cible. On ne garantit pas un chiffre, on installe un systeme dont les maths jouent pour toi.</p>
+<p>[[figure:quiz-maths]]</p>
 <h2>Le miroir d'identite</h2>
 <p>Les quiz qui cartonnent ne notent pas, ils revelent une identite. "Tu es un Visionnaire" se partage. "Tu as eu 6 sur 10" se cache. Donc on bannit la logique bonne ou mauvaise reponse, on revele un type.</p>
 <p>Ta mission d'aujourd'hui, la plus importante de la semaine : quelle transformation ton audience cherche vraiment ?</p>$html$,
@@ -88,6 +89,7 @@ values
   $html$<p>Le truc contre-intuitif que presque personne ne fait : on ecrit les resultats AVANT la moindre question.</p>
 <h2>Pourquoi a l'envers</h2>
 <p>Si tu pars des questions, tu obtiens un quiz fouillis qui ne trie rien. Si tu pars des profils de sortie, chaque question sert a orienter vers le bon profil. Retiens la chaine : chaque resultat = un segment = un tag Systeme.io = une offre.</p>
+<p>[[figure:chaine-resultat]]</p>
 <h2>3 ou 4 profils, flatteurs mais actionnables</h2>
 <ul>
 <li>Pas plus de 4, pour rester clair.</li>
@@ -119,6 +121,7 @@ values
   $html$<p>Erreur classique : tout reecrire a la main pour que ce soit parfait. Non. L'IA a fait 90% du boulot. Ton job, c'est les 10% qui font que c'est toi.</p>
 <h2>Le reglage qui change tout : la capture au pic de curiosite</h2>
 <p>La plupart demandent l'email au debut, et le perdent. Place la capture juste avant le resultat, formulee comme "ou on t'envoie ton profil detaille ?". A ce moment, le prospect a tout repondu, il meurt d'envie de savoir. C'est LE reglage qui fait le plus bouger ton taux de leads.</p>
+<p>[[figure:capture-pic]]</p>
 <h2>Trois autres gestes</h2>
 <ul>
 <li>Premiere question facile et fun, jamais un champ email.</li>
@@ -237,6 +240,7 @@ values
 <li>Le chemin : "voici ce qu'une personne de ton profil doit faire maintenant."</li>
 <li>Le pont vers l'offre : "le plus rapide pour y arriver, c'est ca."</li>
 </ol>
+<p>[[figure:page-resultat]]</p>
 <h2>Trois facons de vendre</h2>
 <p>Le lien de vente direct sur la page de resultat, l'email de vente declenche par tag, et la combinaison valeur gratuite puis vente (la plus ethique). Pas de fausse rarete : si tu dis qu'une offre ferme, c'est qu'elle ferme vraiment.</p>$html$,
   $html$<p>Ton offre est branchee a ton quiz : un CTA sur la page de resultat et une sequence de vente douce. Ton systeme peut maintenant convertir.</p>
