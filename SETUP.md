@@ -26,8 +26,9 @@ Domaine prévu : `formaquiz.tipote.com` (sous-domaine Cloudflare).
    - `service_role` -> `SUPABASE_SERVICE_ROLE_KEY` (secret, jamais côté client)
 3. Applique le schéma : SQL Editor > colle le contenu de
    `supabase/migrations/0001_formaquiz_initial.sql` > Run.
-4. Charge le Jour 1 de démo : SQL Editor > colle `supabase/seed/day1.sql`
-   > Run.
+4. Charge tout le parcours : SQL Editor > colle `supabase/seed/parcours.sql`
+   > Run. (Ce fichier contient la préparation J-3/J0, les 14 jours et le
+   bonus. Il remplace l'ancien `day1.sql` partiel.)
 
 🚨 Tant que la migration n'est pas exécutée sur Supabase, l'app ne voit
 aucune table.

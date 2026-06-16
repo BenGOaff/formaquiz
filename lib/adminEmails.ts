@@ -5,6 +5,7 @@
 
 export const ADMIN_EMAILS: readonly string[] = [
   "blagardette@gmail.com",
+  "hello@ethilife.fr",
 ];
 
 export function isAdminEmail(email: string | null | undefined): boolean {
