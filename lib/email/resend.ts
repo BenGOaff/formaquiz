@@ -3,7 +3,13 @@
 //
 // Config requise dans le .env :
 //   RESEND_API_KEY        cle API Resend (re_...)
-//   FORMAQUIZ_EMAIL_FROM  expediteur verifie, ex: "FormaQuiz <bonjour@tipote.com>"
+//   FORMAQUIZ_EMAIL_FROM  expediteur sur le domaine verifie,
+//                         ex: "FormaQuiz <bonjour@send.tipote.com>"
+// Optionnel :
+//   FORMAQUIZ_REPLY_TO    adresse de reponse reellement relevee
+//                         (ex: une boite que Bene lit). Sans ca, les
+//                         reponses partent vers le domaine d'envoi et
+//                         risquent de se perdre.
 //
 // L'envoi est best-effort : si la config manque ou que Resend renvoie une
 // erreur, on log et on renvoie { ok:false } SANS jamais throw. Les appelants
@@ -13,6 +19,7 @@ import "server-only";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const EMAIL_FROM = process.env.FORMAQUIZ_EMAIL_FROM;
+const REPLY_TO = process.env.FORMAQUIZ_REPLY_TO;
 
 export interface SendResult {
   ok: boolean;
@@ -43,7 +50,13 @@ export async function sendEmail({
         Authorization: `Bearer ${RESEND_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ from: EMAIL_FROM, to, subject, html }),
+      body: JSON.stringify({
+        from: EMAIL_FROM,
+        to,
+        subject,
+        html,
+        ...(REPLY_TO ? { reply_to: REPLY_TO } : {}),
+      }),
     });
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
