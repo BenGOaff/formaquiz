@@ -1,4 +1,4 @@
-# Swipe file : 32 growth hacks pour un quiz qui rapporte
+# Swipe file : 36 growth hacks pour un quiz qui rapporte
 
 > Le coeur de la valeur perçue du challenge. Des méthodes peu connues ou sous-exploitées, toutes éthiques (aucune ne trompe le prospect), à intégrer dans les 14 jours.
 >
@@ -10,7 +10,7 @@
 
 ## Comment utiliser ce fichier
 
-Tu n'appliques pas les 32 d'un coup. Chaque jour du challenge active 1 ou 2 hacks. Ce fichier est ton réservoir : tu y reviens quand tu veux pousser un quiz plus loin. Les hacks marqués "avancé" sont pour ceux qui ont déjà publié et veulent optimiser.
+Tu n'appliques pas les 36 d'un coup. Chaque jour du parcours active quelques hacks. Ce fichier est ton réservoir : tu y reviens quand tu veux pousser un quiz plus loin. Les hacks marqués "avancé" sont pour ceux qui ont déjà publié et veulent optimiser.
 
 ---
 
@@ -266,20 +266,57 @@ Tu n'appliques pas les 32 d'un coup. Chaque jour du challenge active 1 ou 2 hack
 - **Exemple (coach)** : l'IA révèle que 70% bloquent sur la même peur, tu en fais ton prochain webinaire.
 - **Jour** : J13 avancé.
 
+
 ---
 
-## Tableau de correspondance hack / jour
+## Catégorie 8 : Vente, coupons et promos
+
+### Hack 33 : Le coupon-récompense sur la page de résultat
+- **Principe** : la page de résultat débloque un code promo personnalisé ("ton profil te donne -20% sur X").
+- **Pourquoi** : on récompense l'action au lieu de forcer la vente. Ça donne une raison d'acheter maintenant, sans fausse urgence.
+- **Pas à pas** : crée un code promo dans Systeme.io, affiche-le sur la page de résultat avec le lien vers l'offre adaptée au profil.
+- **Exemple (coach)** : le profil "Prêt à passer à l'action" reçoit -20% sur l'accompagnement.
+- **Jour** : bonus vente.
+
+### Hack 34 : Le coupon par profil (vente plus data)
+- **Principe** : un code promo différent selon le résultat.
+- **Pourquoi** : tu sais ensuite quel profil achète le plus. Tu vends ET tu apprends.
+- **Pas à pas** : un code distinct par profil dans Systeme.io, suivi des conversions par code.
+- **Jour** : bonus vente.
+
+### Hack 35 : Le coupon de partage
+- **Principe** : partager le quiz débloque un code promo.
+- **Pourquoi** : double effet, viralité plus vente, sans rien dépenser.
+- **Pas à pas** : relie le code à l'étape de partage. Annonce l'échange clairement.
+- **Jour** : J5 et bonus vente.
+
+### Hack 36 : L'urgence honnête
+- **Principe** : si une offre ou un coupon expire, dis-le, mais seulement si c'est vrai.
+- **Pourquoi** : la vraie échéance convertit, la fausse détruit ta crédibilité. C'est ta ligne.
+- **Pas à pas** : date réelle d'expiration du code, rappelée une fois, jamais de faux compte à rebours.
+- **Jour** : bonus vente.
+
+---
+
+## Tableau de correspondance hack / jour (FormaQuiz 7 jours)
 
 | Jour | Hacks activés |
 |---|---|
-| J0 | Engagement public (pré-challenge) |
-| J1 | 1 miroir d'identité, 5 mécanisme unique, 6 diagnostic vs personnalité |
-| J2 | 2 vol de langage |
-| J3 | 3 méthode inversée, 4 résultat flatteur, 29 aiguilleur de ventes (pose) |
-| J4 | 8 prompt à 3 couches |
-| J5 | 7 première question gratuite, 9 personnalisation, 10 progression, 11 micro-engagement, 12 titre triple ressort |
-| J6 | 13 image partageable, 14 OG image, 15 mobile d'abord |
-| J7 | 19 tag par réponse |
-| J8 | 16 bonus asymétrique, 17 anti-triche honnête, 20 taguer un ami |
-| J9 | 21 recyclage, 22 emplacements dormants, 27 story interactive |
-| J10 | 18 co-brandé,
+| J0 | engagement public |
+| J1 | 1 miroir d'identité, 2 vol de langage, 3 méthode inversée, 4 résultat flatteur, 5 mécanisme unique, 6 diagnostic vs personnalité |
+| J2 | 19 tag par réponse, 28 email qui parle du résultat |
+| J3 | choix du format quiz / sondage / popquiz |
+| J4 | 8 prompt à 3 couches, 7 première question gratuite, 9 personnalisation, 10 progression, 11 micro-engagement, 12 titre, 13 image partageable, 14 OG image, 15 mobile d'abord |
+| J5 | 16 bonus asymétrique, 17 anti-triche, 18 co-brandé, 20 taguer un ami, 21 recyclage, 22 emplacements dormants, 23 embed SEO, 24 échange de quiz, 25 groupes sans spam, 26 popquiz cliffhanger, 27 story |
+| J6 | rejoindre la communauté via le résultat, 32 analyse IA |
+| J7 | 31 point de fuite unique, 32 analyse IA, relancement evergreen |
+| Bonus pub | 4 offre auto-liquidante, retargeting des abandonneurs |
+| Bonus vente | 1 page résultat = vente, 29 aiguilleur, 33 à 36 coupons et promos |
+| Bonus sondages | 2 vol de langage en masse, 32 analyse IA |
+| Bonus popquiz | 26 cliffhanger, popquiz webinaire |
+
+---
+
+## Note d'éthique (à garder en tête)
+
+Chacun de ces hacks respecte ta ligne : on informe, on donne, on rend service, et on laisse les gens se convaincre seuls. Aucun ne repose sur la fausse urgence, la fausse rareté ou la manipulation. Les coupons sont des récompenses honnêtes, jamais des pièges. La seule méthode payante du parcours reste la pub, en bonus, et l'offre auto-liquidante la rend sans risque.
