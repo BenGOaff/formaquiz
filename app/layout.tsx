@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   title: "FormaQuiz",
   description: "Apprends les quiz en avançant dans un quiz.",
   robots: { index: false, follow: false }, // espace membre privé
+  icons: { icon: "/favicon.ico", apple: "/formaquiz.png" },
 };
 
 export const viewport: Viewport = {
