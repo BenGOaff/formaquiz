@@ -2,13 +2,16 @@
 // Logique d'octroi / revocation d'acces, partagee entre le webhook
 // Systeme.io et l'admin (invitation manuelle). Server-only.
 //
-// Onboarding : si l'email n'a pas encore de compte, on l'invite
-// (email envoye par Supabase via le SMTP Resend configure) avec un
-// retour sur /bienvenue, qui etablit la session et propose de choisir
-// un mot de passe. Si le compte existe deja, on (re)active juste son
-// enrollment.
+// Onboarding : si l'email n'a pas encore de compte, on genere un lien
+// d'invitation (sans laisser Supabase envoyer son email par defaut) et on
+// envoie NOTRE email d'accueil brande via Resend. Le lien retombe sur
+// /bienvenue, qui etablit la session et fait choisir un mot de passe. Si
+// le compte existe deja, on (re)active l'enrollment et on envoie un lien
+// magique d'entree directe.
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { sendEmail } from "@/lib/email/resend";
+import { welcomeEmail } from "@/lib/email/templates";
 
 const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://formaquiz.tipote.com").trim();
 
@@ -45,16 +48,31 @@ export async function grantAccessByEmail(
 ): Promise<GrantResult> {
   let user = await findUserByEmail(email);
   let created = false;
+  // Lien d'action a mettre dans l'email d'accueil (invitation ou magique).
+  let actionUrl: string | null = null;
 
   if (!user) {
-    const { data: invited, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      redirectTo: `${APP_URL}/bienvenue`,
+    // type "invite" cree le compte ET renvoie le lien, sans envoyer
+    // d'email Supabase : c'est nous qui envoyons l'email brande.
+    const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+      type: "invite",
+      email,
+      options: { redirectTo: `${APP_URL}/bienvenue` },
     });
-    if (error || !invited?.user) {
+    if (error || !data?.user) {
       return { ok: false, created: false, reason: "invite_failed" };
     }
-    user = { id: invited.user.id };
+    user = { id: data.user.id };
     created = true;
+    actionUrl = data.properties?.action_link ?? null;
+  } else {
+    // Compte existant : lien magique pour une entree directe dans l'espace.
+    const { data } = await supabaseAdmin.auth.admin.generateLink({
+      type: "magiclink",
+      email,
+      options: { redirectTo: `${APP_URL}/dashboard` },
+    });
+    actionUrl = data?.properties?.action_link ?? null;
   }
 
   const now = new Date().toISOString();
@@ -72,6 +90,13 @@ export async function grantAccessByEmail(
     },
     { onConflict: "user_id" },
   );
+
+  // Email d'accueil best-effort : un echec d'envoi ne doit pas annuler
+  // l'octroi d'acces (l'eleve peut toujours passer par /login).
+  if (actionUrl) {
+    const { subject, html } = welcomeEmail({ actionUrl, isNewAccount: created });
+    await sendEmail({ to: email, subject, html });
+  }
 
   return { ok: true, created };
 }

@@ -12,9 +12,35 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 
 type Phase = "loading" | "password" | "error";
+type Mode = "welcome" | "reset";
 
-export function Welcome() {
+const COPY: Record<
+  Mode,
+  { title: string; desc: string; cta: string; allowSkip: boolean }
+> = {
+  welcome: {
+    title: "Bienvenue dans FormaQuiz",
+    desc: "Choisis un mot de passe pour tes prochaines connexions.",
+    cta: "C'est parti",
+    allowSkip: true,
+  },
+  reset: {
+    title: "Nouveau mot de passe",
+    desc: "Choisis ton nouveau mot de passe.",
+    cta: "Enregistrer",
+    allowSkip: false,
+  },
+};
+
+/**
+ * Atterrissage des liens email (invitation et recuperation). Etablit la
+ * session a partir des jetons du lien (hash ou code PKCE), puis fait
+ * choisir un mot de passe. Memes mecaniques pour l'accueil et le reset,
+ * seuls les textes changent (prop `mode`).
+ */
+export function SetPasswordFlow({ mode }: { mode: Mode }) {
   const router = useRouter();
+  const copy = COPY[mode];
   const [phase, setPhase] = useState<Phase>("loading");
   const [password, setPassword] = useState("");
   const [saving, setSaving] = useState(false);
@@ -44,7 +70,6 @@ export function Welcome() {
             const { error } = await supabase.auth.exchangeCodeForSession(code);
             if (error) throw error;
           } else {
-            // Deja connecte ?
             const { data } = await supabase.auth.getSession();
             if (!data.session) {
               setPhase("error");
@@ -54,7 +79,7 @@ export function Welcome() {
         }
 
         // Nettoie l'URL (retire le hash avec les jetons).
-        window.history.replaceState(null, "", "/bienvenue");
+        window.history.replaceState(null, "", window.location.pathname);
         setPhase("password");
       } catch {
         setPhase("error");
@@ -62,7 +87,7 @@ export function Welcome() {
     })();
   }, []);
 
-  async function setNewPassword(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (password.length < 8) {
       toast.error("Choisis un mot de passe d'au moins 8 caractères.");
@@ -76,7 +101,9 @@ export function Welcome() {
       toast.error("Le mot de passe n'a pas pu être enregistré. Réessaie.");
       return;
     }
-    toast.success("Mot de passe enregistré. Bienvenue !");
+    toast.success(
+      mode === "welcome" ? "Mot de passe enregistré. Bienvenue !" : "Mot de passe mis à jour.",
+    );
     router.replace("/dashboard");
     router.refresh();
   }
@@ -113,12 +140,10 @@ export function Welcome() {
           <Card>
             <CardContent className="flex flex-col gap-4 py-6">
               <div className="flex flex-col gap-1 text-center">
-                <h1 className="font-display text-xl font-semibold">Bienvenue dans FormaQuiz</h1>
-                <p className="text-sm text-muted-foreground">
-                  Choisis un mot de passe pour tes prochaines connexions.
-                </p>
+                <h1 className="font-display text-xl font-semibold">{copy.title}</h1>
+                <p className="text-sm text-muted-foreground">{copy.desc}</p>
               </div>
-              <form onSubmit={setNewPassword} className="flex flex-col gap-4">
+              <form onSubmit={submit} className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="password">Mot de passe</Label>
                   <Input
@@ -131,16 +156,18 @@ export function Welcome() {
                   />
                 </div>
                 <Button type="submit" size="lg" disabled={saving}>
-                  {saving ? "Un instant..." : "C'est parti"}
+                  {saving ? "Un instant..." : copy.cta}
                 </Button>
               </form>
-              <button
-                type="button"
-                onClick={() => router.replace("/dashboard")}
-                className="text-center text-sm text-muted-foreground underline-offset-4 hover:underline"
-              >
-                Je le ferai plus tard
-              </button>
+              {copy.allowSkip && (
+                <button
+                  type="button"
+                  onClick={() => router.replace("/dashboard")}
+                  className="text-center text-sm text-muted-foreground underline-offset-4 hover:underline"
+                >
+                  Je le ferai plus tard
+                </button>
+              )}
             </CardContent>
           </Card>
         )}

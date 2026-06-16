@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LogOut, BookOpen, LayoutDashboard, ShieldCheck } from "lucide-react";
+import { LogOut, BookOpen, LayoutDashboard, ShieldCheck, ExternalLink } from "lucide-react";
+
+// App Tiquiz (creation des quiz) : l'eleve en a besoin pendant le parcours.
+const TIQUIZ_URL = "https://quiz.tipote.com";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
@@ -44,6 +47,12 @@ export function AppHeader({ isAdmin = false }: { isAdmin?: boolean }) {
               </Link>
             </Button>
           )}
+          <Button asChild variant="outline" size="sm">
+            <a href={TIQUIZ_URL} target="_blank" rel="noopener noreferrer">
+              <ExternalLink />
+              <span className="hidden sm:inline">Tiquiz</span>
+            </a>
+          </Button>
           <Button variant="ghost" size="sm" onClick={signOut} aria-label="Se déconnecter">
             <LogOut />
             <span className="hidden sm:inline">Quitter</span>

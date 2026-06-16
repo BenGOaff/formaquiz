@@ -8,7 +8,15 @@ import { createServerClient } from "@supabase/ssr";
 import { isAdminEmail } from "@/lib/adminEmails";
 
 // Routes accessibles sans être connecté.
-const PUBLIC_PREFIXES = ["/login", "/auth", "/bienvenue", "/api/systeme-io"];
+const PUBLIC_PREFIXES = [
+  "/login",
+  "/auth",
+  "/bienvenue",
+  "/nouveau-mot-de-passe",
+  "/mot-de-passe-oublie",
+  "/api/systeme-io",
+  "/api/auth",
+];
 
 // Routes réservées à l'élève connecté (enrollment vérifié plus loin
 // dans les pages elles-mêmes / la RLS).
