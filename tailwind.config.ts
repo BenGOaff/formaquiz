@@ -18,7 +18,9 @@ const config = {
   theme: {
     container: {
       center: true,
-      padding: "1.5rem",
+      // Marges laterales : ~20px sur mobile (confort + largeur preservee),
+      // 40px a partir de tablette/desktop.
+      padding: { DEFAULT: "1.25rem", md: "2.5rem" },
       screens: { "2xl": "1400px" },
     },
     extend: {

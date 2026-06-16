@@ -35,7 +35,7 @@ export default async function AdminElevesPage() {
     .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6">
+    <div className="mx-auto flex max-w-4xl flex-col gap-6">
       <header className="flex flex-col gap-1">
         <h1 className="font-display text-2xl font-bold sm:text-3xl">Tes élèves</h1>
         <p className="text-sm text-muted-foreground">

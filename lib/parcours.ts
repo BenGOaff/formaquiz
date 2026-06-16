@@ -103,11 +103,13 @@ export interface DayDetail {
 export async function getDayDetail(
   userId: string,
   dayNumber: number,
+  opts?: { bypassLock?: boolean },
 ): Promise<DayDetail | null> {
   const all = await getDaysWithProgress(userId);
   const day = all.find((d) => d.day_number === dayNumber);
   if (!day) return null;
-  if (!day.unlocked) return null;
+  // Un admin peut previsualiser n'importe quel jour publie, meme verrouille.
+  if (!day.unlocked && !opts?.bypassLock) return null;
 
   const supabase = await getSupabaseServerClient();
   const [{ data: questions }, { data: answers }] = await Promise.all([

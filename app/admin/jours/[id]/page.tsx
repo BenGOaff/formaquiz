@@ -34,7 +34,7 @@ export default async function AdminDayEditorPage({
   }));
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6">
+    <div className="mx-auto flex max-w-3xl flex-col gap-6">
       <div className="flex items-center justify-between">
         <Link
           href="/admin/jours"

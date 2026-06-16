@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, Download, LinkIcon } from "lucide-react";
 import { getViewer, getDayDetail, getDaysWithProgress } from "@/lib/parcours";
+import { isAdminEmail } from "@/lib/adminEmails";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { RichContent } from "@/components/RichContent";
 import { NoAccess } from "@/components/NoAccess";
@@ -23,7 +24,9 @@ export default async function DayPage({
   if (!viewer) redirect("/login");
   if (!viewer.enrolled) return <NoAccess email={viewer.email} />;
 
-  const detail = await getDayDetail(viewer.userId, dayNumber);
+  const detail = await getDayDetail(viewer.userId, dayNumber, {
+    bypassLock: isAdminEmail(viewer.email),
+  });
   // Jour inexistant, non publié, ou pas encore débloqué : on renvoie au
   // tableau de bord plutôt que d'exposer un 404 sec.
   if (!detail) redirect("/dashboard");
@@ -39,7 +42,7 @@ export default async function DayPage({
   const resources = d.resources ?? [];
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6">
+    <div className="mx-auto flex max-w-3xl flex-col gap-6">
       <Link
         href="/dashboard"
         className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
