@@ -73,11 +73,13 @@ export function buildCoachSystemPrompt(input: {
   docs?: CoachDoc[];
   days: CoachDay[];
   currentDay: CoachDay | null;
+  firstName: string | null;
   niche: string | null;
   level: string | null;
+  objective: string | null;
   currentAnswers: CoachAnswer[];
 }): string {
-  const { instruction, docs, days, currentDay, niche, level, currentAnswers } = input;
+  const { instruction, docs, days, currentDay, firstName, niche, level, objective, currentAnswers } = input;
 
   const persona = instruction && instruction.trim() ? instruction.trim() : SYSTEM_PERSONA;
 
@@ -110,10 +112,12 @@ export function buildCoachSystemPrompt(input: {
   }
 
   const profileBits: string[] = [];
+  if (firstName) profileBits.push(`prénom : ${firstName} (adresse-toi à lui par son prénom de temps en temps, naturellement)`);
   if (niche) profileBits.push(`niche : ${niche}`);
   if (level) profileBits.push(`niveau : ${level}`);
+  if (objective) profileBits.push(`objectif principal : ${objective}`);
   if (profileBits.length) {
-    prompt += `\n\n=== CONTEXTE DE L'ÉLÈVE ===\n${profileBits.join(", ")}`;
+    prompt += `\n\n=== CONTEXTE DE L'ÉLÈVE ===\n${profileBits.join("\n")}`;
   }
 
   if (currentAnswers.length) {

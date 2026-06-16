@@ -4,6 +4,7 @@ import { ArrowLeft, Download, LinkIcon } from "lucide-react";
 import { getViewer, getDayDetail, getDaysWithProgress } from "@/lib/parcours";
 import { isAdminEmail } from "@/lib/adminEmails";
 import { resolveDayVideoSrc } from "@/lib/video/playback";
+import { personalizeText } from "@/lib/personalize";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { RichContent } from "@/components/RichContent";
 import { NoAccess } from "@/components/NoAccess";
@@ -42,6 +43,11 @@ export default async function DayPage({
 
   const resources = d.resources ?? [];
   const { src: videoSrc } = await resolveDayVideoSrc(d);
+  // Personnalisation : {prenom} dans le contenu est remplace par le prenom
+  // de l'eleve (capte au diagnostic d'entree).
+  const firstName = viewer.profile?.full_name?.split(" ")[0] ?? null;
+  const introHtml = personalizeText(d.intro_html, firstName);
+  const resultHtml = personalizeText(d.result_html, firstName);
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
@@ -63,10 +69,10 @@ export default async function DayPage({
 
       <VideoPlayer src={videoSrc} />
 
-      {d.intro_html && (
+      {introHtml && (
         <Card>
           <CardContent className="py-5">
-            <RichContent html={d.intro_html} />
+            <RichContent html={introHtml} />
           </CardContent>
         </Card>
       )}
@@ -103,7 +109,7 @@ export default async function DayPage({
         questions={questions}
         initialAnswers={answers}
         alreadyCompleted={d.progress === "completed"}
-        resultHtml={d.result_html}
+        resultHtml={resultHtml}
         nextDayNumber={nextDayNumber}
       />
     </div>
