@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getViewer } from "@/lib/parcours";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { buildClaudeMessageBody } from "@/lib/claudeRequest";
@@ -122,7 +123,20 @@ export async function POST(req: NextRequest) {
       .filter((a) => a.prompt && a.value);
   }
 
+  // Instruction (editable par l'admin) + documents de connaissance.
+  // Lus via service_role : tables internes, pas user-specific.
+  const [{ data: settings }, { data: knowledge }] = await Promise.all([
+    supabaseAdmin.from("coach_settings").select("instruction").eq("id", "default").maybeSingle(),
+    supabaseAdmin
+      .from("coach_knowledge")
+      .select("title, content")
+      .eq("enabled", true)
+      .order("sort_order", { ascending: true }),
+  ]);
+
   const system = buildCoachSystemPrompt({
+    instruction: settings?.instruction ?? null,
+    docs: knowledge ?? [],
     days: days ?? [],
     currentDay,
     niche: viewer.profile?.niche ?? null,
