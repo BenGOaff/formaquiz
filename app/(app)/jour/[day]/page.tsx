@@ -39,7 +39,7 @@ export default async function DayPage({
   const resources = d.resources ?? [];
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6">
+    <div className="mx-auto flex max-w-3xl flex-col gap-6">
       <Link
         href="/dashboard"
         className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
