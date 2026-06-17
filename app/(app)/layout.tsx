@@ -14,7 +14,12 @@ export default async function AppLayout({
 
   return (
     <div className="flex min-h-screen flex-col bg-surface">
-      <AppHeader isAdmin={isAdmin} />
+      <AppHeader
+        isAdmin={isAdmin}
+        name={viewer?.profile?.full_name ?? null}
+        email={viewer?.email ?? null}
+        avatarUrl={viewer?.profile?.avatar_url ?? null}
+      />
       <main className="container flex-1 py-8">{children}</main>
       {/* Coach dispo pour les eleves avec acces (et pour l'admin pour tester). */}
       {(enrolled || isAdmin) && <CoachBubble />}
