@@ -28,6 +28,7 @@ export default async function AdminSpotlightsPage() {
   const { data } = await supabaseAdmin
     .from("spotlights")
     .select("id, user_id, milestone, status, draft, created_at")
+    .neq("status", "superseded")
     .order("created_at", { ascending: false });
   const rows = (data ?? []) as SpotlightRow[];
 
