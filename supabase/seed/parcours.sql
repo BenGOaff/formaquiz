@@ -50,7 +50,7 @@ values
 <li>Un quiz peut servir 16 objectifs. Choisis-en UN principal, sinon ton quiz ne fait rien de bien.</li>
 <li>On construit à l'envers : d'abord la prise de conscience visée, puis les résultats, puis les questions.</li>
 <li>Un quiz révèle une identité, il ne note pas. On bannit la logique bonne ou mauvaise réponse.</li>
-<li>Vole le langage de ta cible : ses mots exacts, pris dans les avis et commentaires.</li>
+<li>Vole le langage de {audience} : ses mots exacts, pris dans les avis et commentaires.</li>
 </ul>
 <h2>Tes actions du jour</h2>
 <ul>
@@ -59,7 +59,7 @@ values
 <li>Note 3 phrases que ta cible emploie vraiment.</li>
 <li>Écris tes 3 ou 4 profils de résultats, avec un nom valorisant chacun.</li>
 </ul>$html$,
-  $html$<p>Ton angle, tes résultats, les mots de ta cible : la matière de ton quiz est posée.</p><p>Demain, on prépare la tuyauterie qui rend tout le reste possible : Systeme.io.</p>$html$,
+  $html$<p>Ton angle, tes résultats, les mots de {audience} : la matière de ton quiz est posée.</p><p>Demain, on prépare la tuyauterie qui rend tout le reste possible : Systeme.io.</p>$html$,
   $st2$published$st2$, 20, $r$[]$r$::jsonb, false
 ),
 (
