@@ -123,5 +123,11 @@ Pas d'étudiants encore : on peut tout construire sans déranger personne.
       - Dashboard admin /admin/feedback : décrochage par jour + ce que
         les élèves disent, pour corriger le contenu en continu.
       - CRON à brancher côté serveur : lundi matin, cf. notes de déploiement.
-- [ ] E moteur de mise en avant
-- [ ] C Quiz Doctor
+- [x] E moteur de mise en avant : détection des caps (paliers de leads
+      via Tiquiz), génération auto du brouillon d'étude de cas (à valider,
+      citations à confirmer), alerte email admin, dashboard /admin/spotlights
+      (relire, copier, marquer publié/écarté). Cron /api/cron/spotlights
+      (resync metrics + détection + digest admin). Tables : spotlights.
+- [ ] C Quiz Doctor (dépend d'un endpoint Tiquiz exposant la structure du
+      quiz : audit pré-publication images / nombre de questions / cohérence
+      bonus / placement capture)

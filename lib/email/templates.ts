@@ -165,3 +165,26 @@ export function weeklyRecapEmail({
     html: layout(inner),
   };
 }
+
+/** Alerte admin : de nouveaux élèves méritent une mise en avant. */
+export function spotlightAdminEmail({
+  items,
+}: {
+  items: { name: string; label: string }[];
+}): BuiltEmail {
+  const list = items
+    .map((i) => `<li style="margin-bottom:6px;">${i.name} : <strong>${i.label}</strong></li>`)
+    .join("");
+  const inner = `
+    <h1 style="margin:0 0 16px;font-size:22px;line-height:28px;color:${INK};">Nouveaux candidats à mettre en avant</h1>
+    <p style="margin:0 0 16px;font-size:15px;line-height:23px;color:${INK};">
+      Des élèves viennent d'atteindre un vrai cap. Un brouillon d'étude de cas est déjà prêt pour chacun, à relire et valider.
+    </p>
+    <ul style="margin:0 0 20px;padding-left:20px;font-size:15px;line-height:23px;color:${INK};">${list}</ul>
+    ${button(`${APP_URL}/admin/spotlights`, "Voir les candidats")}
+  `;
+  return {
+    subject: `${items.length} candidat(s) à mettre en avant (FormaQuiz)`,
+    html: layout(inner),
+  };
+}
