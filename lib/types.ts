@@ -77,6 +77,17 @@ export interface FunnelAssets {
   raw?: string;
 }
 
+/** Modele Systeme.io a importer en 1 clic (URL de partage). */
+export interface SioTemplate {
+  id: string;
+  label: string;
+  kind: string;
+  url: string;
+  description: string | null;
+  enabled: boolean;
+  sort_order: number;
+}
+
 export interface DayWithProgress extends Day {
   progress: ProgressStatus;
   unlocked: boolean;
