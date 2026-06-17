@@ -102,7 +102,10 @@ Pas d'étudiants encore : on peut tout construire sans déranger personne.
    du quiz ; à faire en dernier car dépend d'un ajout côté Tiquiz).
 
 ## Statut (à tenir à jour)
-- [ ] B funnel done-for-you
+- [x] B funnel done-for-you (page "Campagne" : génère séquences email +
+      kit de lancement depuis le carnet/persona, copier-coller + export .md ;
+      table funnel_assets, /api/me/funnel, lib/generate/funnel). Reste à
+      faire si besoin : vrai format d'import Systeme.io.
 - [ ] A coach proactif data
 - [ ] D feedback + relances + auto-amélioration
 - [ ] E moteur de mise en avant
