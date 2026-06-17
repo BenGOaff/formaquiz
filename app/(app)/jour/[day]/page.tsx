@@ -4,7 +4,10 @@ import { ArrowLeft, Download, LinkIcon } from "lucide-react";
 import { getViewer, getDayDetail, getDaysWithProgress } from "@/lib/parcours";
 import { isAdminEmail } from "@/lib/adminEmails";
 import { resolveDayVideoSrc } from "@/lib/video/playback";
-import { personalizeText } from "@/lib/personalize";
+import { personalizeContent } from "@/lib/personalize";
+import { resolvePersona, personaLabel } from "@/lib/personas";
+import { getPersonaVocab, getDayPersonaExample } from "@/lib/personaContent";
+import { Sparkles } from "lucide-react";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { RichContent } from "@/components/RichContent";
 import { NoAccess } from "@/components/NoAccess";
@@ -48,11 +51,17 @@ export default async function DayPage({
 
   const resources = d.resources ?? [];
   const { src: videoSrc } = await resolveDayVideoSrc(d);
-  // Personnalisation : {prenom} dans le contenu est remplace par le prenom
-  // de l'eleve (capte au diagnostic d'entree).
+  // Personnalisation : {prenom} + vocabulaire du persona ({offre}, {client}
+  // ...), plus un encart d'exemples concrets dans le metier de l'eleve.
   const firstName = viewer.profile?.full_name?.split(" ")[0] ?? null;
-  const introHtml = personalizeText(d.intro_html, firstName);
-  const resultHtml = personalizeText(d.result_html, firstName);
+  const persona = resolvePersona(viewer.profile?.activity_type);
+  const vocab = await getPersonaVocab(persona);
+  const introHtml = personalizeContent(d.intro_html, { firstName, vocab });
+  const resultHtml = personalizeContent(d.result_html, { firstName, vocab });
+  const personaExample = personalizeContent(await getDayPersonaExample(d.id, persona), {
+    firstName,
+    vocab,
+  });
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
@@ -78,6 +87,19 @@ export default async function DayPage({
         <Card>
           <CardContent className="py-5">
             <RichContent html={introHtml} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Encart "Pour toi" : exemples concrets dans le metier de l'eleve. */}
+      {personaExample && (
+        <Card className="border-primary/30 bg-surface-soft">
+          <CardContent className="flex flex-col gap-2 py-5">
+            <span className="flex items-center gap-2 text-sm font-semibold text-primary">
+              <Sparkles className="size-4" />
+              Pour toi, {personaLabel(persona).toLowerCase()}
+            </span>
+            <RichContent html={personaExample} />
           </CardContent>
         </Card>
       )}

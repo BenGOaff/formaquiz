@@ -4,6 +4,7 @@ import { ArrowLeft, Eye } from "lucide-react";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { DayEditor } from "@/components/admin/DayEditor";
 import { QuestionsManager } from "@/components/admin/QuestionsManager";
+import { PersonaExamplesEditor } from "@/components/admin/PersonaExamplesEditor";
 import { Button } from "@/components/ui/button";
 import type { Day, Question } from "@/lib/types";
 
@@ -59,6 +60,7 @@ export default async function AdminDayEditorPage({
       </header>
 
       <DayEditor day={typedDay} />
+      <PersonaExamplesEditor dayId={typedDay.id} />
       <QuestionsManager dayId={typedDay.id} initialQuestions={typedQuestions} />
     </div>
   );
