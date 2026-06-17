@@ -16,6 +16,7 @@ const PUBLIC_PREFIXES = [
   "/mot-de-passe-oublie",
   "/api/systeme-io",
   "/api/auth",
+  "/api/cron",
 ];
 
 // Routes réservées à l'élève connecté (enrollment vérifié plus loin

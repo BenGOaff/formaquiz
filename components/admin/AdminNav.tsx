@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, Users, Sparkles, Languages, Boxes, ArrowUpRight } from "lucide-react";
+import { CalendarDays, Users, Sparkles, Languages, Boxes, Inbox, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
@@ -11,6 +11,7 @@ const links = [
   { href: "/admin/coach", label: "Coach", icon: Sparkles },
   { href: "/admin/personas", label: "Personas", icon: Languages },
   { href: "/admin/modeles", label: "Modèles SIO", icon: Boxes },
+  { href: "/admin/feedback", label: "Retours", icon: Inbox },
 ];
 
 export function AdminNav() {

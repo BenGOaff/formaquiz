@@ -11,6 +11,7 @@ import { Sparkles, Gem } from "lucide-react";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { RichContent } from "@/components/RichContent";
 import { NoAccess } from "@/components/NoAccess";
+import { BlockerButton } from "@/components/BlockerButton";
 import { Card, CardContent } from "@/components/ui/card";
 import { QuizRunner } from "./QuizRunner";
 
@@ -154,6 +155,8 @@ export default async function DayPage({
         nextDayNumber={nextDayNumber}
         isBonus={d.is_bonus}
       />
+
+      <BlockerButton dayNumber={d.day_number} />
     </div>
   );
 }
