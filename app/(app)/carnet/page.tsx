@@ -1,106 +1,134 @@
 import { redirect } from "next/navigation";
-import { BookOpen } from "lucide-react";
+import Link from "next/link";
+import { BookOpen, Compass, Gift, ArrowRight } from "lucide-react";
 import { getViewer } from "@/lib/parcours";
-import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { NoAccess } from "@/components/NoAccess";
+import { getCarnet } from "@/lib/carnet";
 import { Card, CardContent } from "@/components/ui/card";
-import type { Question } from "@/lib/types";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { NoAccess } from "@/components/NoAccess";
 
 export const dynamic = "force-dynamic";
+
+const LEVEL_LABEL: Record<string, string> = {
+  debutant: "Débutant",
+  intermediaire: "Intermédiaire",
+  avance: "Avancé",
+};
+
+const OBJECTIVE_LABEL: Record<string, string> = {
+  capter: "Capter des leads",
+  qualifier: "Qualifier mes prospects",
+  segmenter: "Segmenter mon audience",
+  vendre: "Vendre directement",
+};
 
 export default async function CarnetPage() {
   const viewer = await getViewer();
   if (!viewer) redirect("/login");
   if (!viewer.enrolled) return <NoAccess email={viewer.email} />;
 
-  const supabase = await getSupabaseServerClient();
-
-  // Réponses de l'élève + jours + questions associées.
-  const { data: answers } = await supabase
-    .from("answers")
-    .select("question_id, day_id, value_text, value_choice")
-    .eq("user_id", viewer.userId);
-
-  const dayIds = Array.from(new Set((answers ?? []).map((a) => a.day_id as string)));
-
-  const [{ data: days }, { data: questions }] = await Promise.all([
-    dayIds.length
-      ? supabase.from("days").select("id, day_number, title").in("id", dayIds)
-      : Promise.resolve({ data: [] as { id: string; day_number: number; title: string }[] }),
-    dayIds.length
-      ? supabase.from("questions").select("*").in("day_id", dayIds)
-      : Promise.resolve({ data: [] as Question[] }),
-  ]);
-
-  const questionById = new Map((questions ?? []).map((q) => [q.id as string, q as Question]));
-  const answersByDay = new Map<string, typeof answers>();
-  for (const a of answers ?? []) {
-    const list = answersByDay.get(a.day_id as string) ?? [];
-    list.push(a);
-    answersByDay.set(a.day_id as string, list);
-  }
-
-  const orderedDays = (days ?? []).sort((a, b) => a.day_number - b.day_number);
-
-  function labelFor(q: Question, valueChoice: string | null): string | null {
-    if (!valueChoice) return null;
-    const opt = q.options.find((o) => o.value === valueChoice);
-    return opt?.label ?? valueChoice;
-  }
+  const carnet = await getCarnet(viewer.userId);
+  const profile = viewer.profile;
+  const firstName = profile?.full_name?.split(" ")[0] ?? null;
+  const hasCompass = Boolean(profile?.niche || profile?.level || profile?.objective);
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
       <header className="flex flex-col gap-1">
-        <h1 className="font-display text-2xl font-bold sm:text-3xl">Ton carnet de bord</h1>
+        <h1 className="flex items-center gap-2 font-display text-2xl font-bold sm:text-3xl">
+          <BookOpen className="size-7 text-primary" />
+          {firstName ? `Le carnet de ${firstName}` : "Ton carnet de bord"}
+        </h1>
         <p className="text-sm text-muted-foreground">
           Toutes tes réponses, rassemblées. C'est la matière de ton projet : ton quiz s'écrit ici,
           réponse après réponse.
         </p>
       </header>
 
-      {orderedDays.length === 0 ? (
+      {/* Ma boussole : le diagnostic d'entree */}
+      {hasCompass && (
         <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-10 text-center text-muted-foreground">
-            <BookOpen className="size-8" />
-            <p className="text-sm">
-              Ton carnet est encore vide. Réponds au quiz d'un jour et tes réponses apparaîtront ici.
+          <CardContent className="flex flex-col gap-3 py-5">
+            <span className="flex items-center gap-2 text-sm font-semibold">
+              <Compass className="size-4 text-primary" />
+              Ma boussole
+            </span>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {profile?.niche && <Field label="Ma niche" value={profile.niche} />}
+              {profile?.level && (
+                <Field label="Mon niveau" value={LEVEL_LABEL[profile.level] ?? profile.level} />
+              )}
+              {profile?.objective && (
+                <Field
+                  label="Mon objectif n°1"
+                  value={OBJECTIVE_LABEL[profile.objective] ?? profile.objective}
+                />
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {carnet.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center gap-4 py-10 text-center">
+            <div className="flex size-12 items-center justify-center rounded-full bg-surface-soft text-primary">
+              <BookOpen className="size-6" />
+            </div>
+            <p className="max-w-md text-sm text-muted-foreground">
+              Ton carnet est encore vierge. Réponds aux quiz du parcours et tes réponses
+              viendront le remplir au fil des jours.
             </p>
+            <Button asChild>
+              <Link href="/dashboard">
+                Commencer le parcours
+                <ArrowRight />
+              </Link>
+            </Button>
           </CardContent>
         </Card>
       ) : (
-        orderedDays.map((d) => {
-          const dayAnswers = (answersByDay.get(d.id) ?? [])
-            .map((a) => ({ a, q: questionById.get(a.question_id as string) }))
-            .filter((x): x is { a: NonNullable<typeof x.a>; q: Question } => !!x.q)
-            .sort((x, y) => x.q.sort_order - y.q.sort_order);
-
-          return (
-            <Card key={d.id}>
-              <CardContent className="flex flex-col gap-4 py-5">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xs font-medium uppercase tracking-wide text-primary">
-                    Jour {d.day_number}
-                  </span>
-                  <h2 className="font-display font-semibold">{d.title}</h2>
-                </div>
-                <ul className="flex flex-col gap-4">
-                  {dayAnswers.map(({ a, q }) => {
-                    const display =
-                      q.type === "action" ? a.value_text : labelFor(q, a.value_choice as string);
-                    if (!display) return null;
-                    return (
-                      <li key={q.id} className="flex flex-col gap-1">
-                        <p className="text-sm font-medium text-muted-foreground">{q.prompt}</p>
-                        <p className="rounded-lg bg-surface-soft px-3 py-2 text-sm">{display}</p>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </CardContent>
-            </Card>
-          );
-        })
+        carnet.map((day) => (
+          <Card key={`${day.isBonus ? "b" : "j"}-${day.dayNumber}`}>
+            <CardContent className="flex flex-col gap-4 py-5">
+              <div className="flex items-baseline gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-primary">
+                  {day.isBonus ? "Bonus" : `Jour ${day.dayNumber}`}
+                </span>
+                {day.isBonus && (
+                  <Badge variant="secondary">
+                    <Gift className="size-3" />
+                    Bonus
+                  </Badge>
+                )}
+                <h2 className="font-display font-semibold">{day.title}</h2>
+              </div>
+              <dl className="flex flex-col gap-4">
+                {day.entries.map((e) => (
+                  <div key={e.questionId} className="flex flex-col gap-1">
+                    <dt className="text-sm font-medium text-muted-foreground">{e.prompt}</dt>
+                    <dd className="whitespace-pre-wrap rounded-lg bg-surface-soft px-3 py-2 text-sm">
+                      {e.answer}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </CardContent>
+          </Card>
+        ))
       )}
+    </div>
+  );
+}
+
+function Field({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col gap-0.5 rounded-lg bg-surface-soft px-4 py-3">
+      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </span>
+      <span className="text-sm font-medium">{value}</span>
     </div>
   );
 }

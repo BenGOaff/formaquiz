@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LogOut, BookOpen, LayoutDashboard, ShieldCheck, ExternalLink } from "lucide-react";
+import { LogOut, BookOpen, LayoutDashboard, ShieldCheck, ExternalLink, UserCircle } from "lucide-react";
 
 // App Tiquiz (creation des quiz) : l'eleve en a besoin pendant le parcours.
 const TIQUIZ_URL = "https://quiz.tipote.com";
@@ -37,6 +37,12 @@ export function AppHeader({ isAdmin = false }: { isAdmin?: boolean }) {
             <Link href="/carnet">
               <BookOpen />
               <span className="hidden sm:inline">Carnet</span>
+            </Link>
+          </Button>
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/profil">
+              <UserCircle />
+              <span className="hidden sm:inline">Profil</span>
             </Link>
           </Button>
           {isAdmin && (
