@@ -12,12 +12,22 @@ import {
 
 export const dynamic = "force-dynamic";
 
+// Base de redirection : on prefere NEXT_PUBLIC_APP_URL (protocole/host
+// fiables par environnement) plutot que req.url, dont le protocole peut
+// basculer en https derriere un proxy / une redirection cross-app et
+// casser le retour en dev (http://localhost:3002).
+function appUrl(req: NextRequest, path: string): string {
+  const env = (process.env.NEXT_PUBLIC_APP_URL ?? "").trim().replace(/\/$/, "");
+  const base = env || new URL(req.url).origin;
+  return `${base}${path}`;
+}
+
 export async function GET(req: NextRequest) {
   const supabase = await getSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return NextResponse.redirect(new URL("/login", req.url));
+  if (!user) return NextResponse.redirect(appUrl(req, "/login"));
 
   const url = new URL(req.url);
   const code = url.searchParams.get("code");
@@ -25,7 +35,7 @@ export async function GET(req: NextRequest) {
   const cookieState = req.cookies.get("tiquiz_oauth_state")?.value;
 
   const fail = () => {
-    const r = NextResponse.redirect(new URL("/dashboard?tiquiz=error", req.url));
+    const r = NextResponse.redirect(appUrl(req, "/dashboard?tiquiz=error"));
     r.cookies.delete("tiquiz_oauth_state");
     return r;
   };
@@ -38,7 +48,7 @@ export async function GET(req: NextRequest) {
   await saveConnection(user.id, exchanged.token, exchanged.tiquizUserId);
   await syncMetrics(user.id); // premiere synchro (best-effort)
 
-  const res = NextResponse.redirect(new URL("/dashboard?tiquiz=connected", req.url));
+  const res = NextResponse.redirect(appUrl(req, "/dashboard?tiquiz=connected"));
   res.cookies.delete("tiquiz_oauth_state");
   return res;
 }
