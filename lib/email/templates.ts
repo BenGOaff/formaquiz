@@ -129,3 +129,39 @@ export function resetPasswordEmail({ actionUrl }: { actionUrl: string }): BuiltE
     html: layout(inner),
   };
 }
+
+/** Récap hebdomadaire doux (lundi matin) : où en est l'élève + prochaine étape. */
+export function weeklyRecapEmail({
+  firstName,
+  dayNumber,
+  dayTitle,
+  completed,
+  total,
+}: {
+  firstName: string | null;
+  dayNumber: number;
+  dayTitle: string;
+  completed: number;
+  total: number;
+}): BuiltEmail {
+  const hello = firstName ? `Salut ${firstName},` : "Salut,";
+  const dashboard = `${APP_URL}/dashboard`;
+  const inner = `
+    <h1 style="margin:0 0 16px;font-size:22px;line-height:28px;color:${INK};">${hello} ta semaine FormaQuiz</h1>
+    <p style="margin:0 0 16px;font-size:15px;line-height:23px;color:${INK};">
+      Tu as bouclé <strong>${completed} jour(s) sur ${total}</strong>. Pas de pression, juste un petit repère pour reprendre quand tu veux.
+    </p>
+    <p style="margin:0 0 8px;font-size:15px;line-height:23px;color:${INK};">Ta prochaine étape :</p>
+    <p style="margin:0 0 20px;font-size:16px;line-height:24px;color:${INK};font-weight:600;">
+      Jour ${dayNumber} : ${dayTitle}
+    </p>
+    ${button(dashboard, "Reprendre mon parcours")}
+    <p style="margin:20px 0 0;font-size:13px;line-height:20px;color:${MUTED};">
+      Un blocage ? Réponds à cet email, ou clique sur "Un blocage ?" en bas de ton jour. On lit tout, et ça nous aide à améliorer la formation.
+    </p>
+  `;
+  return {
+    subject: "Ta prochaine étape FormaQuiz t'attend",
+    html: layout(inner),
+  };
+}

@@ -114,6 +114,14 @@ Pas d'étudiants encore : on peut tout construire sans déranger personne.
       action, max 2). Affiché sur Avancées (TiquizInsights) + injecté dans
       le prompt du coach (il conseille à partir des vrais chiffres). On se
       tait si volume insuffisant ou pas de fuite claire.
-- [ ] D feedback + relances + auto-amélioration
+- [x] D feedback + relances + auto-amélioration :
+      - Récap hebdo DOUX le lundi (cron /api/cron/weekly-recap, auth
+        CRON_SECRET, idempotent via digest_log). Uniquement aux élèves
+        dont le parcours n'est pas fini. Pas de spam.
+      - Collecte des blocages : bouton "Un blocage ?" sur chaque jour
+        (BlockerButton -> /api/me/feedback, table feedback).
+      - Dashboard admin /admin/feedback : décrochage par jour + ce que
+        les élèves disent, pour corriger le contenu en continu.
+      - CRON à brancher côté serveur : lundi matin, cf. notes de déploiement.
 - [ ] E moteur de mise en avant
 - [ ] C Quiz Doctor
