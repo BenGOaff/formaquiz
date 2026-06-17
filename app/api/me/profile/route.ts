@@ -1,16 +1,24 @@
 // app/api/me/profile/route.ts
 // Mise a jour du profil par l'eleve lui-meme (RLS : il ne touche que le
-// sien). Champs editables : prenom, niche, niveau, objectif. Ne touche
-// pas a diagnostic_completed_at (le diagnostic reste considere fait).
+// sien). Champs editables : prenom, niche, activite, maturite,
+// monetisation, budget pub. Ne touche pas a diagnostic_completed_at.
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import {
+  ACTIVITY_VALUES,
+  MATURITY_VALUES,
+  MONETIZATION_VALUES,
+  ADS_VALUES,
+} from "@/lib/businessProfile";
 
 const schema = z.object({
   firstName: z.string().min(1).max(80),
   niche: z.string().min(1).max(300),
-  level: z.enum(["debutant", "intermediaire", "avance"]),
-  objective: z.enum(["capter", "qualifier", "segmenter", "vendre"]),
+  activityType: z.enum(ACTIVITY_VALUES),
+  maturity: z.enum(MATURITY_VALUES),
+  monetization: z.enum(MONETIZATION_VALUES),
+  adsBudget: z.enum(ADS_VALUES),
 });
 
 export async function PATCH(req: NextRequest) {
@@ -30,8 +38,10 @@ export async function PATCH(req: NextRequest) {
     .update({
       full_name: parsed.data.firstName.trim(),
       niche: parsed.data.niche.trim(),
-      level: parsed.data.level,
-      objective: parsed.data.objective,
+      activity_type: parsed.data.activityType,
+      maturity: parsed.data.maturity,
+      monetization: parsed.data.monetization,
+      ads_budget: parsed.data.adsBudget,
       updated_at: new Date().toISOString(),
     })
     .eq("id", user.id);

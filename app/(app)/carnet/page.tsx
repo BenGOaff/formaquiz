@@ -7,21 +7,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { NoAccess } from "@/components/NoAccess";
+import {
+  ACTIVITY_OPTIONS,
+  MATURITY_OPTIONS,
+  MONETIZATION_OPTIONS,
+  ADS_OPTIONS,
+  labelOf,
+} from "@/lib/businessProfile";
 
 export const dynamic = "force-dynamic";
-
-const LEVEL_LABEL: Record<string, string> = {
-  debutant: "Débutant",
-  intermediaire: "Intermédiaire",
-  avance: "Avancé",
-};
-
-const OBJECTIVE_LABEL: Record<string, string> = {
-  capter: "Capter des leads",
-  qualifier: "Qualifier mes prospects",
-  segmenter: "Segmenter mon audience",
-  vendre: "Vendre directement",
-};
 
 export default async function CarnetPage() {
   const viewer = await getViewer();
@@ -31,7 +25,13 @@ export default async function CarnetPage() {
   const carnet = await getCarnet(viewer.userId);
   const profile = viewer.profile;
   const firstName = profile?.full_name?.split(" ")[0] ?? null;
-  const hasCompass = Boolean(profile?.niche || profile?.level || profile?.objective);
+  const hasCompass = Boolean(
+    profile?.niche ||
+      profile?.activity_type ||
+      profile?.maturity ||
+      profile?.monetization ||
+      profile?.ads_budget,
+  );
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
@@ -56,14 +56,17 @@ export default async function CarnetPage() {
             </span>
             <div className="grid gap-3 sm:grid-cols-3">
               {profile?.niche && <Field label="Ma niche" value={profile.niche} />}
-              {profile?.level && (
-                <Field label="Mon niveau" value={LEVEL_LABEL[profile.level] ?? profile.level} />
+              {profile?.activity_type && (
+                <Field label="Mon activité" value={labelOf(ACTIVITY_OPTIONS, profile.activity_type)} />
               )}
-              {profile?.objective && (
-                <Field
-                  label="Mon objectif n°1"
-                  value={OBJECTIVE_LABEL[profile.objective] ?? profile.objective}
-                />
+              {profile?.maturity && (
+                <Field label="Où j'en suis" value={labelOf(MATURITY_OPTIONS, profile.maturity)} />
+              )}
+              {profile?.monetization && (
+                <Field label="Ma monétisation" value={labelOf(MONETIZATION_OPTIONS, profile.monetization)} />
+              )}
+              {profile?.ads_budget && (
+                <Field label="Budget pub" value={labelOf(ADS_OPTIONS, profile.ads_budget)} />
               )}
             </div>
           </CardContent>

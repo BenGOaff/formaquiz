@@ -1,16 +1,24 @@
 // app/api/me/diagnostic/route.ts
-// Enregistre le diagnostic d'entree de l'eleve : niveau, niche, objectif.
-// Ecrit sur son propre profil (RLS : un eleve ne touche que le sien) et
-// marque la completion pour ne plus represente le diagnostic.
+// Enregistre l'onboarding business de l'eleve : prenom, niche, type
+// d'activite, maturite, monetisation, budget pub. Ecrit sur son propre
+// profil (RLS) et marque la completion.
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import {
+  ACTIVITY_VALUES,
+  MATURITY_VALUES,
+  MONETIZATION_VALUES,
+  ADS_VALUES,
+} from "@/lib/businessProfile";
 
 const schema = z.object({
   firstName: z.string().min(1).max(80),
-  level: z.enum(["debutant", "intermediaire", "avance"]),
   niche: z.string().min(1).max(300),
-  objective: z.enum(["capter", "qualifier", "segmenter", "vendre"]),
+  activityType: z.enum(ACTIVITY_VALUES),
+  maturity: z.enum(MATURITY_VALUES),
+  monetization: z.enum(MONETIZATION_VALUES),
+  adsBudget: z.enum(ADS_VALUES),
 });
 
 export async function POST(req: NextRequest) {
@@ -30,9 +38,11 @@ export async function POST(req: NextRequest) {
       id: user.id,
       email: user.email ?? null,
       full_name: parsed.data.firstName.trim(),
-      level: parsed.data.level,
       niche: parsed.data.niche.trim(),
-      objective: parsed.data.objective,
+      activity_type: parsed.data.activityType,
+      maturity: parsed.data.maturity,
+      monetization: parsed.data.monetization,
+      ads_budget: parsed.data.adsBudget,
       diagnostic_completed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },

@@ -4,6 +4,13 @@
 // Pas de RAG : on borne le contexte (index de tous les jours + le jour
 // courant en entier) pour maitriser le cout et l'hallucination.
 import "server-only";
+import {
+  ACTIVITY_OPTIONS,
+  MATURITY_OPTIONS,
+  MONETIZATION_OPTIONS,
+  ADS_OPTIONS,
+  labelOf,
+} from "@/lib/businessProfile";
 
 export interface CoachDay {
   day_number: number;
@@ -75,11 +82,25 @@ export function buildCoachSystemPrompt(input: {
   currentDay: CoachDay | null;
   firstName: string | null;
   niche: string | null;
-  level: string | null;
-  objective: string | null;
+  activityType: string | null;
+  maturity: string | null;
+  monetization: string | null;
+  adsBudget: string | null;
   currentAnswers: CoachAnswer[];
 }): string {
-  const { instruction, docs, days, currentDay, firstName, niche, level, objective, currentAnswers } = input;
+  const {
+    instruction,
+    docs,
+    days,
+    currentDay,
+    firstName,
+    niche,
+    activityType,
+    maturity,
+    monetization,
+    adsBudget,
+    currentAnswers,
+  } = input;
 
   const persona = instruction && instruction.trim() ? instruction.trim() : SYSTEM_PERSONA;
 
@@ -114,10 +135,19 @@ export function buildCoachSystemPrompt(input: {
   const profileBits: string[] = [];
   if (firstName) profileBits.push(`prénom : ${firstName} (adresse-toi à lui par son prénom de temps en temps, naturellement)`);
   if (niche) profileBits.push(`niche : ${niche}`);
-  if (level) profileBits.push(`niveau : ${level}`);
-  if (objective) profileBits.push(`objectif principal : ${objective}`);
+  if (activityType) profileBits.push(`activité : ${labelOf(ACTIVITY_OPTIONS, activityType)}`);
+  if (maturity) profileBits.push(`maturité business : ${labelOf(MATURITY_OPTIONS, maturity)}`);
+  if (monetization) profileBits.push(`monétisation : ${labelOf(MONETIZATION_OPTIONS, monetization)}`);
+  if (adsBudget) profileBits.push(`budget pub : ${labelOf(ADS_OPTIONS, adsBudget)}`);
   if (profileBits.length) {
-    prompt += `\n\n=== CONTEXTE DE L'ÉLÈVE ===\n${profileBits.join("\n")}`;
+    prompt += `\n\n=== CONTEXTE DE L'ÉLÈVE (adapte tes conseils à SA situation) ===\n${profileBits.join("\n")}`;
+    // Adaptations clefs selon le profil.
+    if (monetization === "affiliation" || monetization === "les_deux") {
+      prompt += `\nNote : il fait de l'affiliation. Oriente le quiz vers la recommandation (le résultat diagnostique le besoin et présente le produit affilié comme solution logique), pas vers la vente d'une offre propre.`;
+    }
+    if (adsBudget === "non") {
+      prompt += `\nNote : pas de budget pub. Priorise les leviers gratuits, ne propose pas d'ads tant que le quiz n'est pas validé en gratuit.`;
+    }
   }
 
   if (currentAnswers.length) {

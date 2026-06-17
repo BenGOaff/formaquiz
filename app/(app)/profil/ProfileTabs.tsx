@@ -12,23 +12,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import {
+  ACTIVITY_OPTIONS,
+  MATURITY_OPTIONS,
+  MONETIZATION_OPTIONS,
+  ADS_OPTIONS,
+  type ActivityType,
+  type Maturity,
+  type Monetization,
+  type AdsBudget,
+} from "@/lib/businessProfile";
 
-type Level = "debutant" | "intermediaire" | "avance";
-type Objective = "capter" | "qualifier" | "segmenter" | "vendre";
 type Tab = "profil" | "reglages";
-
-const LEVEL_OPTIONS: { value: Level; label: string }[] = [
-  { value: "debutant", label: "Débutant" },
-  { value: "intermediaire", label: "Intermédiaire" },
-  { value: "avance", label: "Avancé" },
-];
-
-const OBJECTIVE_OPTIONS: { value: Objective; label: string }[] = [
-  { value: "capter", label: "Capter des leads" },
-  { value: "qualifier", label: "Qualifier mes prospects" },
-  { value: "segmenter", label: "Segmenter mon audience" },
-  { value: "vendre", label: "Vendre directement" },
-];
 
 export function ProfileTabs({
   userId,
@@ -36,8 +31,10 @@ export function ProfileTabs({
   initialTab,
   firstName: initialFirstName,
   niche: initialNiche,
-  level: initialLevel,
-  objective: initialObjective,
+  activity: initialActivity,
+  maturity: initialMaturity,
+  monetization: initialMonetization,
+  adsBudget: initialAds,
   avatarUrl: initialAvatarUrl,
 }: {
   userId: string;
@@ -45,8 +42,10 @@ export function ProfileTabs({
   initialTab: Tab;
   firstName: string;
   niche: string;
-  level: Level | null;
-  objective: Objective | null;
+  activity: ActivityType | null;
+  maturity: Maturity | null;
+  monetization: Monetization | null;
+  adsBudget: AdsBudget | null;
   avatarUrl: string | null;
 }) {
   const router = useRouter();
@@ -54,8 +53,10 @@ export function ProfileTabs({
 
   const [firstName, setFirstName] = useState(initialFirstName);
   const [niche, setNiche] = useState(initialNiche);
-  const [level, setLevel] = useState<Level | null>(initialLevel);
-  const [objective, setObjective] = useState<Objective | null>(initialObjective);
+  const [activity, setActivity] = useState<ActivityType | null>(initialActivity);
+  const [maturity, setMaturity] = useState<Maturity | null>(initialMaturity);
+  const [monetization, setMonetization] = useState<Monetization | null>(initialMonetization);
+  const [ads, setAds] = useState<AdsBudget | null>(initialAds);
   const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl);
   const [savingInfo, setSavingInfo] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -106,7 +107,7 @@ export function ProfileTabs({
 
   async function saveInfo(e: React.FormEvent) {
     e.preventDefault();
-    if (!firstName.trim() || !niche.trim() || !level || !objective) {
+    if (!firstName.trim() || !niche.trim() || !activity || !maturity || !monetization || !ads) {
       toast.error("Remplis tous les champs pour enregistrer.");
       return;
     }
@@ -115,7 +116,14 @@ export function ProfileTabs({
       const res = await fetch("/api/me/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firstName: firstName.trim(), niche: niche.trim(), level, objective }),
+        body: JSON.stringify({
+          firstName: firstName.trim(),
+          niche: niche.trim(),
+          activityType: activity,
+          maturity,
+          monetization,
+          adsBudget: ads,
+        }),
       });
       if (!res.ok) throw new Error("save failed");
       toast.success("Profil mis à jour.");
@@ -216,28 +224,56 @@ export function ProfileTabs({
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label>Mon niveau</Label>
+                <Label>Mon activité</Label>
                 <div className="flex flex-col gap-2">
-                  {LEVEL_OPTIONS.map((opt) => (
+                  {ACTIVITY_OPTIONS.map((opt) => (
                     <Choice
                       key={opt.value}
                       label={opt.label}
-                      selected={level === opt.value}
-                      onClick={() => setLevel(opt.value)}
+                      selected={activity === opt.value}
+                      onClick={() => setActivity(opt.value)}
                     />
                   ))}
                 </div>
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label>Mon objectif n°1</Label>
+                <Label>Où j'en suis</Label>
                 <div className="flex flex-col gap-2">
-                  {OBJECTIVE_OPTIONS.map((opt) => (
+                  {MATURITY_OPTIONS.map((opt) => (
                     <Choice
                       key={opt.value}
                       label={opt.label}
-                      selected={objective === opt.value}
-                      onClick={() => setObjective(opt.value)}
+                      selected={maturity === opt.value}
+                      onClick={() => setMaturity(opt.value)}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label>Ma monétisation</Label>
+                <div className="flex flex-col gap-2">
+                  {MONETIZATION_OPTIONS.map((opt) => (
+                    <Choice
+                      key={opt.value}
+                      label={opt.label}
+                      selected={monetization === opt.value}
+                      onClick={() => setMonetization(opt.value)}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label>Budget pub</Label>
+                <div className="flex flex-col gap-2">
+                  {ADS_OPTIONS.map((opt) => (
+                    <Choice
+                      key={opt.value}
+                      label={opt.label}
+                      selected={ads === opt.value}
+                      onClick={() => setAds(opt.value)}
                     />
                   ))}
                 </div>
