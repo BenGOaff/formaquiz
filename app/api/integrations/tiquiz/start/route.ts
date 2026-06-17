@@ -21,7 +21,9 @@ export async function GET(req: NextRequest) {
   const res = NextResponse.redirect(`${TIQUIZ_AUTHORIZE_URL}?state=${encodeURIComponent(state)}`);
   res.cookies.set("tiquiz_oauth_state", state, {
     httpOnly: true,
-    secure: true,
+    // En dev (http://localhost) un cookie Secure est ignore par le
+    // navigateur : on ne le force qu'en production.
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
     maxAge: 600,
