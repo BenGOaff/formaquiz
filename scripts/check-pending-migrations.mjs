@@ -3,32 +3,57 @@
 //
 // Detecte AUTOMATIQUEMENT les migrations Supabase non appliquees en lisant
 // TOUS les .sql de supabase/migrations/ et en testant l'existence des
-// tables / colonnes qu'ils declarent. Porte du meme outil sur Tiquiz.
+// tables / colonnes qu'ils declarent, via l'API REST (PostgREST).
 //
-// Methode (best-effort, conservateur pour eviter les faux positifs) :
-//   - CREATE TABLE [IF NOT EXISTS] <nom>            -> verifie la table
-//   - ALTER TABLE <table> ADD COLUMN <col>          -> verifie la colonne
-//   - Ignore : INSERT, UPDATE, DROP, CREATE INDEX/POLICY/TRIGGER/FUNCTION,
-//              GRANT, NOTIFY, etc. (donc les seeds ne sont pas detectes ici)
+// Robuste sur Node 20 : pas de supabase-js (qui exige WebSocket), juste
+// fetch. Charge aussi le .env tout seul, donc PAS besoin de `set -a; . .env`.
 //
-// Usage (sur le serveur, env charge) :
-//   cd ~/formaquiz && set -a; . .env; set +a
-//   npm run check:migrations-pending
+// Usage (sur le serveur) :
+//   cd ~/formaquiz && npm run check:migrations-pending
 //
 // Exit : 0 si tout est applique, 1 si au moins 1 migration en retard.
 
-import { createClient } from "@supabase/supabase-js";
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const MIGRATIONS_DIR = join(__dirname, "..", "supabase", "migrations");
+const ROOT = join(__dirname, "..");
+const MIGRATIONS_DIR = join(ROOT, "supabase", "migrations");
 
-const SUPABASE_URL =
+// ── Chargement best-effort du .env (sans l'executer, donc pas de bug de
+//    caractere special comme avec `. .env`). On ne surcharge pas une var
+//    deja presente dans l'environnement.
+function loadDotenv() {
+  for (const name of [".env", ".env.local"]) {
+    const p = join(ROOT, name);
+    if (!existsSync(p)) continue;
+    const content = readFileSync(p, "utf8");
+    for (const rawLine of content.split(/\r?\n/)) {
+      const line = rawLine.trim();
+      if (!line || line.startsWith("#")) continue;
+      const m = line.match(/^(?:export\s+)?([A-Z0-9_]+)\s*=\s*(.*)$/i);
+      if (!m) continue;
+      let val = m[2];
+      // Retire des guillemets entourants eventuels.
+      if (
+        (val.startsWith('"') && val.endsWith('"')) ||
+        (val.startsWith("'") && val.endsWith("'"))
+      ) {
+        val = val.slice(1, -1);
+      }
+      if (process.env[m[1]] === undefined) process.env[m[1]] = val;
+    }
+  }
+}
+loadDotenv();
+
+const SUPABASE_URL = (
   process.env.SUPABASE_URL ??
   process.env.NEXT_PUBLIC_SUPABASE_URL ??
-  process.env.SUPABASE_PROJECT_URL;
+  process.env.SUPABASE_PROJECT_URL ??
+  ""
+).replace(/\/$/, "");
 const SERVICE_ROLE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY ??
   process.env.SUPABASE_SERVICE_ROLE ??
@@ -36,14 +61,39 @@ const SERVICE_ROLE_KEY =
   process.env.SUPABASE_SECRET_KEY;
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-  console.error("ENV manquantes : NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY");
-  console.error("Sur le serveur : cd ~/formaquiz && set -a; . .env; set +a ; puis relance.");
+  console.error("ENV manquantes : NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (cherchees dans .env)");
   process.exit(2);
 }
 
-const supa = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
-  auth: { persistSession: false },
-});
+const HEADERS = { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` };
+
+async function probe(query) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${query}`, { headers: HEADERS });
+  const text = await res.text().catch(() => "");
+  return { status: res.status, text };
+}
+
+function isMissingTable(r) {
+  return r.status === 404 || /PGRST205|could not find the table|relation .* does not exist/i.test(r.text);
+}
+function isMissingColumn(r) {
+  return /PGRST204|42703|column .* does not exist|could not find the .* column/i.test(r.text);
+}
+
+async function tableExists(table) {
+  const r = await probe(`${table}?select=*&limit=1`);
+  if (r.status === 200 || r.status === 206) return { exists: true };
+  if (isMissingTable(r)) return { exists: false, reason: r.text.slice(0, 160) };
+  return { exists: true, warning: `${r.status} ${r.text.slice(0, 120)}` };
+}
+
+async function columnExists(table, col) {
+  const r = await probe(`${table}?select=${encodeURIComponent(col)}&limit=1`);
+  if (r.status === 200 || r.status === 206) return { exists: true };
+  if (isMissingTable(r)) return { exists: false, reason: `TABLE ABSENTE` };
+  if (isMissingColumn(r)) return { exists: false, reason: r.text.slice(0, 160) };
+  return { exists: true, warning: `${r.status} ${r.text.slice(0, 120)}` };
+}
 
 function parseSql(sql) {
   const stripped = sql.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*--.*$/gm, "");
@@ -56,9 +106,8 @@ function parseSql(sql) {
   const alterBlockRe = /alter\s+table\s+(?:if\s+exists\s+)?(?:only\s+)?(?:public\.)?["']?(\w+)["']?([\s\S]*?);/gi;
   for (const m of stripped.matchAll(alterBlockRe)) {
     const table = m[1].toLowerCase();
-    const body = m[2];
     const addColRe = /\badd\s+(?:column\s+)?(?:if\s+not\s+exists\s+)?["']?(\w+)["']?/gi;
-    for (const c of body.matchAll(addColRe)) {
+    for (const c of m[2].matchAll(addColRe)) {
       const col = c[1].toLowerCase();
       if (["constraint", "primary", "foreign", "unique", "check", "index"].includes(col)) continue;
       if (!columnsByTable.has(table)) columnsByTable.set(table, new Set());
@@ -68,39 +117,17 @@ function parseSql(sql) {
   return { tables, columnsByTable };
 }
 
-async function tableExists(table) {
-  const { error } = await supa.from(table).select("*", { count: "exact", head: true }).limit(0);
-  if (!error) return { exists: true };
-  if (error.code === "PGRST205" || /relation.*does not exist/i.test(error.message)) {
-    return { exists: false, reason: error.message };
-  }
-  return { exists: true, warning: `${error.code} ${error.message}` };
-}
-
-async function columnExists(table, col) {
-  const { error } = await supa.from(table).select(col).limit(1);
-  if (!error) return { exists: true };
-  if (error.code === "PGRST204" || /column.*does not exist/i.test(error.message)) {
-    return { exists: false, reason: error.message };
-  }
-  if (error.code === "PGRST205" || /relation.*does not exist/i.test(error.message)) {
-    return { exists: false, reason: `TABLE ABSENTE : ${error.message}` };
-  }
-  return { exists: true, warning: `${error.code} ${error.message}` };
-}
-
 async function main() {
   console.log(`> check:migrations-pending FormaQuiz (${SUPABASE_URL})`);
   const files = readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql")).sort();
-  console.log(`  ${files.length} fichiers .sql a scanner dans supabase/migrations/`);
+  console.log(`  ${files.length} fichiers .sql a scanner`);
 
   let totalChecks = 0;
   let totalFails = 0;
   const failedMigrations = [];
 
   for (const file of files) {
-    const sql = readFileSync(join(MIGRATIONS_DIR, file), "utf8");
-    const { tables, columnsByTable } = parseSql(sql);
+    const { tables, columnsByTable } = parseSql(readFileSync(join(MIGRATIONS_DIR, file), "utf8"));
     if (tables.size === 0 && columnsByTable.size === 0) continue;
 
     const fails = [];
@@ -133,7 +160,7 @@ async function main() {
   if (failedMigrations.length > 0) {
     console.log("\n🚨 MIGRATIONS A APPLIQUER SUR SUPABASE (FormaQuiz) :");
     for (const m of failedMigrations) console.log(`  - supabase/migrations/${m.file}`);
-    console.log("\nComment appliquer : Studio FormaQuiz -> SQL Editor -> coller chaque fichier -> Run, puis relancer ce script.");
+    console.log("\nStudio FormaQuiz -> SQL Editor -> coller chaque fichier -> Run, puis relancer ce script.");
     process.exit(1);
   }
   console.log("Toutes les migrations detectables sont appliquees. ok");
