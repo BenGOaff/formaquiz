@@ -53,6 +53,30 @@ export interface TiquizMetrics {
   topQuiz: { title: string; leads: number } | null;
 }
 
+// ── Chantier B : funnel "done-for-you" genere a partir du carnet ──
+export interface FunnelEmail {
+  subject: string;
+  body: string;
+}
+export interface FunnelResultEmail {
+  result: string;
+  subject: string;
+  body: string;
+}
+export interface FunnelLaunch {
+  posts: string[];
+  dm: string;
+  partnerEmail: string;
+}
+export interface FunnelAssets {
+  welcome: FunnelEmail[];
+  byResult: FunnelResultEmail[];
+  sales: FunnelEmail[];
+  launch: FunnelLaunch;
+  /** Repli si la generation n'a pas pu etre parsee en JSON structure. */
+  raw?: string;
+}
+
 export interface DayWithProgress extends Day {
   progress: ProgressStatus;
   unlocked: boolean;

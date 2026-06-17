@@ -8,6 +8,7 @@ import {
   BookOpen,
   GraduationCap,
   Trophy,
+  Megaphone,
   ShieldCheck,
   UserCircle,
   Settings,
@@ -24,6 +25,7 @@ const NAV = [
   { href: "/dashboard", label: "Formation", icon: GraduationCap },
   { href: "/avancees", label: "Avancées", icon: Trophy },
   { href: "/carnet", label: "Carnet", icon: BookOpen },
+  { href: "/funnel", label: "Campagne", icon: Megaphone },
 ];
 
 export function AppHeader({

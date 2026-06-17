@@ -3,6 +3,10 @@
 Espace membre Next.js + Supabase, petit frère de Tiquiz. App séparée,
 sur le VPS de Béné. On ne modifie JAMAIS le code de Tiquiz ni Tipote.
 
+> **Vision produit et roadmap V2 : lire `VISION_ET_ROADMAP.md`.** Source de
+> vérité des intentions Béné (étoile polaire, 5 chantiers A à E, ordre,
+> statut). À relire au début de toute session qui touche au produit.
+
 ## Règles non négociables
 
 - **Tutoiement** partout dans l'interface et le contenu.
