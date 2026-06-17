@@ -104,8 +104,11 @@ Pas d'étudiants encore : on peut tout construire sans déranger personne.
 ## Statut (à tenir à jour)
 - [x] B funnel done-for-you (page "Campagne" : génère séquences email +
       kit de lancement depuis le carnet/persona, copier-coller + export .md ;
-      table funnel_assets, /api/me/funnel, lib/generate/funnel). Reste à
-      faire si besoin : vrai format d'import Systeme.io.
+      table funnel_assets, /api/me/funnel, lib/generate/funnel).
+- [x] B+ Import Systeme.io en 1 clic via URL de partage : l'admin gère des
+      modèles SIO (table sio_templates, /admin/modeles), l'élève les importe
+      depuis la page Campagne (boutons "Importer"). Béné crée le modèle dans
+      SIO, colle l'URL de partage.
 - [ ] A coach proactif data
 - [ ] D feedback + relances + auto-amélioration
 - [ ] E moteur de mise en avant

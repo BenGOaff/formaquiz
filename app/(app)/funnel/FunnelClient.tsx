@@ -3,17 +3,30 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Sparkles, RefreshCw, Copy, Download, Mail, Megaphone, Users, MessageSquare } from "lucide-react";
+import {
+  Sparkles,
+  RefreshCw,
+  Copy,
+  Download,
+  Mail,
+  Megaphone,
+  Users,
+  MessageSquare,
+  Boxes,
+  ExternalLink,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import type { FunnelAssets, FunnelEmail, FunnelResultEmail } from "@/lib/types";
+import type { FunnelAssets, FunnelEmail, FunnelResultEmail, SioTemplate } from "@/lib/types";
 
 export function FunnelClient({
   initialAssets,
   generatedAt,
+  templates = [],
 }: {
   initialAssets: FunnelAssets | null;
   generatedAt: string | null;
+  templates?: SioTemplate[];
 }) {
   const router = useRouter();
   const [assets, setAssets] = useState<FunnelAssets | null>(initialAssets);
@@ -40,9 +53,13 @@ export function FunnelClient({
     download("ma-campagne-formaquiz.md", toMarkdown(assets));
   }
 
+  const templatesBlock = templates.length > 0 ? <SioTemplatesBlock templates={templates} /> : null;
+
   if (!assets) {
     return (
-      <Card>
+      <div className="flex flex-col gap-6">
+        {templatesBlock}
+        <Card>
         <CardContent className="flex flex-col items-start gap-4 py-8">
           <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
             <Megaphone className="size-6" />
@@ -60,12 +77,14 @@ export function FunnelClient({
             {busy ? "Je rédige ta campagne..." : "Générer ma campagne"}
           </Button>
         </CardContent>
-      </Card>
+        </Card>
+      </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-6">
+      {templatesBlock}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-muted-foreground">
           {generatedAt ? `Générée le ${new Date(generatedAt).toLocaleDateString("fr-FR")}.` : ""} Tu
@@ -249,6 +268,44 @@ function toMarkdown(a: FunnelAssets): string {
   if (a.launch.dm) lines.push("### Script de message direct", a.launch.dm, "");
   if (a.launch.partnerEmail) lines.push("### Email d'échange partenaire", a.launch.partnerEmail, "");
   return lines.join("\n");
+}
+
+function SioTemplatesBlock({ templates }: { templates: SioTemplate[] }) {
+  return (
+    <Card className="border-primary/30 bg-surface-soft">
+      <CardContent className="flex flex-col gap-3 py-5">
+        <div className="flex items-center gap-2">
+          <Boxes className="size-5 text-primary" />
+          <h2 className="font-display font-semibold">Modèles à importer en 1 clic</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Des modèles Systeme.io prêts à l'emploi (séquences, tunnels). Clique, importe sur ton
+          compte, puis personnalise avec les textes générés ci-dessous.
+        </p>
+        <div className="flex flex-col gap-2">
+          {templates.map((t) => (
+            <div
+              key={t.id}
+              className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background p-3"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium">{t.label}</p>
+                {t.description && (
+                  <p className="truncate text-xs text-muted-foreground">{t.description}</p>
+                )}
+              </div>
+              <Button asChild size="sm">
+                <a href={t.url} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink />
+                  Importer
+                </a>
+              </Button>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 function download(filename: string, content: string) {
