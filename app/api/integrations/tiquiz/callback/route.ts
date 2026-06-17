@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
   const exchanged = await exchangeCodeForToken(code);
   if (!exchanged) return fail();
 
-  await saveConnection(user.id, exchanged.token, exchanged.tiquizUserId);
+  await saveConnection(user.id, exchanged.token, exchanged.tiquizUserId, exchanged.email);
   await syncMetrics(user.id); // premiere synchro (best-effort)
 
   const res = NextResponse.redirect(appUrl(req, "/dashboard?tiquiz=connected"));

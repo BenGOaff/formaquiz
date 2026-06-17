@@ -18,6 +18,7 @@ export const TIQUIZ_AUTHORIZE_URL = `${TIQUIZ_BASE}/connect/formaquiz`;
 export interface TiquizConnection {
   user_id: string;
   tiquiz_user_id: string | null;
+  tiquiz_email: string | null;
   token: string;
   connected_at: string;
   last_synced_at: string | null;
@@ -42,7 +43,7 @@ export async function getTiquizConnection(userId: string): Promise<TiquizConnect
 /** Echange app-a-app du code de consentement contre un token durable. */
 export async function exchangeCodeForToken(
   code: string,
-): Promise<{ token: string; tiquizUserId: string | null } | null> {
+): Promise<{ token: string; tiquizUserId: string | null; email: string | null } | null> {
   try {
     const res = await fetch(`${TIQUIZ_BASE}/api/partner/token`, {
       method: "POST",
@@ -53,7 +54,11 @@ export async function exchangeCodeForToken(
     if (!res.ok) return null;
     const json = await res.json();
     if (!json?.ok || !json.token) return null;
-    return { token: json.token as string, tiquizUserId: (json.user_id as string) ?? null };
+    return {
+      token: json.token as string,
+      tiquizUserId: (json.user_id as string) ?? null,
+      email: (json.email as string) ?? null,
+    };
   } catch {
     return null;
   }
@@ -78,16 +83,94 @@ export async function saveConnection(
   userId: string,
   token: string,
   tiquizUserId: string | null,
+  tiquizEmail: string | null,
 ): Promise<void> {
   await supabaseAdmin.from("tiquiz_connections").upsert(
     {
       user_id: userId,
       token,
       tiquiz_user_id: tiquizUserId,
+      tiquiz_email: tiquizEmail,
       connected_at: new Date().toISOString(),
     },
     { onConflict: "user_id" },
   );
+  // Une connexion explicite annule un eventuel opt-out d'auto-connexion.
+  await supabaseAdmin
+    .from("profiles")
+    .update({ tiquiz_autolink_optout: false })
+    .eq("id", userId);
+}
+
+/** Tente l'auto-connexion par email (compte Tiquiz de meme adresse). */
+async function autoLink(
+  email: string,
+): Promise<{ token: string; tiquizUserId: string | null; email: string | null } | null> {
+  try {
+    const res = await fetch(`${TIQUIZ_BASE}/api/partner/auto-link`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-partner-secret": SHARED },
+      body: JSON.stringify({ email }),
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (!json?.ok || !json.found || !json.token) return null;
+    return {
+      token: json.token as string,
+      tiquizUserId: (json.user_id as string) ?? null,
+      email: (json.email as string) ?? email,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Connecte automatiquement le Tiquiz de l'eleve si :
+ *  - aucune connexion existante,
+ *  - l'eleve n'a pas opt-out (deconnexion manuelle "mauvais compte"),
+ *  - un compte Tiquiz porte la meme adresse email.
+ * Renvoie true si une connexion vient d'etre etablie.
+ */
+export async function ensureAutoConnect(
+  userId: string,
+  email: string | null,
+  optout: boolean,
+): Promise<boolean> {
+  if (!email || optout) return false;
+  const existing = await getTiquizConnection(userId);
+  if (existing) return false;
+
+  const linked = await autoLink(email);
+  if (!linked) return false;
+
+  await saveConnection(userId, linked.token, linked.tiquizUserId, linked.email);
+  await syncMetrics(userId);
+  return true;
+}
+
+/** Deconnecte le Tiquiz : revoque cote Tiquiz, supprime la connexion et
+ *  pose l'opt-out pour ne pas reconnecter automatiquement (mauvais compte). */
+export async function disconnect(userId: string): Promise<void> {
+  const conn = await getTiquizConnection(userId);
+  if (conn?.token) {
+    try {
+      await fetch(`${TIQUIZ_BASE}/api/partner/revoke`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-partner-secret": SHARED },
+        body: JSON.stringify({ token: conn.token }),
+        cache: "no-store",
+      });
+    } catch {
+      // best-effort : on supprime la connexion locale quoi qu'il arrive.
+    }
+  }
+  await supabaseAdmin.from("tiquiz_connections").delete().eq("user_id", userId);
+  await supabaseAdmin
+    .from("profiles")
+    .update({ tiquiz_autolink_optout: true })
+    .eq("id", userId);
 }
 
 /** Attribue les badges de resultat merites par les metriques. */

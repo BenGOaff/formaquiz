@@ -3,7 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { BarChart3, ExternalLink, RefreshCw, Users, Eye, CheckCircle2, Share2 } from "lucide-react";
+import {
+  BarChart3,
+  ExternalLink,
+  RefreshCw,
+  Users,
+  Eye,
+  CheckCircle2,
+  Share2,
+  Unlink,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { TiquizMetrics } from "@/lib/types";
@@ -14,14 +23,30 @@ export function TiquizPanel({
   connected,
   metrics,
   lastSyncedAt,
+  connectedEmail = null,
 }: {
   connected: boolean;
   metrics: TiquizMetrics | null;
   lastSyncedAt: string | null;
+  connectedEmail?: string | null;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
   const autoRan = useRef(false);
+
+  async function disconnect() {
+    if (!confirm("Déconnecter ce compte Tiquiz ? Tes badges déjà obtenus restent acquis.")) return;
+    setDisconnecting(true);
+    try {
+      await fetch("/api/integrations/tiquiz/disconnect", { method: "POST" });
+      router.refresh();
+    } catch {
+      toast.error("Déconnexion impossible pour le moment.");
+    } finally {
+      setDisconnecting(false);
+    }
+  }
 
   async function sync(showToast: boolean) {
     setBusy(true);
@@ -116,6 +141,23 @@ export function TiquizPanel({
             {m.topQuiz.leads} leads).
           </p>
         )}
+
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
+          <p className="text-xs text-muted-foreground">
+            {connectedEmail ? (
+              <>
+                Compte connecté : <strong className="text-foreground">{connectedEmail}</strong>.
+                Mauvais compte ?
+              </>
+            ) : (
+              "Mauvais compte Tiquiz connecté ?"
+            )}
+          </p>
+          <Button variant="ghost" size="sm" onClick={disconnect} disabled={disconnecting}>
+            <Unlink />
+            {disconnecting ? "..." : "Déconnecter mon Tiquiz"}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

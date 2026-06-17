@@ -73,4 +73,6 @@ export interface Profile {
   objective: string | null;
   tiquiz_account_url: string | null;
   diagnostic_completed_at: string | null;
+  avatar_url: string | null;
+  tiquiz_autolink_optout: boolean;
 }
