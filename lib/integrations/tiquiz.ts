@@ -64,6 +64,26 @@ export async function exchangeCodeForToken(
   }
 }
 
+/** Structure des quiz de l'eleve pour le Quiz Doctor (lecture seule). */
+export async function fetchQuizAudit(
+  userId: string,
+): Promise<import("@/lib/quizDoctor").QuizStruct[] | null> {
+  const conn = await getTiquizConnection(userId);
+  if (!conn?.token) return null;
+  try {
+    const res = await fetch(`${TIQUIZ_BASE}/api/partner/quiz-audit`, {
+      headers: { "x-partner-secret": SHARED, Authorization: `Bearer ${conn.token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (!json?.ok) return null;
+    return (json.quizzes ?? []) as import("@/lib/quizDoctor").QuizStruct[];
+  } catch {
+    return null;
+  }
+}
+
 async function fetchMetrics(token: string): Promise<TiquizMetrics | null> {
   try {
     const res = await fetch(`${TIQUIZ_BASE}/api/partner/metrics`, {

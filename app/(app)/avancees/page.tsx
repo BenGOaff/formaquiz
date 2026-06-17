@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { BadgeGrid } from "@/components/BadgeGrid";
 import { TiquizPanel } from "@/components/TiquizPanel";
 import { TiquizInsights } from "@/components/TiquizInsights";
+import { QuizDoctor } from "@/components/QuizDoctor";
 import { NoAccess } from "@/components/NoAccess";
 
 export const dynamic = "force-dynamic";
@@ -74,6 +75,9 @@ export default async function AvanceesPage() {
 
       {/* Coach proactif : recommandations issues des vrais chiffres */}
       {connection && <TiquizInsights insights={computeTiquizInsights(tiquizMetrics)} />}
+
+      {/* Quiz Doctor : audit de la structure du quiz (réglages) */}
+      <QuizDoctor connected={Boolean(connection)} />
 
       {/* Badges */}
       <section className="flex flex-col gap-3">
