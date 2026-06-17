@@ -3,6 +3,12 @@ import { UserCircle } from "lucide-react";
 import { getViewer } from "@/lib/parcours";
 import { NoAccess } from "@/components/NoAccess";
 import { ProfileTabs } from "./ProfileTabs";
+import type {
+  ActivityType,
+  Maturity,
+  Monetization,
+  AdsBudget,
+} from "@/lib/businessProfile";
 
 export const dynamic = "force-dynamic";
 
@@ -38,10 +44,10 @@ export default async function ProfilPage({
         initialTab={initialTab}
         firstName={p?.full_name?.split(" ")[0] ?? ""}
         niche={p?.niche ?? ""}
-        level={(p?.level as "debutant" | "intermediaire" | "avance" | null) ?? null}
-        objective={
-          (p?.objective as "capter" | "qualifier" | "segmenter" | "vendre" | null) ?? null
-        }
+        activity={(p?.activity_type as ActivityType | null) ?? null}
+        maturity={(p?.maturity as Maturity | null) ?? null}
+        monetization={(p?.monetization as Monetization | null) ?? null}
+        adsBudget={(p?.ads_budget as AdsBudget | null) ?? null}
         avatarUrl={p?.avatar_url ?? null}
       />
     </div>

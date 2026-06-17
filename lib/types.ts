@@ -71,6 +71,11 @@ export interface Profile {
   niche: string | null;
   level: string | null;
   objective: string | null;
+  // Profil business issu de l'onboarding (parcours / coaching adaptes).
+  activity_type: string | null;
+  maturity: string | null;
+  monetization: string | null;
+  ads_budget: string | null;
   tiquiz_account_url: string | null;
   diagnostic_completed_at: string | null;
   avatar_url: string | null;

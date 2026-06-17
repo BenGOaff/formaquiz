@@ -141,8 +141,10 @@ export async function POST(req: NextRequest) {
     currentDay,
     firstName: viewer.profile?.full_name?.split(" ")[0] ?? null,
     niche: viewer.profile?.niche ?? null,
-    level: viewer.profile?.level ?? null,
-    objective: viewer.profile?.objective ?? null,
+    activityType: viewer.profile?.activity_type ?? null,
+    maturity: viewer.profile?.maturity ?? null,
+    monetization: viewer.profile?.monetization ?? null,
+    adsBudget: viewer.profile?.ads_budget ?? null,
     currentAnswers,
   });
 
