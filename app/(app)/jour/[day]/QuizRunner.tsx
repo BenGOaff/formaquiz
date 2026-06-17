@@ -113,7 +113,14 @@ export function QuizRunner({
     try {
       const res = await fetch(`/api/days/${dayNumber}/complete`, { method: "POST" });
       if (!res.ok) throw new Error("complete failed");
+      const data = (await res.json().catch(() => ({}))) as {
+        newBadges?: { code: string; label: string }[];
+      };
       setPhase("result");
+      // Celebration : badge(s) nouvellement debloque(s).
+      for (const b of data.newBadges ?? []) {
+        toast.success(`Badge débloqué : ${b.label}`, { icon: "🏅", duration: 5000 });
+      }
       router.refresh(); // met à jour la progression du dashboard
     } catch {
       toast.error("Impossible de valider le jour. Réessaie dans un instant.");

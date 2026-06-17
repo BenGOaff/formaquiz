@@ -8,6 +8,19 @@ import type {
   Profile,
   Question,
 } from "@/lib/types";
+import type { ProgressSnapshot } from "@/lib/gamification";
+
+/** Etat de progression condense, pour le calcul des badges. */
+export function snapshotFromDays(days: DayWithProgress[]): ProgressSnapshot {
+  const parcours = days.filter((d) => !d.is_bonus);
+  return {
+    completedParcoursDays: parcours
+      .filter((d) => d.progress === "completed")
+      .map((d) => d.day_number),
+    totalParcoursDays: parcours.length,
+    completedBonusCount: days.filter((d) => d.is_bonus && d.progress === "completed").length,
+  };
+}
 
 export interface Viewer {
   userId: string;

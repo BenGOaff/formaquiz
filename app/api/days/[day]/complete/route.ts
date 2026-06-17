@@ -5,6 +5,9 @@
 // score (cf. cahier des charges).
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getDaysWithProgress, snapshotFromDays } from "@/lib/parcours";
+import { earnedBadgeCodes, badgeByCode } from "@/lib/gamification";
 
 export async function POST(
   _req: NextRequest,
@@ -76,5 +79,37 @@ export async function POST(
   if (error) {
     return NextResponse.json({ ok: false, reason: "db" }, { status: 500 });
   }
-  return NextResponse.json({ ok: true });
+
+  // ── Badges : on attribue les jalons nouvellement merites ──
+  // L'ecriture passe par la service_role (RLS badges = lecture seule pour
+  // l'eleve). Un echec ici ne doit pas casser la validation du jour.
+  const newBadges: { code: string; label: string }[] = [];
+  try {
+    const days = await getDaysWithProgress(user.id);
+    const earned = earnedBadgeCodes(snapshotFromDays(days));
+
+    const { data: existing } = await supabaseAdmin
+      .from("badges")
+      .select("code")
+      .eq("user_id", user.id);
+    const have = new Set((existing ?? []).map((b) => b.code as string));
+
+    const toInsert = earned.filter((code) => !have.has(code));
+    if (toInsert.length > 0) {
+      await supabaseAdmin
+        .from("badges")
+        .upsert(
+          toInsert.map((code) => ({ user_id: user.id, code })),
+          { onConflict: "user_id,code", ignoreDuplicates: true },
+        );
+      for (const code of toInsert) {
+        const def = badgeByCode(code);
+        if (def) newBadges.push({ code, label: def.label });
+      }
+    }
+  } catch {
+    // silencieux : la validation du jour reste acquise.
+  }
+
+  return NextResponse.json({ ok: true, newBadges });
 }
