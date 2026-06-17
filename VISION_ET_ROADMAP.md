@@ -109,7 +109,11 @@ Pas d'étudiants encore : on peut tout construire sans déranger personne.
       modèles SIO (table sio_templates, /admin/modeles), l'élève les importe
       depuis la page Campagne (boutons "Importer"). Béné crée le modèle dans
       SIO, colle l'URL de partage.
-- [ ] A coach proactif data
+- [x] A coach proactif data : moteur d'insights fiable
+      (lib/insights/tiquizInsights, seuils de confiance, 1 constat = 1
+      action, max 2). Affiché sur Avancées (TiquizInsights) + injecté dans
+      le prompt du coach (il conseille à partir des vrais chiffres). On se
+      tait si volume insuffisant ou pas de fuite claire.
 - [ ] D feedback + relances + auto-amélioration
 - [ ] E moteur de mise en avant
 - [ ] C Quiz Doctor

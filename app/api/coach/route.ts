@@ -11,6 +11,8 @@ import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { buildClaudeMessageBody } from "@/lib/claudeRequest";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { buildCoachSystemPrompt, type CoachAnswer } from "@/lib/coach/knowledge";
+import { getTiquizConnection } from "@/lib/integrations/tiquiz";
+import { computeTiquizInsights } from "@/lib/insights/tiquizInsights";
 
 const DAILY_LIMIT = 40; // messages eleve par jour
 const HISTORY_LIMIT = 12; // messages passes envoyes en contexte
@@ -134,7 +136,7 @@ export async function POST(req: NextRequest) {
       .order("sort_order", { ascending: true }),
   ]);
 
-  const system = buildCoachSystemPrompt({
+  const systemBase = buildCoachSystemPrompt({
     instruction: settings?.instruction ?? null,
     docs: knowledge ?? [],
     days: days ?? [],
@@ -147,6 +149,25 @@ export async function POST(req: NextRequest) {
     adsBudget: viewer.profile?.ads_budget ?? null,
     currentAnswers,
   });
+
+  // Coach proactif : on injecte les signaux REELS du funnel Tiquiz (si
+  // connecte et si une fuite claire est detectee), pour que le coach
+  // conseille a partir des vrais chiffres, en priorite.
+  let system = systemBase;
+  try {
+    const connection = await getTiquizConnection(viewer.userId);
+    const actionable = computeTiquizInsights(connection?.metrics ?? null).filter(
+      (i) => i.tone === "alerte" || i.tone === "conseil",
+    );
+    if (actionable.length > 0) {
+      system +=
+        "\n\n=== SIGNAUX RÉELS DE SON FUNNEL TIQUIZ (à prioriser) ===\n" +
+        actionable.map((i) => `- ${i.title} ACTION : ${i.action}`).join("\n") +
+        "\nSi l'élève demande comment progresser ou pourquoi son quiz ne convertit pas assez, appuie-toi EN PRIORITÉ sur ces signaux réels.";
+    }
+  } catch {
+    // Pas de signaux disponibles : le coach fonctionne normalement.
+  }
 
   const threadId = await getOrCreateThread(supabase, viewer.userId);
   if (!threadId) return NextResponse.json({ ok: false, reason: "db" }, { status: 500 });
