@@ -22,6 +22,7 @@ export function DayEditor({ day }: { day: Day }) {
     video_url: day.video_url ?? "",
     video_id: day.video_id ?? (null as string | null),
     intro_html: day.intro_html ?? "",
+    pepite_html: day.pepite_html ?? "",
     result_html: day.result_html ?? "",
     is_bonus: day.is_bonus ?? false,
   });
@@ -44,6 +45,7 @@ export function DayEditor({ day }: { day: Day }) {
         video_id: form.video_id,
         video_url: form.video_id ? null : form.video_url || null,
         intro_html: form.intro_html || null,
+        pepite_html: form.pepite_html || null,
         result_html: form.result_html || null,
         is_bonus: form.is_bonus,
         resources: resources.filter((r) => r.label.trim() && r.url.trim()),
@@ -122,6 +124,20 @@ export function DayEditor({ day }: { day: Day }) {
             value={form.intro_html}
             onChange={(v) => set("intro_html", v)}
             placeholder="Écris le contenu du jour..."
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label>La pépite (nugget avancé et actionnable)</Label>
+          <p className="text-xs text-muted-foreground">
+            Un conseil malin (persuasion, growth hack) à appliquer tout de suite. Affiché dans un
+            encart distinct. Les variables {"{prenom}"}, {"{offre}"}, {"{client}"}, {"{audience}"}{" "}
+            s'adaptent au persona.
+          </p>
+          <RichTextEditor
+            value={form.pepite_html}
+            onChange={(v) => set("pepite_html", v)}
+            placeholder="La pépite du jour..."
           />
         </div>
 

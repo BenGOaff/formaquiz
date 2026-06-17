@@ -36,6 +36,7 @@ export interface Day {
   video_id: string | null;
   resources: DayResource[];
   result_html: string | null;
+  pepite_html: string | null;
   status: "draft" | "published";
   sort_order: number;
   is_bonus: boolean;
