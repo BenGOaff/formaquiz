@@ -7,7 +7,7 @@ import { resolveDayVideoSrc } from "@/lib/video/playback";
 import { personalizeContent } from "@/lib/personalize";
 import { resolvePersona, personaLabel } from "@/lib/personas";
 import { getPersonaVocab, getDayPersonaExample } from "@/lib/personaContent";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Gem } from "lucide-react";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { RichContent } from "@/components/RichContent";
 import { NoAccess } from "@/components/NoAccess";
@@ -58,6 +58,7 @@ export default async function DayPage({
   const vocab = await getPersonaVocab(persona);
   const introHtml = personalizeContent(d.intro_html, { firstName, vocab });
   const resultHtml = personalizeContent(d.result_html, { firstName, vocab });
+  const pepiteHtml = personalizeContent(d.pepite_html, { firstName, vocab });
   const personaExample = personalizeContent(await getDayPersonaExample(d.id, persona), {
     firstName,
     vocab,
@@ -87,6 +88,19 @@ export default async function DayPage({
         <Card>
           <CardContent className="py-5">
             <RichContent html={introHtml} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* La pepite : nugget avance et actionnable (persuasion, growth). */}
+      {pepiteHtml && (
+        <Card className="border-l-4 border-l-amber-400 bg-amber-50/60">
+          <CardContent className="flex flex-col gap-2 py-5">
+            <span className="flex items-center gap-2 text-sm font-semibold text-amber-700">
+              <Gem className="size-4" />
+              La pépite
+            </span>
+            <RichContent html={pepiteHtml} />
           </CardContent>
         </Card>
       )}

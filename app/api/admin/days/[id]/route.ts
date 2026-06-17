@@ -16,6 +16,7 @@ const patchSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   subtitle: z.string().max(300).nullable().optional(),
   intro_html: z.string().max(50000).nullable().optional(),
+  pepite_html: z.string().max(20000).nullable().optional(),
   video_url: z.string().max(2000).nullable().optional(),
   video_id: z.string().uuid().nullable().optional(),
   resources: z.array(resourceSchema).optional(),
