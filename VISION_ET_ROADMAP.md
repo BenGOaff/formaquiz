@@ -128,6 +128,12 @@ Pas d'étudiants encore : on peut tout construire sans déranger personne.
       citations à confirmer), alerte email admin, dashboard /admin/spotlights
       (relire, copier, marquer publié/écarté). Cron /api/cron/spotlights
       (resync metrics + détection + digest admin). Tables : spotlights.
-- [ ] C Quiz Doctor (dépend d'un endpoint Tiquiz exposant la structure du
+- [x] C Quiz Doctor : audit de la structure du quiz (capture activée,
+      nombre de questions, nombre de résultats, images OG + résultats,
+      personnalisation, cohérence du bonus de partage). Endpoint Tiquiz
+      /api/partner/quiz-audit (lecture seule via token) + lib/quizDoctor
+      (règles) + /api/me/quiz-audit + composant QuizDoctor sur Avancées.
+      TOUS LES 5 CHANTIERS V2 SONT LIVRÉS.
+- [ ] (ancien) C Quiz Doctor (dépend d'un endpoint Tiquiz exposant la structure du
       quiz : audit pré-publication images / nombre de questions / cohérence
       bonus / placement capture)
