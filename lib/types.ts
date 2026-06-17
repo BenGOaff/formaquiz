@@ -43,6 +43,15 @@ export interface Day {
 
 export type ProgressStatus = "locked" | "in_progress" | "completed";
 
+/** Metriques agregees remontees du compte Tiquiz de l'eleve. */
+export interface TiquizMetrics {
+  leads: number;
+  views: number;
+  completes: number;
+  shares: number;
+  topQuiz: { title: string; leads: number } | null;
+}
+
 export interface DayWithProgress extends Day {
   progress: ProgressStatus;
   unlocked: boolean;

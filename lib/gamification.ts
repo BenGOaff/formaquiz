@@ -7,15 +7,30 @@
 export type BadgeRule =
   | { type: "day"; day: number } // ce jour du parcours est termine
   | { type: "parcours_complete" } // tous les jours du parcours sont termines
-  | { type: "any_bonus" }; // au moins un bonus est termine
+  | { type: "any_bonus" } // au moins un bonus est termine
+  | { type: "metric"; kind: "leads"; threshold: number }; // vrais chiffres Tiquiz
 
 export interface BadgeDef {
   code: string;
   label: string;
   description: string;
   /** Cle d'icone, mappee vers lucide cote rendu. */
-  icon: "rocket" | "plug" | "trophy" | "users" | "graduation" | "compass";
+  icon:
+    | "rocket"
+    | "plug"
+    | "trophy"
+    | "users"
+    | "graduation"
+    | "compass"
+    | "sprout"
+    | "flame"
+    | "trending";
   rule: BadgeRule;
+}
+
+/** Chiffres reels (Tiquiz) utilises pour les badges de resultat. */
+export interface MetricSnapshot {
+  leads: number;
 }
 
 // Curates : un jalon par phase cle, pas un badge par jour (sinon ca dilue).
@@ -62,6 +77,29 @@ export const BADGES: BadgeDef[] = [
     icon: "compass",
     rule: { type: "any_bonus" },
   },
+  // Badges de resultat : bases sur tes vrais chiffres Tiquiz (connecte
+  // ton compte pour les debloquer).
+  {
+    code: "first_lead",
+    label: "Premier lead",
+    description: "Ton quiz a capté son tout premier lead. Ça commence pour de vrai.",
+    icon: "sprout",
+    rule: { type: "metric", kind: "leads", threshold: 1 },
+  },
+  {
+    code: "leads_10",
+    label: "10 leads",
+    description: "10 leads captés par ton quiz. La machine tourne.",
+    icon: "flame",
+    rule: { type: "metric", kind: "leads", threshold: 10 },
+  },
+  {
+    code: "leads_50",
+    label: "50 leads",
+    description: "50 leads. Tu as un vrai actif d'acquisition entre les mains.",
+    icon: "trending",
+    rule: { type: "metric", kind: "leads", threshold: 50 },
+  },
 ];
 
 export interface ProgressSnapshot {
@@ -73,8 +111,12 @@ export interface ProgressSnapshot {
   completedBonusCount: number;
 }
 
-/** Codes des badges merites pour un etat de progression donne. */
-export function earnedBadgeCodes(s: ProgressSnapshot): string[] {
+/**
+ * Codes des badges merites pour un etat de progression donne. Les badges
+ * de resultat (regle "metric") ne se calculent que si `metrics` est fourni
+ * (compte Tiquiz connecte).
+ */
+export function earnedBadgeCodes(s: ProgressSnapshot, metrics?: MetricSnapshot): string[] {
   const codes: string[] = [];
   for (const b of BADGES) {
     const r = b.rule;
@@ -87,6 +129,13 @@ export function earnedBadgeCodes(s: ProgressSnapshot): string[] {
     ) {
       codes.push(b.code);
     } else if (r.type === "any_bonus" && s.completedBonusCount > 0) {
+      codes.push(b.code);
+    } else if (
+      r.type === "metric" &&
+      metrics &&
+      r.kind === "leads" &&
+      metrics.leads >= r.threshold
+    ) {
       codes.push(b.code);
     }
   }

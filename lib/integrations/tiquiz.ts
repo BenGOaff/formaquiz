@@ -1,0 +1,142 @@
+// lib/integrations/tiquiz.ts
+// Cote consommateur du pont FormaQuiz <- Tiquiz. Server-only.
+// - echange du code de consentement contre un token durable
+// - lecture des metriques via le token
+// - persistance de la connexion + snapshot
+// - attribution des badges de resultat (leads)
+import "server-only";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { earnedBadgeCodes, badgeByCode } from "@/lib/gamification";
+import { snapshotFromDays, getDaysWithProgress } from "@/lib/parcours";
+import type { TiquizMetrics } from "@/lib/types";
+
+const TIQUIZ_BASE = (process.env.TIQUIZ_BASE_URL ?? "https://quiz.tipote.com").trim();
+const SHARED = (process.env.PARTNER_SHARED_SECRET ?? "").trim();
+
+export const TIQUIZ_AUTHORIZE_URL = `${TIQUIZ_BASE}/connect/formaquiz`;
+
+export interface TiquizConnection {
+  user_id: string;
+  tiquiz_user_id: string | null;
+  token: string;
+  connected_at: string;
+  last_synced_at: string | null;
+  metrics: TiquizMetrics | null;
+}
+
+export async function getTiquizConnection(userId: string): Promise<TiquizConnection | null> {
+  const { data } = await supabaseAdmin
+    .from("tiquiz_connections")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!data) return null;
+  const conn = data as TiquizConnection;
+  // metrics jsonb vaut {} tant qu'aucune synchro n'a abouti : on normalise
+  // en null pour que l'UI affiche l'etat "connecte, en cours" proprement.
+  const m = conn.metrics as TiquizMetrics | Record<string, never> | null;
+  conn.metrics = m && typeof (m as TiquizMetrics).leads === "number" ? (m as TiquizMetrics) : null;
+  return conn;
+}
+
+/** Echange app-a-app du code de consentement contre un token durable. */
+export async function exchangeCodeForToken(
+  code: string,
+): Promise<{ token: string; tiquizUserId: string | null } | null> {
+  try {
+    const res = await fetch(`${TIQUIZ_BASE}/api/partner/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-partner-secret": SHARED },
+      body: JSON.stringify({ code }),
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (!json?.ok || !json.token) return null;
+    return { token: json.token as string, tiquizUserId: (json.user_id as string) ?? null };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchMetrics(token: string): Promise<TiquizMetrics | null> {
+  try {
+    const res = await fetch(`${TIQUIZ_BASE}/api/partner/metrics`, {
+      headers: { "x-partner-secret": SHARED, Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (!json?.ok) return null;
+    return json.metrics as TiquizMetrics;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveConnection(
+  userId: string,
+  token: string,
+  tiquizUserId: string | null,
+): Promise<void> {
+  await supabaseAdmin.from("tiquiz_connections").upsert(
+    {
+      user_id: userId,
+      token,
+      tiquiz_user_id: tiquizUserId,
+      connected_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" },
+  );
+}
+
+/** Attribue les badges de resultat merites par les metriques. */
+async function awardMetricBadges(
+  userId: string,
+  metrics: TiquizMetrics,
+): Promise<{ code: string; label: string }[]> {
+  const days = await getDaysWithProgress(userId);
+  const earned = earnedBadgeCodes(snapshotFromDays(days), { leads: metrics.leads });
+
+  const { data: existing } = await supabaseAdmin
+    .from("badges")
+    .select("code")
+    .eq("user_id", userId);
+  const have = new Set((existing ?? []).map((b) => b.code as string));
+
+  const toInsert = earned.filter((code) => !have.has(code));
+  if (toInsert.length === 0) return [];
+
+  await supabaseAdmin
+    .from("badges")
+    .upsert(
+      toInsert.map((code) => ({ user_id: userId, code })),
+      { onConflict: "user_id,code", ignoreDuplicates: true },
+    );
+
+  const out: { code: string; label: string }[] = [];
+  for (const code of toInsert) {
+    const def = badgeByCode(code);
+    if (def) out.push({ code, label: def.label });
+  }
+  return out;
+}
+
+/** Rafraichit les metriques Tiquiz + attribue les nouveaux badges. */
+export async function syncMetrics(
+  userId: string,
+): Promise<{ metrics: TiquizMetrics | null; newBadges: { code: string; label: string }[] }> {
+  const conn = await getTiquizConnection(userId);
+  if (!conn) return { metrics: null, newBadges: [] };
+
+  const metrics = await fetchMetrics(conn.token);
+  if (!metrics) return { metrics: conn.metrics, newBadges: [] };
+
+  await supabaseAdmin
+    .from("tiquiz_connections")
+    .update({ metrics, last_synced_at: new Date().toISOString() })
+    .eq("user_id", userId);
+
+  const newBadges = await awardMetricBadges(userId, metrics);
+  return { metrics, newBadges };
+}

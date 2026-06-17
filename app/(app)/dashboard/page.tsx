@@ -3,10 +3,12 @@ import { redirect } from "next/navigation";
 import { CheckCircle2, Lock, Play, Sparkles, Gift, Trophy, Medal } from "lucide-react";
 import { getViewer, getDaysWithProgress, snapshotFromDays } from "@/lib/parcours";
 import { earnedBadgeCodes, BADGES } from "@/lib/gamification";
+import { getTiquizConnection } from "@/lib/integrations/tiquiz";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BadgeGrid } from "@/components/BadgeGrid";
+import { TiquizPanel } from "@/components/TiquizPanel";
 import { NoAccess } from "@/components/NoAccess";
 import { cn } from "@/lib/utils";
 import type { DayWithProgress } from "@/lib/types";
@@ -30,7 +32,12 @@ export default async function DashboardPage() {
   const allDone = total > 0 && completed === total;
   const firstName = viewer.profile?.full_name?.split(" ")[0] ?? null;
 
-  const earnedCodes = earnedBadgeCodes(snapshotFromDays(days));
+  const connection = await getTiquizConnection(viewer.userId);
+  const tiquizMetrics = connection?.metrics ?? null;
+  const earnedCodes = earnedBadgeCodes(
+    snapshotFromDays(days),
+    tiquizMetrics ? { leads: tiquizMetrics.leads } : undefined,
+  );
 
   return (
     <div className="flex flex-col gap-8">
@@ -107,6 +114,13 @@ export default async function DashboardPage() {
           </div>
         </section>
       )}
+
+      {/* Resultats reels Tiquiz (connexion 1-clic) */}
+      <TiquizPanel
+        connected={Boolean(connection)}
+        metrics={tiquizMetrics}
+        lastSyncedAt={connection?.last_synced_at ?? null}
+      />
 
       {/* Section badges : jalons reels debloques au fil du parcours */}
       <section className="flex flex-col gap-3">

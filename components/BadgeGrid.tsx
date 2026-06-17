@@ -1,4 +1,15 @@
-import { Rocket, Plug, Trophy, Users, GraduationCap, Compass, Lock } from "lucide-react";
+import {
+  Rocket,
+  Plug,
+  Trophy,
+  Users,
+  GraduationCap,
+  Compass,
+  Sprout,
+  Flame,
+  TrendingUp,
+  Lock,
+} from "lucide-react";
 import { BADGES, type BadgeDef } from "@/lib/gamification";
 import { cn } from "@/lib/utils";
 
@@ -9,6 +20,9 @@ const ICONS: Record<BadgeDef["icon"], typeof Rocket> = {
   users: Users,
   graduation: GraduationCap,
   compass: Compass,
+  sprout: Sprout,
+  flame: Flame,
+  trending: TrendingUp,
 };
 
 /**
