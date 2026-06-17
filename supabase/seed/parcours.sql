@@ -52,6 +52,8 @@ values
 <li>Un quiz révèle une identité, il ne note pas. On bannit la logique bonne ou mauvaise réponse.</li>
 <li>Vole le langage de {audience} : ses mots exacts, pris dans les avis et commentaires.</li>
 </ul>
+<h2>Gabarit de résultat (copie, puis remplis)</h2>
+<p>Garde cette trame pour chaque profil, elle vend sans vendre : <em>"Tu es [nom valorisant]. Si ça coince, ce n'est pas ta faute : c'est [le vrai coupable, une méthode ou un mythe]. La bonne nouvelle, c'est que [ce qui devient possible]. Ta prochaine étape : [le pont vers la suite]."</em></p>
 <h2>Tes actions du jour</h2>
 <ul>
 <li>Choisis l'objectif n°1 de ton quiz.</li>
@@ -73,6 +75,8 @@ values
 <li>Une automatisation : quand le contact reçoit le tag X, démarre la séquence Y.</li>
 <li>L'email qui parle du résultat explose les ouvertures, sans effort manuel.</li>
 </ul>
+<h2>Gabarit d'email de bienvenue (à copier)</h2>
+<p><em>"Salut {prenom}, ton résultat dit que tu es [profil]. Concrètement, ça veut dire [insight court]. Avant d'aller plus loin, réponds-moi en une ligne : quel est ton plus gros défi avec [ton sujet] en ce moment ? Je lis tout."</em></p>
 <h2>Tes actions du jour</h2>
 <ul>
 <li>Crée ou prépare ton compte Systeme.io et repère ta clé API.</li>
@@ -93,6 +97,8 @@ values
 <li>La règle : quiz pour des leads segmentés, sondage pour comprendre ton marché, popquiz pour capter sur tes vidéos.</li>
 <li>On peut les combiner (à voir en bonus).</li>
 </ul>
+<h2>La question à copier (avant de créer)</h2>
+<p>Pose-la à {audience}, elle vaut de l'or : <em>"Quel est ton plus gros défi avec [ton sujet] en ce moment ?"</em> Leurs réponses deviennent tes questions, tes profils et tes titres.</p>
 <h2>Tes actions du jour</h2>
 <ul>
 <li>Choisis ton format selon ton objectif du Jour 1 (pour la plupart, ce sera le quiz).</li>
@@ -113,6 +119,8 @@ values
 <li>Pense à l'image de résultat partageable et à l'image OG (l'aperçu au partage).</li>
 <li>Publie, fais le quiz toi-même, et vérifie que ton contact arrive taggué dans Systeme.io.</li>
 </ul>
+<h2>Le prompt à 3 couches (à copier dans Tiquiz)</h2>
+<p><em>"Crée un quiz pour [cible précise]. Objectif principal : [ton objectif n°1]. À la fin, le répondant doit réaliser que [la transformation]. Ton : [ta voix]. Donne 3 ou 4 profils de résultats avec un nom valorisant, et 6 à 8 questions identitaires, sans bonne ni mauvaise réponse."</em></p>
 <h2>Tes actions du jour</h2>
 <ul>
 <li>Génère ton quiz avec le prompt à 3 couches, puis affine.</li>
@@ -135,6 +143,8 @@ values
 <li>Un quiz = des semaines de contenu : un post par résultat, par question, par statistique.</li>
 <li>Les audiences des autres, gratuitement : le pod d'échange de quiz, le cadeau d'invité, les groupes sans spammer.</li>
 </ul>
+<h2>Phrase de partage (à copier sur ta page de résultat)</h2>
+<p><em>"Tu connais quelqu'un qui est exactement comme ça ? Envoie-lui le test, il va halluciner."</em> Et active l'anti-triche honnête : "partage pour débloquer ton plan détaillé".</p>
 <h2>Tes actions du jour</h2>
 <ul>
 <li>Active ton étape bonus de partage avec un bonus que tu as déjà et qui donne envie.</li>
@@ -156,6 +166,8 @@ values
 <li>Le flywheel d'autorité : au bout de 100 à 200 réponses, tu as une donnée que personne d'autre n'a.</li>
 <li>Anime simplement, mais régulièrement.</li>
 </ul>
+<h2>Message d'accueil (à copier)</h2>
+<p><em>"Bienvenue ! Ici, on [la promesse simple de ta communauté]. Pour commencer : présente-toi en une phrase et dis-nous ton résultat au quiz. On t'accueille."</em></p>
 <h2>Tes actions du jour</h2>
 <ul>
 <li>Choisis ta plateforme et crée ton espace communauté.</li>
@@ -176,6 +188,8 @@ values
 <li>Un quiz identitaire ne périme jamais : relance-le chaque trimestre avec un nouveau prétexte.</li>
 <li>Ensuite : passe en abo Tiquiz quand tu satures, explore les bonus, regarde le multiprofils et l'affiliation.</li>
 </ul>
+<h2>La question qui fait progresser ton quiz (à copier)</h2>
+<p>Sur ta page de résultat ou dans ton premier email : <em>"Qu'est-ce qui a failli t'empêcher d'aller au bout du quiz ?"</em> Les réponses te donnent, noir sur blanc, ta prochaine version.</p>
 <h2>Tes actions du jour</h2>
 <ul>
 <li>Lis ton funnel Tiquiz et repère ton point de fuite n°1.</li>
