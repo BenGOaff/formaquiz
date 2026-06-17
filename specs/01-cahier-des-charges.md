@@ -1,253 +1,150 @@
-# FormaQuiz : cahier des charges de l'espace membre
+# FormaQuiz : cahier des charges (état réel du produit)
 
-> Spec fonctionnelle et technique d'un espace membre codé sur ton serveur. Pensée pour être donnée à ton assistant de code. Pas une formation classique : un parcours sous forme de quiz géant, composé de petits quiz quotidiens qui SONT le contenu.
->
-> Conventions à respecter (les tiennes) : tutoiement, zéro tiret long dans tout contenu user-visible, Supabase + RLS, pattern webhook Systeme.io comme sur Tiquiz, migrations SQL avec IF NOT EXISTS + NOTIFY pgrst, ne jamais inventer d'URL. Reprends ton AGENTS.md et tes pitfalls habituels.
-
----
-
-## 1. Le principe en une phrase
-
-L'élève ne suit pas une formation, il avance dans un FormaQuiz : chaque jour, une page simple avec une vidéo, des ressources, et un quiz dont les questions le font agir sur SON projet. Finir le quiz du jour débloque le suivant. Un coach IA est dispo s'il bloque.
-
-La règle d'or pédagogique : **la vidéo enseigne, le quiz fait agir et débloque.** Jamais de QCM de culture générale. Les questions sont des questions d'action et de décision sur le projet réel de l'élève.
+> Ce document décrit ce que FormaQuiz FAIT aujourd'hui, concrètement.
+> Il sert de base pour lister les fonctionnalités et écrire le copywriting.
+> Il ne décrit que l'existant (pas d'idées en attente). Mis à jour juin 2026.
 
 ---
 
-## 2. Périmètre
+## 1. Ce qu'est FormaQuiz
 
-**Ce que c'est :**
-- Un espace membre web, authentifié, avec un parcours linéaire de jours (FormaQuiz).
-- Un moteur de quiz quotidien dont les réponses sont stockées (elles forment le carnet de bord de l'élève).
-- Un déblocage progressif (jour N complété debloque jour N+1).
-- Un coach IA en bulle, nourri du contenu du challenge.
-- Une gamification basée sur les vrais résultats (leads captés), pas sur des étoiles.
+FormaQuiz est un espace de formation en ligne où l'élève ne regarde pas un cours : **il avance dans un parcours en faisant**. Chaque jour, une vidéo enseigne, un petit quiz le fait agir sur SON projet, et finir le quiz du jour débloque le suivant.
 
-**Ce que ce n'est pas :**
-- Ce n'est pas Tiquiz ni Tipote. C'est une app séparée qui s'intègre à Tiquiz (l'élève utilise le vrai Tiquiz pour créer SON quiz lead-magnet pendant les missions) et à Systeme.io (paiement et accès).
-- On ne modifie pas le code de Tiquiz. On peut lire ses données (analytics leads) via un endpoint dédié, en lecture seule.
+Objectif de l'élève : repartir avec un **quiz lead-magnet publié (via Tiquiz)**, branché à son outil d'emailing (Systeme.io), qui capte des leads qualifiés en automatique, et tout le système autour (emails, diffusion) pour transformer ces leads en clients.
+
+Promesse : un système d'acquisition concret, monté en quelques jours, sans page blanche et sans se noyer.
+
+Pour qui : freelances, infopreneurs (vendeurs de formations), coachs et consultants, auteurs, créateurs de contenu, affiliés, marketing de réseau. Le contenu s'adapte au métier de chacun.
 
 ---
 
-## 3. Décision d'architecture : le moteur de quiz
+## 2. Le parcours
 
-Tu codes l'espace membre, donc tu as deux options pour les quiz quotidiens du parcours. À trancher en connaissance de cause :
+- **7 jours de parcours** (Jour 0 à Jour 7) + **4 contenus bonus**.
+  - J0 Bienvenue et le pacte. J1 Penser son quiz. J2 Les prérequis Systeme.io. J3 Choisir le bon format Tiquiz. J4 Créer et connecter son quiz. J5 Promouvoir gratuitement. J6 Créer sa communauté. J7 Adapter, suivre, et après.
+  - Bonus : trafic payant, vendre avec un quiz, exploiter les sondages, exploiter les popquiz.
+- **Déblocage par la complétion, jamais par un score.** L'élève répond, ça valide le jour et débloque le suivant. Les questions de rappel servent au feedback, elles ne bloquent pas.
+- Les **bonus sont accessibles à tout moment**, hors de la séquence quotidienne.
 
-**Option A (recommandée) : moteur de quiz natif dans l'espace membre.**
-- Tu construis un composant quiz natif. Avantage : contrôle total sur la capture des réponses (le carnet), le déblocage, le contexte donné au coach, la gamification, le tout dans une seule base de données.
-- L'expérience "quiz" est préservée (même feeling), et l'élève utilise le VRAI Tiquiz en parallèle pour créer son propre quiz lead-magnet dans les missions.
+### Anatomie d'un jour
+1. **La vidéo** qui enseigne.
+2. **Le contenu** du jour (à retenir + tes actions).
+3. **Le gabarit à copier** : les mots exacts prêts à l'emploi (trame de résultat, email de bienvenue, prompt Tiquiz, phrase de partage, etc.). Action en 30 secondes.
+4. **La pépite** : un concept avancé et actionnable (persuasion, growth), appliqué à son cas.
+5. **L'encart "Pour toi"** : un exemple concret dans SON métier.
+6. **Le quiz du jour** : des questions d'action et de décision sur son projet (jamais du QCM scolaire).
+7. **L'écran de résultat** qui relance l'élan vers le jour suivant.
 
-**Option B : embarquer de vrais quiz Tiquiz (iframe).**
-- Dogfooding maximal (l'élève est littéralement dans un quiz Tiquiz pendant qu'il apprend), mais tu dépends des données Tiquiz pour savoir qui a complété quoi et pour récupérer les réponses dans le carnet. Plus de couplage, moins de contrôle.
-
-**Recommandation :** Option A pour les quiz quotidiens du parcours, et UN vrai quiz Tiquiz embarqué au tout début (le quiz de diagnostic d'entrée) pour que l'élève goûte le vrai produit dès la première minute. Le meilleur des deux mondes.
-
----
-
-## 4. Stack et intégrations
-
-- **App** : ton stack habituel (Next.js + Supabase), sur ton serveur. Nouveau projet séparé.
-- **Auth** : Supabase Auth. RLS sur toutes les tables.
-- **Paiement et accès** : checkout via Systeme.io (page de vente sur tipote.fr). Webhook entrant Systeme.io vers l'app pour créer/activer l'accès au FormaQuiz, exactement comme le webhook qui upgrade les plans Tiquiz. URL du webhook et domaine à définir, ne pas inventer.
-- **Coach IA** : appel à une API LLM (Claude). Base de connaissance = les fichiers de ce dossier formation. Voir section 9.
-- **Lecture des résultats Tiquiz** (gamification, v2) : endpoint en lecture seule côté Tiquiz qui renvoie le nombre de leads de l'élève, si l'élève a lié son compte Tiquiz. Lecture uniquement, jamais d'écriture sur les compteurs Tiquiz.
+Le tableau de bord "Formation" présente les jours sous forme de **cartes** (style jeu), avec la progression et le jour en cours, et une section distincte pour les bonus.
 
 ---
 
-## 5. Le parcours apprenant (flow bout en bout)
+## 3. La personnalisation par persona
 
-1. L'élève achète via Systeme.io. Le webhook crée son accès et son compte.
-2. Première connexion : le quiz de diagnostic Tiquiz embarqué. Il le segmente (niveau, niche, objectif). Réponses stockées.
-3. Il atterrit sur son tableau de bord parcours : sa progression, le jour débloqué, son plan personnalisé issu du diagnostic.
-4. Jour 1 : page avec vidéo + ressources + quiz du jour + bulle coach.
-5. Il répond au quiz du jour (questions d'action sur son projet). Réponses stockées dans son carnet.
-6. Page de résultat du jour : son plan d'action du jour + le bouton qui débloque le jour suivant (drip : disponible le lendemain, ou immédiat selon ton choix, voir section 7).
-7. S'il bloque à tout moment, il ouvre la bulle coach.
-8. Au fil des jours, son carnet se remplit, ses livrables se génèrent (section 8), ses vrais chiffres montent (section 10).
-9. Jour 7 : son quiz lead-magnet est publié sur le vrai Tiquiz. Jour 14 : parcours terminé, bilan, suite proposée.
+Même parcours et mêmes vidéos pour tous, mais **le langage et les exemples s'adaptent au métier** de l'élève (capté à l'onboarding). Deux leviers :
+- **Glossaire** : des mots comme "offre", "client", "audience", "expertise" deviennent le vocabulaire du métier (un affilié lit "le produit que tu recommandes", un coach "ton accompagnement", un auteur "ton livre").
+- **Encarts d'exemples** : sur chaque jour, un exemple concret dans le domaine de l'élève.
+
+Pourquoi : la valeur perçue explose quand l'élève se reconnait. Tout est éditable par l'admin.
 
 ---
 
-## 6. Anatomie d'une journée (la page type)
+## 4. Le coach IA
 
-Une seule template de page, réutilisée pour les 14 jours, alimentée par les données du jour :
+Un coach disponible en permanence dans l'espace. Il connait :
+- **le programme** (tous les jours) et des **frameworks avancés** : la méthode Ask (sonder son marché), la persuasion (la trame de Blair Warren, les principes de Cialdini), les 16 objectifs possibles d'un quiz, des growth hacks ;
+- **le profil business** de l'élève et **son carnet** (ses réponses) ;
+- **ses vrais chiffres Tiquiz** s'il a connecté son compte.
 
-- **En-tête** : numéro du jour, titre, barre de progression du parcours.
-- **Vidéo** : le lecteur (la vidéo du jour, hébergée où tu veux). C'est elle qui enseigne.
-- **Ressources** : liens et fichiers utiles du jour (templates, swipe file, séquences email).
-- **Le quiz du jour** : 3 à 6 questions d'action/décision sur le projet de l'élève. Voir section 7 pour les types.
-- **Page de résultat** : récap personnalisé, plan d'action du jour, livrable généré si applicable, bouton "débloquer le jour suivant".
-- **Bulle coach IA** : en bas à droite, persistante sur toute la page.
+Il répond court, concret, en tutoiement, sans jargon scolaire. Il est **proactif** : si l'élève demande pourquoi son quiz ne convertit pas, il s'appuie sur ses chiffres réels.
 
 ---
 
-## 7. Le moteur de quiz quotidien
+## 5. La connexion Tiquiz et les résultats réels
 
-**Types de questions autorisés (et seulement ceux-là) :**
-- **Action / saisie** : "Colle ici l'angle de ton quiz." (texte libre, stocké dans le carnet)
-- **Décision** : "Lequel de ces 3 formats colle à ta cible ?" (choix, oriente la suite)
-- **Auto-évaluation** : "Où en es-tu sur cette étape ?" (sert à adapter le coach et le plan)
-- **Rappel léger** : une question de compréhension simple, pour ancrer (effet de test). Jamais de piège, jamais de la trivia.
+L'élève peut **connecter son compte Tiquiz en 1 clic** (ou automatiquement s'il utilise le même email), et le déconnecter quand il veut. En lecture seule, sans partager de données personnelles de leads.
 
-**Interdit :** les QCM de culture générale type "quelle est la définition de X". Ça tue le concept.
-
-**Capture :** chaque réponse est stockée, rattachée à l'élève et au jour. C'est la matière du carnet (section 8).
-
-**Méta-pédagogie (atout unique) :** dans la vidéo, tu peux pointer les questions elles-mêmes comme exemples ("la question que tu viens de lire, c'est exactement le type de question que tu mettras dans TON quiz"). L'élève apprend à faire des quiz en faisant un quiz.
-
-**Logique de déblocage :**
-- Compléter le quiz du jour pose un statut "jour N complété" et débloque le jour N+1.
-- Drip : tu choisis entre déblocage immédiat (l'élève peut binger) ou déblocage le lendemain (rythme, anti-abandon par surcharge). Recommandation : déblocage le lendemain par défaut, avec une option "tout débloquer" pour les pressés (à toi de voir selon le positionnement).
-- L'élève peut toujours revenir sur un jour déjà fait (relecture, modif de ses réponses).
-- Déblocage sur complétion, pas sur score. On entraîne, on ne recale pas.
+Une fois connecté, dans la page "Avancées" :
+- **Ses vrais chiffres** : leads captés, vues, complétions, partages, meilleur quiz.
+- **Les recommandations du coach** issues de ces chiffres : un constat = une action (ex. "beaucoup finissent ton quiz mais peu laissent leur email, déplace la capture avant le résultat"). Fiable : rien ne s'affiche tant qu'il n'y a pas assez de données ou pas de problème clair.
+- **Le Quiz Doctor** : un audit automatique de la structure de son quiz, avec une checklist de corrections (capture activée, nombre de questions, nombre de profils de résultats, images de partage, personnalisation, cohérence du bonus de partage). Chaque correction renvoie au bon jour.
 
 ---
 
-## 8. Le carnet de bord (les réponses qui deviennent des livrables)
+## 6. La campagne "done-for-you"
 
-- Les réponses aux quiz quotidiens alimentent un carnet consultable par l'élève (une page dédiée).
-- À des jalons clés, le carnet génère des livrables prêts à coller, à partir des réponses :
-  - le brief à 3 couches pour la génération Tiquiz,
-  - les 3-4 résultats nommés + tags,
-  - les séquences email pré-remplies avec sa niche et son offre.
-- La génération de ces livrables se fait via l'API LLM (même brique que le coach, section 9), avec les réponses de l'élève en entrée.
-- Résultat : l'élève ne remplit pas des templates vides, son projet s'écrit au fil de ses réponses.
+Tiquiz écrit le quiz ; FormaQuiz écrit **tout l'autour** (là où la plupart abandonnent après la capture). Sur la page "Campagne", l'élève génère, à partir de son carnet et de son métier :
+- sa **séquence de bienvenue**,
+- **un email par profil de résultat** (la logique des segments),
+- sa **séquence de vente douce**,
+- son **kit de lancement** : posts, script de message direct, email d'échange entre partenaires.
 
----
-
-## 9. Le coach IA
-
-**Rôle :** répondre aux questions des élèves 24/7 et générer les livrables du carnet.
-
-**Architecture :**
-- Appel à une API LLM (Claude).
-- Base de connaissance = les fichiers de ce dossier formation (modules 00 à 08, swipe file, séquences, pépites, FAQ à écrire).
-- Pour maîtriser le coût et l'hallucination : scope le contexte au contenu du jour courant + une FAQ globale, plutôt que tout balancer à chaque fois. RAG (embeddings) si le volume grandit.
-- Le coach connaît le contexte de l'élève : sa niche, son niveau, ses réponses précédentes (passées dans le prompt).
-
-**Garde-fous (non négociables, ta ligne) :**
-- Répond uniquement à partir du contenu fourni. S'il ne sait pas : il le dit et renvoie vers toi ou la communauté. Jamais d'invention de méthode ou de chiffre.
-- Tutoiement, ton chaleureux et direct, zéro fausse urgence, zéro promesse de résultat chiffré.
-- Zéro tiret long dans ses réponses (même règle que ton contenu produit).
-- L'IA assiste, elle ne te remplace pas : elle débloque et accélère, tu restes la référence.
-
-**UI :** bulle en bas à droite, historique de conversation par élève, persistante.
-
-**Contrôle des coûts :** limite de messages par jour et par élève (à définir), cache des réponses fréquentes, contexte scopé.
+Chaque texte est copiable et téléchargeable. En plus : des **modèles Systeme.io à importer en 1 clic** (séquences, tunnels), via les URLs de partage que l'admin a préparées. L'élève importe le squelette, colle les textes générés, personnalise.
 
 ---
 
-## 10. La gamification réelle (anti-vanité)
+## 7. Le carnet de bord
 
-- Les points ne sont pas des étoiles, ce sont les vrais résultats : leads captés, partages, ventes.
-- **MVP** : l'élève saisit ses chiffres (lus dans ses analytics Tiquiz) ou poste une capture. Simple, honnête.
-- **v2** : récupération automatique via l'endpoint lecture seule Tiquiz, si l'élève a lié son compte. Lecture uniquement.
-- **Jalons / badges** : quiz publié (J7), premier lead, 10 leads, première vente. Liés à des faits réels.
-- **Classement communauté** : opt-in, basé sur les vrais chiffres. Pas obligatoire (respect de ceux qui ne veulent pas s'exposer).
-- Garde le ton bienveillant : on célèbre les résultats, on ne shame personne.
+Toutes les réponses de l'élève sont rassemblées dans un **carnet** : c'est son projet qui prend forme, jour après jour. En tête, une "boussole" rappelle son profil (niche, activité, maturité, monétisation, budget). Le carnet est aussi la matière première de sa campagne.
 
 ---
 
-## 11. Modèle de données (point de départ Supabase)
+## 8. Progression, badges et mises en avant
 
-À adapter, mais voici une base saine :
-
-- `users` (via Supabase Auth) : profil, niche, niveau, lien compte Tiquiz optionnel.
-- `enrollments` : accès au FormaQuiz, statut, date, source paiement Systeme.io.
-- `days` : contenu de chaque jour (numéro, titre, url vidéo, ressources, ordre, règle de drip).
-- `questions` : questions d'un jour (type, intitulé, options, ordre).
-- `answers` : réponse d'un élève à une question (user_id, day, question_id, valeur, timestamp). C'est le carnet.
-- `progress` : statut par jour et par élève (débloqué, en cours, complété, date).
-- `deliverables` : livrables générés (user_id, type, contenu, date).
-- `coach_threads` et `coach_messages` : historique du coach par élève (avec compteur pour le rate limit).
-- `metrics` : chiffres réels de l'élève (leads, partages, ventes), saisis ou importés.
-- `badges` : jalons débloqués par élève.
-
-Migrations : IF NOT EXISTS, NOTIFY pgrst en fin, RLS sur tout. Comme d'habitude chez toi.
+- **Badges de jalons réels** (pas de points gadgets) : sur le parcours (premier jour, tuyauterie prête, quiz publié, communauté lancée, diplômé, explorateur des bonus) et sur les **vrais résultats** (premier lead, 10 leads, 50 leads). Petite célébration à chaque déblocage.
+- **Moteur de mise en avant** : quand un élève atteint un cap réel (paliers de leads), le système rédige automatiquement le **brouillon de son étude de cas** et alerte l'admin. L'admin valide, adapte et publie. Preuve sociale en continu pour FormaQuiz et Tiquiz.
 
 ---
 
-## 12. Pages et écrans
+## 9. Accès, comptes et emails
 
-- **Connexion / inscription** (Supabase Auth).
-- **Quiz de diagnostic d'entrée** (Tiquiz embarqué).
-- **Tableau de bord parcours** : progression, jour débloqué, plan perso, accès carnet et classement.
-- **Page du jour** (template unique, section 6).
-- **Page de résultat du jour** (récap + plan + déblocage).
-- **Carnet de bord** : toutes les réponses + livrables générés.
-- **Classement / communauté** (opt-in).
-- **Profil** : niche, niveau, lien compte Tiquiz, préférences.
-- **Admin (toi)** : créer/éditer les jours, vidéos, questions, ressources ; voir la progression des élèves ; modérer.
+- **Accès automatique à l'achat** : l'achat sur le bon de commande Systeme.io ouvre l'accès (webhook), et un remboursement le coupe.
+- **Email d'accueil brandé** envoyé à l'ouverture d'accès (présente la formation), puis l'élève choisit son mot de passe.
+- **Connexion** par mot de passe ou par lien magique, **réinitialisation du mot de passe**.
+- Pas d'accès sans compte ni achat actif.
+- L'admin peut aussi inviter un élève manuellement.
 
 ---
 
-## 13. Accès et paiement
+## 10. Relances et amélioration continue
 
-- Vente via Systeme.io (page tipote.fr). À la confirmation de paiement, webhook entrant vers l'app qui crée l'enrollment et l'accès.
-- Réutilise le pattern de webhook signé Systeme.io déjà en place sur Tiquiz (vérification de signature, idempotence).
-- Gère les cas : accès accordé, accès révoqué (remboursement), upgrade éventuel.
-
----
-
-## 14. Sécurité
-
-- Auth Supabase + RLS sur toutes les tables (un élève ne voit que ses données).
-- Contenu des jours protégé (pas accessible sans enrollment actif).
-- Webhook Systeme.io signé et idempotent.
-- Coach IA : rate limit par élève, garde-fous de prompt, pas de données sensibles dans le contexte.
-- Endpoint lecture Tiquiz : lecture seule, scoping strict au compte lié, jamais d'écriture.
+- **Récap du lundi matin** : un email doux qui rappelle où l'élève en est et sa prochaine étape. Uniquement à ceux qui n'ont pas fini, pas de spam.
+- **Collecte des blocages** : sur chaque jour, un bouton discret "Un blocage ?" laisse l'élève dire ce qui coince.
+- **Tableau de bord d'amélioration** (admin) : où les élèves décrochent (par jour) et ce qu'ils disent. La formation s'améliore cohorte après cohorte.
 
 ---
 
-## 15. Phasage MVP puis v2
+## 11. Le back-office admin (réservé à l'admin)
 
-**MVP (lance la première promo avec ça) :**
-- Auth + accès via webhook Systeme.io.
-- Quiz de diagnostic d'entrée + segmentation.
-- Les 14 jours : page type (vidéo + ressources + quiz natif), déblocage progressif.
-- Capture des réponses (carnet brut, sans génération auto).
-- Coach IA basique (contexte du jour + FAQ, garde-fous).
-- Gamification MVP : saisie manuelle des chiffres + jalons.
-
-**v2 :**
-- Génération auto des livrables depuis le carnet.
-- Récupération auto des chiffres via l'endpoint Tiquiz.
-- Classement communauté.
-- RAG pour le coach si le volume l'exige.
-- Plan personnalisé avancé (parcours débutant/avancé différenciés).
+- **Jours** : créer, ordonner, publier les jours ; vidéo, contenu, pépite, ressources, questions du quiz, et exemples par persona.
+- **Élèves** : inviter, voir et gérer les accès.
+- **Coach** : éditer la personnalité du coach et charger des documents de connaissance.
+- **Personas** : éditer le vocabulaire par métier.
+- **Modèles SIO** : ajouter les URLs de partage Systeme.io importables en 1 clic.
+- **Retours** : décrochage par jour + retours des élèves.
+- **Mises en avant** : les candidats aux études de cas, avec brouillon prêt à relire.
 
 ---
 
-## 16. Garde-fous et conventions (rappel)
+## 12. Sous le capot (résumé technique)
 
-- Tutoiement partout.
-- Zéro tiret long dans tout contenu user-visible (scan avant chaque commit qui touche au contenu).
-- Anti-hallucination du coach strict.
-- Pas de promesse de chiffre, promesse de système.
-- Ne jamais inventer d'URL (domaines à définir avec toi).
-- Reprends tes conventions Supabase, webhook, migrations, sécurité déjà documentées.
-
----
-
-## 17. Checklist de build (ordre conseillé)
-
-1. Schéma Supabase + RLS + migrations.
-2. Auth + webhook Systeme.io (accès).
-3. Admin minimal pour créer un jour (vidéo + ressources + questions).
-4. Page du jour + moteur de quiz natif + capture des réponses.
-5. Déblocage progressif + tableau de bord parcours.
-6. Quiz de diagnostic d'entrée (Tiquiz embarqué) + segmentation.
-7. Coach IA (API LLM + base de connaissance + garde-fous + bulle UI).
-8. Gamification MVP (saisie chiffres + jalons).
-9. Tests de bout en bout (achat fictif, parcours complet, coach, déblocage).
-10. v2 (génération livrables, import chiffres, classement).
+- App web séparée (Next.js), base de données Supabase, hébergée sur le serveur de Béné, sur le sous-domaine sécurisé (HTTPS).
+- **Vidéos auto-hébergées** (même pipeline que les popquiz Tiquiz), lecture par lien signé.
+- Emails transactionnels via Resend (domaine d'envoi vérifié).
+- Intégration Tiquiz en lecture seule (consentement de l'élève), intégration Systeme.io (achat + accès).
+- Tâches planifiées (cron) : récap du lundi, détection des mises en avant.
+- L'app ne modifie jamais Tiquiz : elle s'y connecte.
 
 ---
 
-## Note finale
+## Récap des fonctionnalités (pour le copywriting)
 
-Ce que tu construis là n'est pas un espace membre de plus. C'est la démonstration vivante de Tiquiz : tes élèves apprennent les quiz en avançant dans un quiz. Le format porte le message, le message vend le produit, et le produit livre le résultat. Tout est cohérent.
-
-Tout le contenu déjà écrit dans ce dossier s'emboîte : les scripts deviennent les vidéos du jour, les missions deviennent les questions des quiz, les pépites et les hacks restent, les séquences email restent. On ne jette rien.
-
-Prochaine étape : le prototype complet du Jour 1 (la page, la vidéo, les questions exactes du quiz, la page de résultat, les ressources), pour valider le modèle avant de décliner les 14.
+- Parcours de 7 jours + 4 bonus, on apprend en faisant, déblocage à la complétion.
+- Chaque jour : vidéo, gabarit prêt à copier, pépite avancée, exemple dans ton métier, quiz d'action.
+- Contenu personnalisé selon ton métier (vocabulaire + exemples).
+- Coach IA proactif qui connait le programme, ton projet et tes vrais chiffres.
+- Connexion Tiquiz en 1 clic : tes vrais résultats + recommandations actionnables + audit de ton quiz (Quiz Doctor).
+- Ta campagne email écrite pour toi (bienvenue, par profil, vente) + kit de lancement + modèles Systeme.io à importer en 1 clic.
+- Carnet de bord : ton projet qui s'écrit tout seul, réponse après réponse.
+- Badges sur de vrais résultats, et mise en avant automatique des réussites.
+- Accès auto à l'achat, emails brandés, récap doux du lundi.
