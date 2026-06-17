@@ -1,15 +1,10 @@
 // lib/businessProfile.ts
 // Profil business de l'eleve, capte a l'onboarding et reutilise partout
 // (plan personnalise, coach, edition profil). Module partage (data pure).
+import { PERSONAS, type Persona } from "@/lib/personas";
 
-export type ActivityType =
-  | "coach"
-  | "formateur"
-  | "freelance"
-  | "ecommerce"
-  | "createur"
-  | "affiliation"
-  | "autre";
+// L'activite EST le persona (pilote la personnalisation vocab + exemples).
+export type ActivityType = Persona;
 export type Maturity = "demarrage" | "audience" | "liste" | "ventes";
 export type Monetization = "offres" | "affiliation" | "les_deux" | "pas_encore";
 export type AdsBudget = "oui" | "non";
@@ -19,15 +14,7 @@ export interface Option<T extends string> {
   label: string;
 }
 
-export const ACTIVITY_OPTIONS: Option<ActivityType>[] = [
-  { value: "coach", label: "Coach ou consultant" },
-  { value: "formateur", label: "Je vends des formations" },
-  { value: "freelance", label: "Freelance / prestataire de services" },
-  { value: "ecommerce", label: "E-commerce / produits" },
-  { value: "createur", label: "Créateur de contenu" },
-  { value: "affiliation", label: "Marketing d'affiliation" },
-  { value: "autre", label: "Autre" },
-];
+export const ACTIVITY_OPTIONS: Option<ActivityType>[] = PERSONAS;
 
 export const MATURITY_OPTIONS: Option<Maturity>[] = [
   { value: "demarrage", label: "Je débute, je n'ai pas encore d'audience" },
