@@ -3,10 +3,12 @@ import { Trophy, Medal } from "lucide-react";
 import { getViewer, getDaysWithProgress, snapshotFromDays } from "@/lib/parcours";
 import { earnedBadgeCodes, BADGES } from "@/lib/gamification";
 import { ensureAutoConnect, getTiquizConnection } from "@/lib/integrations/tiquiz";
+import { computeTiquizInsights } from "@/lib/insights/tiquizInsights";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { BadgeGrid } from "@/components/BadgeGrid";
 import { TiquizPanel } from "@/components/TiquizPanel";
+import { TiquizInsights } from "@/components/TiquizInsights";
 import { NoAccess } from "@/components/NoAccess";
 
 export const dynamic = "force-dynamic";
@@ -69,6 +71,9 @@ export default async function AvanceesPage() {
         lastSyncedAt={connection?.last_synced_at ?? null}
         connectedEmail={connection?.tiquiz_email ?? null}
       />
+
+      {/* Coach proactif : recommandations issues des vrais chiffres */}
+      {connection && <TiquizInsights insights={computeTiquizInsights(tiquizMetrics)} />}
 
       {/* Badges */}
       <section className="flex flex-col gap-3">
