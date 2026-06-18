@@ -1,17 +1,17 @@
-# FormaQuiz : journal de bord
+# L'Atelier du Quiz : journal de bord
 
 ## Où on en est (15 juin 2026, au soir)
 
-**FormaQuiz est EN LIGNE : https://formaquiz.tipote.com** 🎉
+**L'Atelier du Quiz est EN LIGNE : https://quizing.tipote.com** 🎉
 Le socle (espace élève + back-office admin) tourne en prod.
 
 ### Infra en place
 - **Supabase** : projet `mkdnnrapmeajogbwmybp`. Migration
-  `0001_formaquiz_initial.sql` + seed `day1.sql` appliqués.
-- **Cloudflare** : sous-domaine `formaquiz.tipote.com` créé (DNS vers le VPS).
-- **VPS** : dossier `/home/tipote/formaquiz`, app sur le **port 3002**,
-  process pm2 **`formaquiz-prod`**.
-- **Caddy** : bloc `formaquiz.tipote.com` ajouté, certificat HTTPS OK.
+  `0001_quizing_initial.sql` + seed `day1.sql` appliqués.
+- **Cloudflare** : sous-domaine `quizing.tipote.com` créé (DNS vers le VPS).
+- **VPS** : dossier `/home/tipote/quizing`, app sur le **port 3002**,
+  process pm2 **`quizing-prod`**.
+- **Caddy** : bloc `quizing.tipote.com` ajouté, certificat HTTPS OK.
 
 ### 3 réglages à retenir (galères déjà résolues, ne pas refaire)
 1. Dans `.env`, l'URL Supabase DOIT commencer par `https://`
@@ -24,27 +24,27 @@ Le socle (espace élève + back-office admin) tourne en prod.
 ### Mémo : redéployer une mise à jour
 ```bash
 # 1. Sur ton PC : amener ma branche de travail dans main
-cd C:\Users\hello\Desktop\formaquiz
+cd C:\Users\hello\Desktop\quizing
 git fetch origin
 git checkout main && git pull origin main
 git checkout origin/claude/laughing-gauss-qh8sua -- .
-git add . && git commit -m "maj formaquiz" && git push origin main
+git add . && git commit -m "maj quizing" && git push origin main
 
-# 2. Sur le VPS (ATTENTION : bien viser formaquiz, pas tiquiz)
-cd /home/tipote/formaquiz
+# 2. Sur le VPS (ATTENTION : bien viser quizing, pas tiquiz)
+cd /home/tipote/quizing
 git pull origin main
 npm ci
 npm run build
-pm2 restart formaquiz-prod      # le port 3002 est fige dans le start script
+pm2 restart quizing-prod      # le port 3002 est fige dans le start script
 
 # Si jamais le process doit etre recree :
-#   pm2 delete formaquiz-prod
-#   pm2 start npm --name formaquiz-prod -- start
+#   pm2 delete quizing-prod
+#   pm2 start npm --name quizing-prod -- start
 #   pm2 save
 ```
 
 > Piege a eviter : ne JAMAIS lancer `pm2 restart tiquiz-prod` depuis le
-> dossier formaquiz (c'est une commande du memo Tiquiz). Et pas besoin de
+> dossier quizing (c'est une commande du memo Tiquiz). Et pas besoin de
 > `--update-env` : le port est dans le start script, les autres vars sont
 > lues depuis .env au demarrage.
 

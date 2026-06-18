@@ -1,5 +1,5 @@
 // lib/adminEmails.ts
-// Emails autorisés à accéder au back-office admin FormaQuiz.
+// Emails autorisés à accéder au back-office admin L'Atelier du Quiz.
 // Le rôle admin est aussi vérifié côté serveur (jamais déduit du seul
 // front) : voir middleware.ts et les routes /api/admin.
 

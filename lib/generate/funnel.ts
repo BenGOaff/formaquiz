@@ -11,7 +11,7 @@ import { resolvePersona, personaLabel, PERSONA_VOCAB } from "@/lib/personas";
 import { labelOf, MATURITY_OPTIONS, MONETIZATION_OPTIONS } from "@/lib/businessProfile";
 import type { FunnelAssets, FunnelEmail, FunnelResultEmail } from "@/lib/types";
 
-const SYSTEM = `Tu es le meilleur copywriter de funnels pour quiz lead-magnet, au service de FormaQuiz (Béné). Tu écris la séquence email et le kit de lancement qui transforment un quiz en machine à leads qualifiés qui ACHÈTENT.
+const SYSTEM = `Tu es le meilleur copywriter de funnels pour quiz lead-magnet, au service de L'Atelier du Quiz (Béné). Tu écris la séquence email et le kit de lancement qui transforment un quiz en machine à leads qualifiés qui ACHÈTENT.
 
 Tu t'appuies sur des principes solides, appliqués (jamais théoriques) :
 - Blair Warren : encourager le rêve, justifier l'échec passé, apaiser la peur, confirmer un soupçon, désigner l'ennemi commun (jamais le lecteur).

@@ -19,7 +19,7 @@ const COPY: Record<
   { title: string; desc: string; cta: string; allowSkip: boolean }
 > = {
   welcome: {
-    title: "Bienvenue dans FormaQuiz",
+    title: "Bienvenue dans L'Atelier du Quiz",
     desc: "Choisis un mot de passe pour tes prochaines connexions.",
     cta: "C'est parti",
     allowSkip: true,

@@ -1,4 +1,4 @@
-# FormaQuiz : spec de l'admin / back-office
+# L'Atelier du Quiz : spec de l'admin / back-office
 
 > Tout ce que l'admin (Béné) doit pouvoir faire sans toucher au code ni redéployer. Le contenu vit dans la base de données, l'admin l'édite via une interface. Complète la spec technique `01-cahier-des-charges.md`.
 >

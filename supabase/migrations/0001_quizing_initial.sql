@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════
--- FORMAQUIZ — schéma initial
+-- QUIZING — schéma initial
 -- ════════════════════════════════════════════════════════════════
 --
 -- Modèle de données du cahier des charges (specs/01, section 11).
@@ -50,7 +50,7 @@ create policy "own profile update" on profiles
   for update using (auth.uid() = id);
 
 -- ───────────────────────────────────────────────────────────────
--- 2. enrollments  (accès au FormaQuiz, créé par le webhook SIO)
+-- 2. enrollments  (accès au L'Atelier du Quiz, créé par le webhook SIO)
 -- ───────────────────────────────────────────────────────────────
 create table if not exists enrollments (
   id          uuid primary key default gen_random_uuid(),
@@ -93,7 +93,7 @@ create table if not exists days (
   subtitle      text,
   intro_html    text,                     -- contenu riche (fq-rich)
   -- Vidéo : soit une URL externe (youtube/url) au MVP, soit un id du
-  -- pipeline auto-hébergé (table formaquiz_videos) une fois branché.
+  -- pipeline auto-hébergé (table quizing_videos) une fois branché.
   video_url     text,
   video_id      uuid,
   -- Ressources téléchargeables / liens : [{label, url, type}]
@@ -267,17 +267,17 @@ create policy "own badges read" on badges
   for select using (auth.uid() = user_id);
 
 -- ───────────────────────────────────────────────────────────────
--- 11. formaquiz_videos  (pipeline vidéo auto-hébergé, namespace
---     "formaquiz" sur le même VPS que popquiz Tiquiz)
+-- 11. quizing_videos  (pipeline vidéo auto-hébergé, namespace
+--     "quizing" sur le même VPS que popquiz Tiquiz)
 -- ───────────────────────────────────────────────────────────────
-create table if not exists formaquiz_videos (
+create table if not exists quizing_videos (
   id            uuid primary key default gen_random_uuid(),
   user_id       uuid references auth.users(id) on delete set null,
   source        text not null default 'upload'
                   check (source in ('upload','youtube','url')),
   external_url  text,
   external_id   text,
-  storage_path  text,        -- formaquiz/raw/<uid>/<id>/source.<ext>
+  storage_path  text,        -- quizing/raw/<uid>/<id>/source.<ext>
   hls_path      text,        -- posé par le worker de transcodage
   thumbnail_url text,
   duration_ms   integer,
@@ -288,11 +288,11 @@ create table if not exists formaquiz_videos (
   updated_at    timestamptz not null default now()
 );
 
-alter table formaquiz_videos enable row level security;
+alter table quizing_videos enable row level security;
 -- Lecture seule pour les élèves enrollés (les URLs de lecture réelles
 -- sont signées côté serveur). Écriture réservée à la service_role.
-drop policy if exists "videos for enrolled" on formaquiz_videos;
-create policy "videos for enrolled" on formaquiz_videos
+drop policy if exists "videos for enrolled" on quizing_videos;
+create policy "videos for enrolled" on quizing_videos
   for select using (fq_has_active_enrollment(auth.uid()));
 
 -- ───────────────────────────────────────────────────────────────

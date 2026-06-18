@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════
--- FORMAQUIZ — diagnostic d'entree (date de completion)
+-- QUIZING — diagnostic d'entree (date de completion)
 -- ════════════════════════════════════════════════════════════════
 -- Le diagnostic ecrit deja niche / level / objective (colonnes existantes
 -- sur profiles). On ajoute juste un marqueur de completion pour savoir

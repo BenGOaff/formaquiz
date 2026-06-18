@@ -1,5 +1,5 @@
 -- 0005_tiquiz_connections.sql
--- Lien entre un eleve FormaQuiz et son compte Tiquiz (apres consentement
+-- Lien entre un eleve L'Atelier du Quiz et son compte Tiquiz (apres consentement
 -- 1-clic). Stocke le token de lecture durable + un snapshot des metriques.
 -- Table interne : RLS activee, AUCUNE policy (le token ne doit jamais
 -- arriver au navigateur ; on lit toujours via la service_role cote serveur).

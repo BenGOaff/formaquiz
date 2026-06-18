@@ -1,14 +1,14 @@
-# FormaQuiz : cahier des charges (état réel du produit)
+# L'Atelier du Quiz : cahier des charges (état réel du produit)
 
-> Ce document décrit ce que FormaQuiz FAIT aujourd'hui, concrètement.
+> Ce document décrit ce que L'Atelier du Quiz FAIT aujourd'hui, concrètement.
 > Il sert de base pour lister les fonctionnalités et écrire le copywriting.
 > Il ne décrit que l'existant (pas d'idées en attente). Mis à jour juin 2026.
 
 ---
 
-## 1. Ce qu'est FormaQuiz
+## 1. Ce qu'est L'Atelier du Quiz
 
-FormaQuiz est un espace de formation en ligne où l'élève ne regarde pas un cours : **il avance dans un parcours en faisant**. Chaque jour, une vidéo enseigne, un petit quiz le fait agir sur SON projet, et finir le quiz du jour débloque le suivant.
+L'Atelier du Quiz est un espace de formation en ligne où l'élève ne regarde pas un cours : **il avance dans un parcours en faisant**. Chaque jour, une vidéo enseigne, un petit quiz le fait agir sur SON projet, et finir le quiz du jour débloque le suivant.
 
 Objectif de l'élève : repartir avec un **quiz lead-magnet publié (via Tiquiz)**, branché à son outil d'emailing (Systeme.io), qui capte des leads qualifiés en automatique, et tout le système autour (emails, diffusion) pour transformer ces leads en clients.
 
@@ -73,7 +73,7 @@ Une fois connecté, dans la page "Avancées" :
 
 ## 6. La campagne "done-for-you"
 
-Tiquiz écrit le quiz ; FormaQuiz écrit **tout l'autour** (là où la plupart abandonnent après la capture). Sur la page "Campagne", l'élève génère, à partir de son carnet et de son métier :
+Tiquiz écrit le quiz ; L'Atelier du Quiz écrit **tout l'autour** (là où la plupart abandonnent après la capture). Sur la page "Campagne", l'élève génère, à partir de son carnet et de son métier :
 - sa **séquence de bienvenue**,
 - **un email par profil de résultat** (la logique des segments),
 - sa **séquence de vente douce**,
@@ -92,7 +92,7 @@ Toutes les réponses de l'élève sont rassemblées dans un **carnet** : c'est s
 ## 8. Progression, badges et mises en avant
 
 - **Badges de jalons réels** (pas de points gadgets) : sur le parcours (premier jour, tuyauterie prête, quiz publié, communauté lancée, diplômé, explorateur des bonus) et sur les **vrais résultats** (premier lead, 10 leads, 50 leads). Petite célébration à chaque déblocage.
-- **Moteur de mise en avant** : quand un élève atteint un cap réel (paliers de leads), le système rédige automatiquement le **brouillon de son étude de cas** et alerte l'admin. L'admin valide, adapte et publie. Preuve sociale en continu pour FormaQuiz et Tiquiz.
+- **Moteur de mise en avant** : quand un élève atteint un cap réel (paliers de leads), le système rédige automatiquement le **brouillon de son étude de cas** et alerte l'admin. L'admin valide, adapte et publie. Preuve sociale en continu pour L'Atelier du Quiz et Tiquiz.
 
 ---
 

@@ -1,5 +1,5 @@
 // app/api/systeme-io/webhook/route.ts
-// Webhook Systeme.io pour FormaQuiz : crée l'accès (enrollment) après
+// Webhook Systeme.io pour L'Atelier du Quiz : crée l'accès (enrollment) après
 // achat, le révoque sur remboursement/annulation. Porté du pattern
 // Tiquiz : secret partagé OU signature HMAC, idempotence stricte.
 //

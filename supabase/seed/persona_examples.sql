@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════
--- FORMAQUIZ - exemples "Pour toi" par persona (encarts par jour)
+-- QUIZING - exemples "Pour toi" par persona (encarts par jour)
 -- ════════════════════════════════════════════════════════════════
 -- Memes jours, memes videos : seuls les exemples changent. Repli neutre
 -- si un persona n'a pas d'exemple. Idempotent (upsert sur day_id+persona).

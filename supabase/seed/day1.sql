@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════
--- FORMAQUIZ — seed du Jour 1 (Module 1 : Pourquoi un quiz)
+-- QUIZING — seed du Jour 1 (Module 1 : Pourquoi un quiz)
 -- ════════════════════════════════════════════════════════════════
 --
 -- Contenu tiré de contenu/parcours/01-module-pourquoi-un-quiz.md.

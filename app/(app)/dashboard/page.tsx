@@ -32,7 +32,7 @@ export default async function DashboardPage() {
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-2">
         <h1 className="font-display text-2xl font-bold sm:text-3xl">
-          {firstName ? `Salut ${firstName}, on continue ?` : "Ton parcours FormaQuiz"}
+          {firstName ? `Salut ${firstName}, on continue ?` : "Ton parcours L'Atelier du Quiz"}
         </h1>
         <p className="text-sm text-muted-foreground">
           Chaque jour : une vidéo qui enseigne, un quiz qui te fait avancer. Finis le quiz du jour

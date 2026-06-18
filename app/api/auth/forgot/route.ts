@@ -9,7 +9,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendEmail } from "@/lib/email/resend";
 import { resetPasswordEmail } from "@/lib/email/templates";
 
-const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://formaquiz.tipote.com").trim();
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://quizing.tipote.com").trim();
 const schema = z.object({ email: z.string().email() });
 
 export async function POST(req: NextRequest) {

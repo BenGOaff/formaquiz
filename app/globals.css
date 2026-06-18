@@ -3,10 +3,10 @@
 @tailwind utilities;
 
 /* ═══════════════════════════════════════════════════════════════════
-   FORMAQUIZ DESIGN SYSTEM
+   QUIZING DESIGN SYSTEM
    Répliqué de Tiquiz. Couleur d'accent (indigo #5D6CDB) centralisée
    dans --primary / --ring : changer ces deux lignes suffit à
-   différencier FormaQuiz plus tard.
+   différencier L'Atelier du Quiz plus tard.
    ═══════════════════════════════════════════════════════════════════ */
 
 @layer base {
@@ -22,7 +22,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 231 41% 31%;
 
-    /* ── Accent FormaQuiz (= indigo Tiquiz) ── */
+    /* ── Accent L'Atelier du Quiz (= indigo Tiquiz) ── */
     --primary: 233 64% 61%;           /* #5D6CDB */
     --primary-foreground: 0 0% 100%;
 

@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════
--- FORMAQUIZ - "La pépite" par jour (nuggets avances et actionnables)
+-- QUIZING - "La pépite" par jour (nuggets avances et actionnables)
 -- ════════════════════════════════════════════════════════════════
 -- Persuasion (Blair Warren, Cialdini) + methode Ask + growth hacks,
 -- en mots simples et orientes passage a l'action. Glossaire applique

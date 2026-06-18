@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════
--- FORMAQUIZ — seed du parcours condensé (7 jours : J0 à J7) + 4 bonus
+-- QUIZING — seed du parcours condensé (7 jours : J0 à J7) + 4 bonus
 -- ════════════════════════════════════════════════════════════════
 --
 -- Source : contenu/support-jours/*.md (contenu de page vu par l'élève) et
@@ -22,7 +22,7 @@ insert into days (day_number, slug, title, subtitle, intro_html, result_html, st
 values
 (
   0, $s$j0-bienvenue$s$, $t$Bienvenue$t$, $st$Comment ça marche, et le pacte$st$,
-  $html$<p>Bienvenue dans FormaQuiz. Ici, tu n'apprends pas les quiz en regardant des cours : tu avances dans un quiz pour apprendre à en faire un. En 7 jours, tu auras un quiz lead-magnet publié, branché à Systeme.io, qui capte des leads qualifiés en automatique. Aujourd'hui, on pose les bases.</p>
+  $html$<p>Bienvenue dans L'Atelier du Quiz. Ici, tu n'apprends pas les quiz en regardant des cours : tu avances dans un quiz pour apprendre à en faire un. En 7 jours, tu auras un quiz lead-magnet publié, branché à Systeme.io, qui capte des leads qualifiés en automatique. Aujourd'hui, on pose les bases.</p>
 <h2>À retenir</h2>
 <ul>
 <li>Chaque jour : une vidéo qui enseigne, un quiz qui te fait agir. Finir le quiz du jour débloque le suivant.</li>

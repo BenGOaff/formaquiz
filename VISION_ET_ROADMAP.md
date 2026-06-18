@@ -1,6 +1,6 @@
-# FormaQuiz - Vision V2 "banger" et roadmap (source de vérité)
+# L'Atelier du Quiz - Vision V2 "banger" et roadmap (source de vérité)
 
-> Ce fichier est LA référence des intentions Béné pour faire de FormaQuiz
+> Ce fichier est LA référence des intentions Béné pour faire de L'Atelier du Quiz
 > un produit qui révolutionne l'apprentissage et garantit des résultats
 > concrets. À relire au début de toute session qui touche au produit.
 > (Validé par Béné, conversation de juin 2026.)
@@ -42,7 +42,7 @@ ta capture est sûrement après le résultat, déplace-la avant."
   insight = une action claire. Si pas sûr, on se tait.
 
 ### B. Le funnel "done-for-you" (la partie où tout le monde se plante)
-Tiquiz écrit le quiz. FormaQuiz écrit TOUT l'autour, à partir du carnet +
+Tiquiz écrit le quiz. L'Atelier du Quiz écrit TOUT l'autour, à partir du carnet +
 persona : séquence de bienvenue, un email par profil de résultat (bucket),
 séquence de vente douce, + kit de lancement (posts, script DM, email
 d'échange partenaire).
@@ -70,7 +70,7 @@ Validé à fond (réf. réussite Jocelyne : https://www.tipote.fr/tiquiz/cas-cli
 Quand un élève atteint un cap réel (quiz publié, X leads, 1re vente
 détectée via métriques), le système **rédige le brouillon de son étude de
 cas** ET notifie Béné ("candidat parfait pour une mise en avant"). Béné
-valide, ça se publie. Preuve sociale en chaîne pour FormaQuiz ET Tiquiz.
+valide, ça se publie. Preuve sociale en chaîne pour L'Atelier du Quiz ET Tiquiz.
 Flywheel : résultats -> preuve -> nouveaux élèves/users Tiquiz -> résultats.
 
 ## Ce qu'on NE fait PAS

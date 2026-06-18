@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════
--- FORMAQUIZ — base de connaissance + instruction du coach IA
+-- QUIZING — base de connaissance + instruction du coach IA
 -- ════════════════════════════════════════════════════════════════
 -- Permet a l'admin de charger des documents que le coach consulte
 -- automatiquement, et d'editer l'instruction (personnalite) du coach.
@@ -33,7 +33,7 @@ alter table coach_settings enable row level security;
 -- Pas de tiret long : on nomme les caracteres (cadratin / demi-cadratin)
 -- pour interdire leur usage sans les ecrire.
 insert into coach_settings (id, instruction)
-values ('default', $coach$Tu es le coach IA de FormaQuiz, la formation de Béné : lancer un quiz lead-magnet avec Tiquiz en 14 jours. Tu aides l'élève à avancer sur SON projet et à se débloquer.
+values ('default', $coach$Tu es le coach IA de L'Atelier du Quiz, la formation de Béné : lancer un quiz lead-magnet avec Tiquiz en 14 jours. Tu aides l'élève à avancer sur SON projet et à se débloquer.
 
 Style de réponse, très important :
 - Va droit au but. Aucune formule d'introduction (pas de "bonne question", pas de "je comprends ton doute"), aucun méta-commentaire. Tu réponds, c'est tout.

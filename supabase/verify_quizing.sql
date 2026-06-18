@@ -1,7 +1,7 @@
 -- ════════════════════════════════════════════════════════════════
--- FORMAQUIZ - verification : tout le SQL est-il applique ?
+-- QUIZING - verification : tout le SQL est-il applique ?
 -- ════════════════════════════════════════════════════════════════
--- Colle CE bloc dans Studio FormaQuiz -> SQL Editor -> Run.
+-- Colle CE bloc dans Studio L'Atelier du Quiz -> SQL Editor -> Run.
 -- Chaque ligne doit afficher ok = true. Si une ligne est false, la
 -- migration correspondante n'est pas passee : applique-la.
 

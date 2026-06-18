@@ -6,9 +6,9 @@
 // L'algorithme DOIT correspondre exactement au validateur du serveur tus
 // (/opt/popquiz-tus, handleValidateSecureLink) :
 //   md5_base64url( `${expires}${pathname} ${secret}` )
-// avec pathname = le chemin décodé (commence par /formaquiz/...), un
+// avec pathname = le chemin décodé (commence par /quizing/...), un
 // espace avant le secret. Le validateur lit le 1er segment du chemin
-// (/formaquiz/) pour choisir FORMAQUIZ_VIDEO_SECRET.
+// (/quizing/) pour choisir QUIZING_VIDEO_SECRET.
 import "server-only";
 import crypto from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -22,12 +22,12 @@ function b64url(buf: Buffer): string {
 
 /**
  * Construit une URL de lecture signée pour un fichier du stockage
- * (storage_path relatif, ex. "formaquiz/raw/<uid>/<vid>/source.mp4").
+ * (storage_path relatif, ex. "quizing/raw/<uid>/<vid>/source.mp4").
  * Renvoie null si l'hébergement vidéo n'est pas configuré.
  */
 export function signVideoUrl(storagePath: string, ttlSec = PLAYBACK_TTL_SECONDS): string | null {
-  const base = process.env.FORMAQUIZ_VIDEO_PLAYBACK_BASE;
-  const secret = process.env.FORMAQUIZ_VIDEO_SECRET;
+  const base = process.env.QUIZING_VIDEO_PLAYBACK_BASE;
+  const secret = process.env.QUIZING_VIDEO_SECRET;
   if (!base || !secret || !storagePath) return null;
 
   const pathname = "/" + storagePath.replace(/^\/+/, "");
@@ -49,7 +49,7 @@ export async function resolveDayVideoSrc(
 ): Promise<{ src: string | null; pending: boolean }> {
   if (day.video_id) {
     const { data: video } = await supabaseAdmin
-      .from("formaquiz_videos")
+      .from("quizing_videos")
       .select("storage_path, status")
       .eq("id", day.video_id)
       .maybeSingle();

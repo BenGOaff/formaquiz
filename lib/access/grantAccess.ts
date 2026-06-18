@@ -13,7 +13,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendEmail } from "@/lib/email/resend";
 import { welcomeEmail } from "@/lib/email/templates";
 
-const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://formaquiz.tipote.com").trim();
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://quizing.tipote.com").trim();
 
 export async function findUserByEmail(email: string): Promise<{ id: string } | null> {
   const lower = email.toLowerCase();
@@ -38,7 +38,7 @@ export interface GrantResult {
 }
 
 /**
- * Donne acces au FormaQuiz a un email : cree le compte (invitation) si
+ * Donne acces au L'Atelier du Quiz a un email : cree le compte (invitation) si
  * besoin, puis pose un enrollment actif. Idempotent.
  */
 export async function grantAccessByEmail(

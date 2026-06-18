@@ -49,7 +49,7 @@ export default async function AdminSpotlightsPage() {
         <h1 className="font-display text-2xl font-bold sm:text-3xl">Mises en avant</h1>
         <p className="text-sm text-muted-foreground">
           Les élèves qui ont atteint un vrai cap, avec un brouillon d'étude de cas prêt à relire.
-          Tu valides, tu adaptes, tu publies (preuve sociale pour FormaQuiz et Tiquiz).
+          Tu valides, tu adaptes, tu publies (preuve sociale pour L'Atelier du Quiz et Tiquiz).
         </p>
       </header>
 

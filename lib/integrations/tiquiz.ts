@@ -1,5 +1,5 @@
 // lib/integrations/tiquiz.ts
-// Cote consommateur du pont FormaQuiz <- Tiquiz. Server-only.
+// Cote consommateur du pont L'Atelier du Quiz <- Tiquiz. Server-only.
 // - echange du code de consentement contre un token durable
 // - lecture des metriques via le token
 // - persistance de la connexion + snapshot
@@ -13,7 +13,7 @@ import type { TiquizMetrics } from "@/lib/types";
 const TIQUIZ_BASE = (process.env.TIQUIZ_BASE_URL ?? "https://quiz.tipote.com").trim();
 const SHARED = (process.env.PARTNER_SHARED_SECRET ?? "").trim();
 
-export const TIQUIZ_AUTHORIZE_URL = `${TIQUIZ_BASE}/connect/formaquiz`;
+export const TIQUIZ_AUTHORIZE_URL = `${TIQUIZ_BASE}/connect/quizing`;
 
 export interface TiquizConnection {
   user_id: string;

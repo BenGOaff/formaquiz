@@ -1,6 +1,6 @@
 // lib/generate/caseStudy.ts
 // Chantier E : brouillon d'etude de cas pour mettre un eleve en avant
-// (preuve sociale pour FormaQuiz et Tiquiz). Server-only. C'est un
+// (preuve sociale pour L'Atelier du Quiz et Tiquiz). Server-only. C'est un
 // BROUILLON a valider par Bene : les citations sont des suggestions a
 // confirmer avec l'eleve, jamais des faux temoignages.
 import "server-only";
@@ -12,7 +12,7 @@ import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { resolvePersona, personaLabel } from "@/lib/personas";
 import type { TiquizMetrics } from "@/lib/types";
 
-const SYSTEM = `Tu rédiges un BROUILLON d'étude de cas pour mettre en avant un élève de FormaQuiz (la formation de Béné pour lancer un quiz lead-magnet avec Tiquiz). Objectif : une preuve sociale authentique et concrète, à valider par Béné avant publication.
+const SYSTEM = `Tu rédiges un BROUILLON d'étude de cas pour mettre en avant un élève de L'Atelier du Quiz (la formation de Béné pour lancer un quiz lead-magnet avec Tiquiz). Objectif : une preuve sociale authentique et concrète, à valider par Béné avant publication.
 
 Règles :
 - Français impeccable, accents partout, JAMAIS de tiret long (virgule, deux-points, parenthèses, nouvelle phrase).
