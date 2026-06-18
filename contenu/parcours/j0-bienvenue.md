@@ -7,7 +7,7 @@
 ---
 
 ## Hook (mot à mot)
-"Salut, et bienvenue dans FormaQuiz. Si tu es là, c'est que tu en as marre d'une chose : créer du contenu, capter trois curieux, et te demander pourquoi rien ne décolle. Dans 7 jours, tu auras un quiz en ligne qui capte des leads qualifiés en automatique, branché à ton Systeme.io. Pas dans six mois. Dans 7 jours. Et tu vas apprendre les quiz d'une façon que tu n'as jamais vue : en avançant toi-même dans un quiz. Bienvenue dans la boucle."
+"Salut, et bienvenue dans L'Atelier du Quiz. Si tu es là, c'est que tu en as marre d'une chose : créer du contenu, capter trois curieux, et te demander pourquoi rien ne décolle. Dans 7 jours, tu auras un quiz en ligne qui capte des leads qualifiés en automatique, branché à ton Systeme.io. Pas dans six mois. Dans 7 jours. Et tu vas apprendre les quiz d'une façon que tu n'as jamais vue : en avançant toi-même dans un quiz. Bienvenue dans la boucle."
 
 ## Le coeur (trame à dire avec tes mots)
 
@@ -17,7 +17,7 @@
 **2. La promesse, sans bullshit.**
 - En 7 jours : un quiz publié, branché à Systeme.io, qui tague tes leads. Promesse de système, pas promesse de million.
 
-**3. Comment marche FormaQuiz (le concept).**
+**3. Comment marche L'Atelier du Quiz (le concept).**
 - Un jour = une vidéo qui enseigne + un quiz qui te fait passer à l'action sur TON projet.
 - Tu ne réponds pas à un test scolaire : chaque question te fait avancer. Tes réponses se rangent dans ton carnet de bord, et ton quiz se construit au fil des jours.
 - Finir le quiz du jour débloque le suivant.

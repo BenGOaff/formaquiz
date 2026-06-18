@@ -10,10 +10,10 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "FormaQuiz",
+  title: "L'Atelier du Quiz",
   description: "Apprends les quiz en avançant dans un quiz.",
   robots: { index: false, follow: false }, // espace membre privé
-  icons: { icon: "/favicon.ico", apple: "/formaquiz.png" },
+  icons: { icon: "/favicon.ico", apple: "/quizing.png" },
 };
 
 export const viewport: Viewport = {

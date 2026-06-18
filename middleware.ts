@@ -1,5 +1,5 @@
 // middleware.ts
-// Protection auth de FormaQuiz. Rafraîchit la session Supabase et garde
+// Protection auth de L'Atelier du Quiz. Rafraîchit la session Supabase et garde
 // les routes membre + admin. Mono-langue, donc pas de logique de locale
 // (contrairement à Tiquiz).
 

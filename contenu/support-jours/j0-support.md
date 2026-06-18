@@ -4,11 +4,11 @@
 
 ## Résumé
 
-Bienvenue dans FormaQuiz. Ici, tu n'apprends pas les quiz en regardant des cours : tu avances dans un quiz pour apprendre à en faire un. En 7 jours, tu auras un quiz lead-magnet publié, branché à Systeme.io, qui capte des leads qualifiés en automatique. Aujourd'hui, on pose les bases : comment marche le parcours, ton engagement, et la création de ton compte Tiquiz gratuit.
+Bienvenue dans L'Atelier du Quiz. Ici, tu n'apprends pas les quiz en regardant des cours : tu avances dans un quiz pour apprendre à en faire un. En 7 jours, tu auras un quiz lead-magnet publié, branché à Systeme.io, qui capte des leads qualifiés en automatique. Aujourd'hui, on pose les bases : comment marche le parcours, ton engagement, et la création de ton compte Tiquiz gratuit.
 
 ## Points clés à retenir
 
-- FormaQuiz est un parcours : chaque jour, une vidéo qui enseigne et un quiz qui te fait passer à l'action. Finir le quiz du jour débloque le suivant.
+- L'Atelier du Quiz est un parcours : chaque jour, une vidéo qui enseigne et un quiz qui te fait passer à l'action. Finir le quiz du jour débloque le suivant.
 - Tes réponses ne sont pas un test : elles construisent ton projet et remplissent ton carnet de bord.
 - Un coach IA est là en bulle, à toute heure, dès que tu bloques.
 - L'engagement public change tout : ceux qui s'engagent à voix haute finissent.

@@ -65,7 +65,7 @@ export const BADGES: BadgeDef[] = [
   },
   {
     code: "diplome",
-    label: "Diplômé FormaQuiz",
+    label: "Diplômé L'Atelier du Quiz",
     description: "Parcours terminé. Tu as construit un actif qui tourne.",
     icon: "graduation",
     rule: { type: "parcours_complete" },

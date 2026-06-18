@@ -3,7 +3,7 @@ import animate from "tailwindcss-animate";
 
 // Design system répliqué de Tiquiz (indigo #5D6CDB). La couleur
 // d'accent vit dans UNE variable CSS (--primary dans globals.css) pour
-// pouvoir différencier FormaQuiz en une ligne plus tard si besoin.
+// pouvoir différencier L'Atelier du Quiz en une ligne plus tard si besoin.
 const config = {
   darkMode: ["class", ".dark"],
   content: [

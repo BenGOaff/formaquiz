@@ -15,7 +15,7 @@ export async function POST(
 
   const { id } = await params;
   const { error } = await supabaseAdmin
-    .from("formaquiz_videos")
+    .from("quizing_videos")
     .update({ status: "ready", updated_at: new Date().toISOString() })
     .eq("id", id);
 

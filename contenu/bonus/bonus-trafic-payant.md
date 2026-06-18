@@ -9,7 +9,7 @@
 ---
 
 ## Hook (mot à mot)
-"On parle de pub, la seule méthode payante de tout FormaQuiz. Et avant que tu paniques en pensant cramer ton budget, je vais te montrer le mécanisme qui rend la pub presque sans risque. C'est ce que les pros connaissent et qu'on n'explique jamais aux débutants. Une fois compris, tu pourras acheter du trafic sans avoir peur."
+"On parle de pub, la seule méthode payante de tout L'Atelier du Quiz. Et avant que tu paniques en pensant cramer ton budget, je vais te montrer le mécanisme qui rend la pub presque sans risque. C'est ce que les pros connaissent et qu'on n'explique jamais aux débutants. Une fois compris, tu pourras acheter du trafic sans avoir peur."
 
 ## Le coeur (trame à dire avec tes mots)
 

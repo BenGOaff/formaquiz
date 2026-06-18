@@ -1,14 +1,14 @@
 // lib/email/templates.ts
-// Gabarits HTML des emails FormaQuiz. Table-based + styles inline pour
+// Gabarits HTML des emails L'Atelier du Quiz. Table-based + styles inline pour
 // passer les clients mail (Gmail, Outlook, Apple Mail). Indigo de marque
 // #5D6CDB. Contenu user-visible : accents respectes, aucun tiret long.
 import "server-only";
 
-const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://formaquiz.tipote.com").trim();
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://quizing.tipote.com").trim();
 const BRAND = "#5D6CDB";
 const INK = "#1f2340";
 const MUTED = "#6b7191";
-const LOGO_URL = `${APP_URL}/formaquiz.png`;
+const LOGO_URL = `${APP_URL}/quizing.png`;
 
 /** Enveloppe commune : entete logo, carte centrale, pied de page. */
 function layout(inner: string): string {
@@ -25,7 +25,7 @@ function layout(inner: string): string {
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
           <tr>
             <td align="center" style="padding-bottom:24px;">
-              <img src="${LOGO_URL}" alt="FormaQuiz" height="34" style="height:34px;width:auto;display:block;" />
+              <img src="${LOGO_URL}" alt="L'Atelier du Quiz" height="34" style="height:34px;width:auto;display:block;" />
             </td>
           </tr>
           <tr>
@@ -35,7 +35,7 @@ function layout(inner: string): string {
           </tr>
           <tr>
             <td align="center" style="padding-top:24px;font-size:12px;line-height:18px;color:${MUTED};">
-              Tu reçois cet email parce que tu as un accès à FormaQuiz.<br />
+              Tu reçois cet email parce que tu as un accès à L'Atelier du Quiz.<br />
               Une question ? Réponds simplement à cet email.
             </td>
           </tr>
@@ -85,9 +85,9 @@ export function welcomeEmail({
 }): BuiltEmail {
   const cta = isNewAccount ? "Activer mon accès" : "Accéder à mon espace";
   const inner = `
-    <h1 style="margin:0 0 16px;font-size:22px;line-height:28px;color:${INK};">Bienvenue dans FormaQuiz.</h1>
+    <h1 style="margin:0 0 16px;font-size:22px;line-height:28px;color:${INK};">Bienvenue dans L'Atelier du Quiz.</h1>
     <p style="margin:0 0 16px;font-size:15px;line-height:23px;color:${INK};">
-      Ton accès est prêt. FormaQuiz, ce n'est pas une formation que tu regardes : c'est un parcours que tu fais.
+      Ton accès est prêt. L'Atelier du Quiz, ce n'est pas une formation que tu regardes : c'est un parcours que tu fais.
     </p>
     <p style="margin:0 0 8px;font-size:15px;line-height:23px;color:${INK};">Concrètement :</p>
     <ul style="margin:0 0 20px;padding-left:20px;font-size:15px;line-height:23px;color:${INK};">
@@ -105,8 +105,8 @@ export function welcomeEmail({
   `;
   return {
     subject: isNewAccount
-      ? "Bienvenue dans FormaQuiz, active ton accès"
-      : "Ton accès FormaQuiz est prêt",
+      ? "Bienvenue dans L'Atelier du Quiz, active ton accès"
+      : "Ton accès L'Atelier du Quiz est prêt",
     html: layout(inner),
   };
 }
@@ -116,7 +116,7 @@ export function resetPasswordEmail({ actionUrl }: { actionUrl: string }): BuiltE
   const inner = `
     <h1 style="margin:0 0 16px;font-size:22px;line-height:28px;color:${INK};">Nouveau mot de passe</h1>
     <p style="margin:0 0 20px;font-size:15px;line-height:23px;color:${INK};">
-      Tu as demandé à réinitialiser ton mot de passe FormaQuiz. Clique ci-dessous pour en choisir un nouveau.
+      Tu as demandé à réinitialiser ton mot de passe L'Atelier du Quiz. Clique ci-dessous pour en choisir un nouveau.
     </p>
     ${button(actionUrl, "Choisir un nouveau mot de passe")}
     <p style="margin:20px 0 0;font-size:13px;line-height:20px;color:${MUTED};">
@@ -125,7 +125,7 @@ export function resetPasswordEmail({ actionUrl }: { actionUrl: string }): BuiltE
     ${fallbackLink(actionUrl)}
   `;
   return {
-    subject: "Réinitialise ton mot de passe FormaQuiz",
+    subject: "Réinitialise ton mot de passe L'Atelier du Quiz",
     html: layout(inner),
   };
 }
@@ -147,7 +147,7 @@ export function weeklyRecapEmail({
   const hello = firstName ? `Salut ${firstName},` : "Salut,";
   const dashboard = `${APP_URL}/dashboard`;
   const inner = `
-    <h1 style="margin:0 0 16px;font-size:22px;line-height:28px;color:${INK};">${hello} ta semaine FormaQuiz</h1>
+    <h1 style="margin:0 0 16px;font-size:22px;line-height:28px;color:${INK};">${hello} ta semaine L'Atelier du Quiz</h1>
     <p style="margin:0 0 16px;font-size:15px;line-height:23px;color:${INK};">
       Tu as bouclé <strong>${completed} jour(s) sur ${total}</strong>. Pas de pression, juste un petit repère pour reprendre quand tu veux.
     </p>
@@ -161,7 +161,7 @@ export function weeklyRecapEmail({
     </p>
   `;
   return {
-    subject: "Ta prochaine étape FormaQuiz t'attend",
+    subject: "Ta prochaine étape L'Atelier du Quiz t'attend",
     html: layout(inner),
   };
 }
@@ -184,7 +184,7 @@ export function spotlightAdminEmail({
     ${button(`${APP_URL}/admin/spotlights`, "Voir les candidats")}
   `;
   return {
-    subject: `${items.length} candidat(s) à mettre en avant (FormaQuiz)`,
+    subject: `${items.length} candidat(s) à mettre en avant (L'Atelier du Quiz)`,
     html: layout(inner),
   };
 }

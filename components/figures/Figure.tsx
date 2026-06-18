@@ -1,7 +1,7 @@
 // components/figures/Figure.tsx
 // Rend un schema SVG a partir de sa cle. Composant pur (pas de hooks),
 // utilisable dans le rendu serveur (RichContent). Couleurs basees sur les
-// tokens (primary, muted) pour rester sur la charte FormaQuiz.
+// tokens (primary, muted) pour rester sur la charte L'Atelier du Quiz.
 
 function Frame({ children, caption }: { children: React.ReactNode; caption?: string }) {
   return (

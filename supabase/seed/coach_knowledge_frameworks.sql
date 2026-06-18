@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════
--- FORMAQUIZ - base de connaissance du coach : frameworks avances
+-- QUIZING - base de connaissance du coach : frameworks avances
 -- ════════════════════════════════════════════════════════════════
 -- Arme le coach IA avec des concepts a haute valeur (persuasion, methode
 -- Ask, objectifs de quiz, growth hacks), formules de facon actionnable et

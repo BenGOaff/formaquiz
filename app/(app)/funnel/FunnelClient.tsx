@@ -50,7 +50,7 @@ export function FunnelClient({
 
   function downloadAll() {
     if (!assets) return;
-    download("ma-campagne-formaquiz.md", toMarkdown(assets));
+    download("ma-campagne-quizing.md", toMarkdown(assets));
   }
 
   const templatesBlock = templates.length > 0 ? <SioTemplatesBlock templates={templates} /> : null;
@@ -254,8 +254,8 @@ function CopyButton({ text }: { text: string }) {
 }
 
 function toMarkdown(a: FunnelAssets): string {
-  if (a.raw) return `# Ma campagne FormaQuiz\n\n${a.raw}\n`;
-  const lines: string[] = ["# Ma campagne FormaQuiz", ""];
+  if (a.raw) return `# Ma campagne L'Atelier du Quiz\n\n${a.raw}\n`;
+  const lines: string[] = ["# Ma campagne L'Atelier du Quiz", ""];
   const emailMd = (e: FunnelEmail) => `**Objet :** ${e.subject}\n\n${e.body}\n`;
   lines.push("## Séquence de bienvenue", "");
   a.welcome.forEach((e) => lines.push(emailMd(e), "---", ""));

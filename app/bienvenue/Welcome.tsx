@@ -113,7 +113,7 @@ export function Welcome() {
           <Card>
             <CardContent className="flex flex-col gap-4 py-6">
               <div className="flex flex-col gap-1 text-center">
-                <h1 className="font-display text-xl font-semibold">Bienvenue dans FormaQuiz</h1>
+                <h1 className="font-display text-xl font-semibold">Bienvenue dans L'Atelier du Quiz</h1>
                 <p className="text-sm text-muted-foreground">
                   Choisis un mot de passe pour tes prochaines connexions.
                 </p>

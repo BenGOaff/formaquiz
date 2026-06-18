@@ -1,4 +1,4 @@
-# FormaQuiz : structure du parcours (7 jours + bonus)
+# L'Atelier du Quiz : structure du parcours (7 jours + bonus)
 
 > La structure officielle du parcours. Source de vérité pour l'ordre des jours, leur thème, et le contenu à charger dans l'app. Le détail de chaque jour est dans `contenu/parcours/`, les bonus dans `contenu/bonus/`.
 >

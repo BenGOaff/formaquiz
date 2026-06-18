@@ -1,4 +1,4 @@
-// lib/types.ts — types partagés du parcours FormaQuiz.
+// lib/types.ts — types partagés du parcours L'Atelier du Quiz.
 
 export type QuestionType = "action" | "decision" | "self_eval" | "recall";
 

@@ -1,4 +1,4 @@
-# FormaQuiz : conventions de code (à lire avant de coder)
+# L'Atelier du Quiz : conventions de code (à lire avant de coder)
 
 Espace membre Next.js + Supabase, petit frère de Tiquiz. App séparée,
 sur le VPS de Béné. On ne modifie JAMAIS le code de Tiquiz ni Tipote.
@@ -33,7 +33,7 @@ sur le VPS de Béné. On ne modifie JAMAIS le code de Tiquiz ni Tipote.
 - Tailwind 3.4 + shadcn/ui (primitives maison dans `components/ui`).
 - Design system répliqué de Tiquiz : indigo `#5D6CDB`, centralisé dans
   `--primary` / `--ring` de `app/globals.css`. Une seule couleur à
-  changer pour différencier FormaQuiz.
+  changer pour différencier L'Atelier du Quiz.
 
 ## Sécurité
 
@@ -62,4 +62,4 @@ sur le VPS de Béné. On ne modifie JAMAIS le code de Tiquiz ni Tipote.
 ## Pipeline vidéo
 
 - Réutilise l'infra popquiz auto-hébergée du VPS (serveur tus + nginx),
-  namespace applicatif `formaquiz`. Voir `SETUP.md` section vidéo.
+  namespace applicatif `quizing`. Voir `SETUP.md` section vidéo.

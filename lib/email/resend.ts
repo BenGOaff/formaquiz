@@ -3,10 +3,10 @@
 //
 // Config requise dans le .env :
 //   RESEND_API_KEY        cle API Resend (re_...)
-//   FORMAQUIZ_EMAIL_FROM  expediteur sur le domaine verifie,
-//                         ex: "FormaQuiz <bonjour@send.tipote.com>"
+//   QUIZING_EMAIL_FROM  expediteur sur le domaine verifie,
+//                         ex: "L'Atelier du Quiz <bonjour@send.tipote.com>"
 // Optionnel :
-//   FORMAQUIZ_REPLY_TO    adresse de reponse reellement relevee
+//   QUIZING_REPLY_TO    adresse de reponse reellement relevee
 //                         (ex: une boite que Bene lit). Sans ca, les
 //                         reponses partent vers le domaine d'envoi et
 //                         risquent de se perdre.
@@ -18,8 +18,8 @@
 import "server-only";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const EMAIL_FROM = process.env.FORMAQUIZ_EMAIL_FROM;
-const REPLY_TO = process.env.FORMAQUIZ_REPLY_TO;
+const EMAIL_FROM = process.env.QUIZING_EMAIL_FROM;
+const REPLY_TO = process.env.QUIZING_REPLY_TO;
 
 export interface SendResult {
   ok: boolean;
@@ -37,7 +37,7 @@ export async function sendEmail({
 }): Promise<SendResult> {
   if (!RESEND_API_KEY || !EMAIL_FROM) {
     console.error(
-      "[email] RESEND_API_KEY ou FORMAQUIZ_EMAIL_FROM manquant. Email non envoye :",
+      "[email] RESEND_API_KEY ou QUIZING_EMAIL_FROM manquant. Email non envoye :",
       subject,
     );
     return { ok: false, reason: "not_configured" };

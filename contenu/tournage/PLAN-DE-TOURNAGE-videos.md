@@ -1,4 +1,4 @@
-# FormaQuiz : plan de tournage des vidéos (7 jours + bonus)
+# L'Atelier du Quiz : plan de tournage des vidéos (7 jours + bonus)
 
 > Ta checklist de tournage. Une entrée par vidéo : le jour, le thème, ce que tu expliques, ce que tu montres à l'écran. Le détail complet (hook mot à mot, trame, CTA, questions du quiz) est dans `contenu/parcours/` et `contenu/bonus/`.
 >
@@ -30,7 +30,7 @@
 ## PARCOURS
 
 ### J0 : Bienvenue
-- **À expliquer** : qui tu es en 30 secondes, la promesse (un quiz publié et branché en 7 jours, promesse de système), comment marche FormaQuiz (vidéo qui enseigne + quiz qui fait agir + carnet + coach IA + déblocage), le pacte (engagement public), créer son compte Tiquiz free.
+- **À expliquer** : qui tu es en 30 secondes, la promesse (un quiz publié et branché en 7 jours, promesse de système), comment marche L'Atelier du Quiz (vidéo qui enseigne + quiz qui fait agir + carnet + coach IA + déblocage), le pacte (engagement public), créer son compte Tiquiz free.
 - **À montrer** : le parcours 7 jours, la bulle coach, le lien Tiquiz free, la communauté.
 
 ### J1 : Pourquoi un quiz et comment le penser

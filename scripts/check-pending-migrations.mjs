@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// scripts/check-pending-migrations.mjs (FormaQuiz)
+// scripts/check-pending-migrations.mjs (L'Atelier du Quiz)
 //
 // Detecte AUTOMATIQUEMENT les migrations Supabase non appliquees en lisant
 // TOUS les .sql de supabase/migrations/ et en testant l'existence des
@@ -9,7 +9,7 @@
 // fetch. Charge aussi le .env tout seul, donc PAS besoin de `set -a; . .env`.
 //
 // Usage (sur le serveur) :
-//   cd ~/formaquiz && npm run check:migrations-pending
+//   cd ~/quizing && npm run check:migrations-pending
 //
 // Exit : 0 si tout est applique, 1 si au moins 1 migration en retard.
 
@@ -118,7 +118,7 @@ function parseSql(sql) {
 }
 
 async function main() {
-  console.log(`> check:migrations-pending FormaQuiz (${SUPABASE_URL})`);
+  console.log(`> check:migrations-pending L'Atelier du Quiz (${SUPABASE_URL})`);
   const files = readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql")).sort();
   console.log(`  ${files.length} fichiers .sql a scanner`);
 
@@ -158,9 +158,9 @@ async function main() {
   console.log(`Resultat : ${totalChecks - totalFails} ok / ${totalFails} manquants sur ${totalChecks} checks (${files.length} fichiers)`);
 
   if (failedMigrations.length > 0) {
-    console.log("\n🚨 MIGRATIONS A APPLIQUER SUR SUPABASE (FormaQuiz) :");
+    console.log("\n🚨 MIGRATIONS A APPLIQUER SUR SUPABASE (L'Atelier du Quiz) :");
     for (const m of failedMigrations) console.log(`  - supabase/migrations/${m.file}`);
-    console.log("\nStudio FormaQuiz -> SQL Editor -> coller chaque fichier -> Run, puis relancer ce script.");
+    console.log("\nStudio L'Atelier du Quiz -> SQL Editor -> coller chaque fichier -> Run, puis relancer ce script.");
     process.exit(1);
   }
   console.log("Toutes les migrations detectables sont appliquees. ok");

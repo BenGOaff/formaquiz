@@ -1,6 +1,6 @@
 // lib/video/uploadToken.ts
 // Frappe des tokens d'upload pour le pipeline vidéo auto-hébergé du VPS
-// (serveur tus + nginx), namespace applicatif "formaquiz". Porté de
+// (serveur tus + nginx), namespace applicatif "quizing". Porté de
 // lib/popquiz/playback.ts de Tiquiz : le serveur tus valide ce JWT HS256
 // avec le MÊME secret (POPQUIZ_TUS_JWT_SECRET).
 //
@@ -8,11 +8,11 @@
 import "server-only";
 import crypto from "node:crypto";
 
-export const FORMAQUIZ_APP = "formaquiz" as const;
+export const QUIZING_APP = "quizing" as const;
 
 // Secret JWT partagé avec le serveur tus du VPS. Même nom des deux côtés
-// (FORMAQUIZ_JWT_SECRET) pour qu'il soit évident qu'ils doivent être égaux.
-const JWT_SECRET_ENV = "FORMAQUIZ_JWT_SECRET";
+// (QUIZING_JWT_SECRET) pour qu'il soit évident qu'ils doivent être égaux.
+const JWT_SECRET_ENV = "QUIZING_JWT_SECRET";
 
 const UPLOAD_TOKEN_TTL_SECONDS = 60 * 60; // 1 h, large pour un gros upload
 
@@ -29,7 +29,7 @@ function requireEnv(name: string): string {
 
 export interface UploadClaims {
   sub: string; // Supabase user id (l'admin)
-  app: typeof FORMAQUIZ_APP;
+  app: typeof QUIZING_APP;
   videoId: string;
   ext: string;
   kind: "source" | "thumbnail";

@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════
--- FORMAQUIZ — distinction parcours / bonus
+-- QUIZING — distinction parcours / bonus
 -- ════════════════════════════════════════════════════════════════
 -- is_bonus = true : contenu bonus, accessible a tout moment (hors de la
 -- sequence quotidienne). false : jour du parcours (debloque sequentiellement).
