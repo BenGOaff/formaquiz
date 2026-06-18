@@ -4,7 +4,14 @@
 // #5D6CDB. Contenu user-visible : accents respectes, aucun tiret long.
 import "server-only";
 
-const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://quizing.tipote.com").trim();
+// Runtime (APP_URL) plutôt que NEXT_PUBLIC_* (inliné au build) : sinon le
+// logo et les liens des emails pointent sur la valeur gravée au build
+// (drame localhost:3002, 18 juin 2026).
+const APP_URL = (
+  process.env.APP_URL ??
+  process.env.NEXT_PUBLIC_APP_URL ??
+  "https://quizing.tipote.com"
+).trim().replace(/\/$/, "");
 const BRAND = "#5D6CDB";
 const INK = "#1f2340";
 const MUTED = "#6b7191";

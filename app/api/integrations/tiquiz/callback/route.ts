@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 // basculer en https derriere un proxy / une redirection cross-app et
 // casser le retour en dev (http://localhost:3002).
 function appUrl(req: NextRequest, path: string): string {
-  const env = (process.env.NEXT_PUBLIC_APP_URL ?? "").trim().replace(/\/$/, "");
+  const env = (process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "").trim().replace(/\/$/, "");
   const base = env || new URL(req.url).origin;
   return `${base}${path}`;
 }
