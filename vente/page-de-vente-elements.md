@@ -1,4 +1,4 @@
-# FormaQuiz : éléments de page de vente
+# L'Atelier du Quiz : éléments de page de vente
 
 > Premiers blocs de la page de vente : promesse principale, 10 puces promesses, pitch en une phrase, et la liste exhaustive des fonctionnalités associées à un bénéfice.
 >
@@ -15,7 +15,7 @@
 Variantes selon l'emplacement :
 
 - *(Titre court)* : « En 7 jours, ton quiz qui capte des leads pendant que tu dors. »
-- *(Sous-titre)* : « FormaQuiz ne t'explique pas les quiz. Il te fait en lancer un, jour après jour, guidé par un coach IA, branché à ton Systeme.io. »
+- *(Sous-titre)* : « L'Atelier du Quiz ne t'explique pas les quiz. Il te fait en lancer un, jour après jour, guidé par un coach IA, branché à ton Systeme.io. »
 - *(Version preuve par l'expérience)* : « La seule formation sur les quiz qui est elle-même un quiz. Tu apprends en faisant, et tu repars avec un quiz publié, pas avec des notes. »
 
 > Note : promesse de système, jamais de chiffre garanti. C'est ta ligne, et c'est aussi le trigger 14 (plausibilité) : une promesse crédible vend mieux qu'une promesse XXL.
@@ -55,7 +55,7 @@ Formules alternées, chacune en bénéfice + conséquence concrète + curiosité
 
 ## 3. Le pitch de l'offre en 1 phrase
 
-**FormaQuiz, c'est le parcours qui te fait lancer ton quiz lead-magnet en 7 jours en te faisant vivre un quiz : tu apprends en faisant, un coach IA te débloque à chaque étape, et tu repars avec un quiz publié qui capte et tague tes leads dans Systeme.io.**
+**L'Atelier du Quiz, c'est le parcours qui te fait lancer ton quiz lead-magnet en 7 jours en te faisant vivre un quiz : tu apprends en faisant, un coach IA te débloque à chaque étape, et tu repars avec un quiz publié qui capte et tague tes leads dans Systeme.io.**
 
 ---
 
@@ -88,4 +88,4 @@ Format : la fonctionnalité, puis le bénéfice concret pour l'élève.
 
 Blocs à produire ensuite, si tu veux : l'accroche (hook) du haut de page, la section problème (reprendre la persona), le storytelling (trigger 6), la preuve sociale (cas Jocelyne, témoignages), la stack de valeur chiffrée (déjà dans le blueprint), la garantie (trigger 16), la FAQ (lever les objections), et les CTA. Dis-moi par quoi on enchaîne.
 
-> Sources de travail : `uploads/📖 BIBLIOTHÈQUE COMPLÈTE DES TRIGGERS PSYCHOLOGIQUES.docx` et `uploads/Puces promesses.docx`, plus tout le contenu du dossier `Formaquiz/contenu/`.
+> Sources de travail : `uploads/📖 BIBLIOTHÈQUE COMPLÈTE DES TRIGGERS PSYCHOLOGIQUES.docx` et `uploads/Puces promesses.docx`, plus tout le contenu du dossier `contenu/`.
