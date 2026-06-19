@@ -93,213 +93,309 @@ values
   $st2$published$st2$, 20, $r$[]$r$::jsonb, false
 ),
 (
-  2, $s$j2-prerequis-systemeio$s$, $t$Les prérequis : Systeme.io, tags, emails$t$, $st$La tuyauterie qui accueille tes leads$st$,
-  $html$<p>Aujourd'hui, on prépare la tuyauterie qui rend tout le reste possible. Sans elle, tes leads tombent dans le vide. Trente minutes de mise en place, et tes leads arriveront au bon endroit, taggués et accueillis.</p>
-<h2>À retenir</h2>
+  2, $s$j2-prerequis-systemeio$s$, $t$Accueille tes contacts en automatique$t$, $st$Branche Systeme.io : chaque contact arrive rangé et reçoit le bon message$st$,
+  $html$<p>Quelqu'un fait ton quiz et te laisse son email. Et après ? Souvent, rien : sans message d'accueil, il t'oublie en deux jours et n'achètera jamais. Aujourd'hui, tu branches le système qui accueille et range chaque contact tout seul. Toi, tu règles une fois ; tes contacts arrivent rangés et reçoivent le bon message.</p>
+<h2>3 mots tout simples</h2>
 <ul>
-<li>Systeme.io est le socle où vivent tes leads. Tiquiz s'y branche en natif.</li>
-<li>Un tag est une étiquette posée sur un contact. Tiquiz peut en poser plusieurs en automatique : capture, par résultat, partage, par réponse.</li>
-<li>La chaîne à retenir : résultat = tag = segment = offre.</li>
-<li>Une automatisation : quand le contact reçoit le tag X, démarre la séquence Y.</li>
-<li>L'email qui parle du résultat explose les ouvertures, sans effort manuel.</li>
+<li>Autorépondeur : l'outil qui garde tes contacts et leur envoie des emails tout seul. Le tien, c'est Systeme.io.</li>
+<li>Tag : une étiquette qu'on colle sur un contact pour le ranger (ex : "profil Bâtisseur").</li>
+<li>Automatisation : une règle "si... alors...". Si le contact reçoit le tag X, alors il reçoit l'email Y, tout seul.</li>
 </ul>
-<h2>Gabarit d'email de bienvenue (à copier)</h2>
-<p><em>"Salut {prenom}, ton résultat dit que tu es [profil]. Concrètement, ça veut dire [insight court]. Avant d'aller plus loin, réponds-moi en une ligne : quel est ton plus gros défi avec [ton sujet] en ce moment ? Je lis tout."</em></p>
-<h2>Tes actions du jour</h2>
+<h2>La clé API : le pont entre Tiquiz et Systeme.io</h2>
+<p>Une clé API, c'est un code secret qui relie deux outils pour qu'ils se parlent. Ici, elle relie Tiquiz à Systeme.io : chaque contact capté par ton quiz arrive direct dans Systeme.io, tout seul. Tu la trouves dans Systeme.io, tu la colles dans Tiquiz, et c'est branché. Sans elle, tu devras exporter ta liste à la main, c'est pénible. On a choisi Systeme.io pour son rapport qualité-prix : emails, automatisations, tags, pages de vente, tout y est déjà.</p>
+<h2>Pour toi : automatique. Pour lui : du sur-mesure.</h2>
+<p>Tu règles l'automatisation une seule fois, et ça tourne pour des centaines de personnes. De son côté, ton visiteur reçoit son prénom (si tu l'as capturé) et son profil : il a l'impression que le message est écrit pour lui seul. Le chemin à retenir : résultat du quiz, puis tag, puis groupe de gens, puis le bon email, avec son prénom.</p>
+<h2>Growth hack 1 : un tag sur une réponse</h2>
+<p>Colle un tag quand quelqu'un répond un truc précis (ex : "je n'ai pas de liste"). Tu sais ce qu'il a répondu, donc tu lui envoies pile le message fait pour lui, et il a l'impression que tu lis dans ses pensées. Dans Tiquiz (onglet Partage), relie une réponse à un tag Systeme.io, puis crée la série d'emails de ce tag.</p>
+<h2>Growth hack 2 : l'email qui dit ton résultat</h2>
+<p>Ton premier email annonce le résultat exact de la personne, dès le titre, avec son prénom : "Marie, voici ton plan de Visionnaire". Elle se sent vue, donc elle ouvre, elle lit, et souvent elle répond. Beardbrand gagne 9€ pour 1€ dépensé avec ces emails qui parlent du résultat. Dans Systeme.io, crée un email par tag de résultat.</p>
+<h2>L'erreur à éviter</h2>
+<p>Capter des emails et les laisser dormir, sans aucun message : tes contacts refroidissent et n'achètent jamais. La solution : branche au moins un email de bienvenue automatique dès aujourd'hui. Le reste viendra après.</p>
+<h2>Ta mission du jour</h2>
 <ul>
-<li>Crée ou prépare ton compte Systeme.io et repère ta clé API.</li>
-<li>Crée tes premiers tags : capture + un par profil de résultat.</li>
-<li>Installe ta séquence de bienvenue à partir du fichier des 7 séquences email.</li>
+<li>Branche ta clé API Systeme.io dans Tiquiz.</li>
+<li>Crée tes tags : un par résultat.</li>
+<li>Branche ton email de bienvenue automatique (avec le prénom).</li>
 </ul>$html$,
-  $html$<p>Ta tuyauterie est prête : tes futurs leads seront accueillis et triés tout seuls.</p><p>Demain, on choisit le bon format Tiquiz pour ton objectif.</p>$html$,
+  $html$<p>Ta tuyauterie est prête : tes futurs leads seront accueillis et triés tout seuls.</p><p>Demain, on conçoit un quiz qu'on finit et qu'on a envie de partager : le potentiel viral.</p>$html$,
   $st2$published$st2$, 30, $r$[]$r$::jsonb, false
 ),
 (
-  3, $s$j3-formats-tiquiz$s$, $t$Tiquiz : quiz, sondage, popquiz$t$, $st$Quel format pour quel objectif$st$,
-  $html$<p>Dans Tiquiz, tu as trois formats : quiz, sondage, popquiz. Trois outils pour trois objectifs. Aujourd'hui, tu apprends lequel choisir, pour ne pas perdre de temps demain au moment de créer.</p>
-<h2>À retenir</h2>
+  3, $s$j3-quiz-viral$s$, $t$Un quiz qu'on finit (et qu'on partage)$t$, $st$Les 2 moteurs viraux : on le finit, on le partage$st$,
+  $html$<p>Aujourd'hui, tu conçois un quiz qu'on termine ET qu'on a envie de partager : c'est ça, le potentiel viral. Un quiz qu'on finit te donne l'email ; un quiz qu'on partage t'amène de nouveaux visiteurs, gratuitement.</p>
+<h2>Pourquoi les gens abandonnent un quiz</h2>
+<p>Un quiz trop long, on le quitte avant la fin. Un quiz qui ressemble à une interro fait peur (peur de la mauvaise réponse), alors on s'en va. Un bon quiz, au contraire, on le finit sans s'en rendre compte, et on a envie de montrer son résultat.</p>
+<h2>Les 2 moteurs viraux</h2>
 <ul>
-<li>Le quiz révèle un type, capture l'email et segmente le lead. C'est ton outil d'acquisition principal.</li>
-<li>Le sondage récolte des données et des avis. Il t'informe toi, il ne personnalise pas le répondant.</li>
-<li>Le popquiz est un quiz incrusté dans une vidéo, pour capter au pic d'attention.</li>
-<li>La règle : quiz pour des leads segmentés, sondage pour comprendre ton marché, popquiz pour capter sur tes vidéos.</li>
-<li>On peut les combiner (à voir en bonus).</li>
+<li>On le FINIT : la personne va jusqu'au bout, donc tu récupères son email.</li>
+<li>On le PARTAGE : elle montre son résultat à ses amis, qui viennent jouer à leur tour.</li>
 </ul>
-<h2>La question à copier (avant de créer)</h2>
-<p>Pose-la à {audience}, elle vaut de l'or : <em>"Quel est ton plus gros défi avec [ton sujet] en ce moment ?"</em> Leurs réponses deviennent tes questions, tes profils et tes titres.</p>
-<h2>Tes actions du jour</h2>
+<p>La preuve : 30 à 40 personnes sur 100 finissent un bon quiz et laissent leur email. Avec un PDF, c'est moins de 3 sur 100.</p>
+<h2>Pour qu'on aille au bout</h2>
 <ul>
-<li>Choisis ton format selon ton objectif du Jour 1 (pour la plupart, ce sera le quiz).</li>
-<li>Repère le template ou l'angle dont tu vas partir demain.</li>
+<li>Ton quiz dit qui on est, il ne teste pas ce qu'on sait.</li>
+<li>La première question est facile et amusante.</li>
+<li>5 à 7 questions, pas plus. Sinon on abandonne.</li>
+<li>Un résultat dont on est fier donne envie de le partager.</li>
+</ul>
+<h2>Growth hack 1 : un quiz qui parle de toi</h2>
+<p>Demande "Quel type de X es-tu ?", pas "connais-tu la réponse ?". Parler de soi, c'est agréable, donc on continue ; une interro fait honte, on part. Au début, dis à l'IA de Tiquiz que ton quiz est un "Quel type de X es-tu ?", sans bonne ni mauvaise réponse.</p>
+<h2>Growth hack 2 : la question qui accroche au début</h2>
+<p>Commence par une question facile et intrigante : si le début est simple et donne envie, le cerveau veut connaître la fin. Exemple d'intro : "La plupart des gens se trompent sur eux-mêmes. Et toi ?", puis une 1ère question facile comme "Tu es plutôt du matin ou du soir ?".</p>
+<h2>Growth hack 3 : un résultat dont on est fier</h2>
+<p>Un résultat valorisant et un peu surprenant, c'est le genre qu'on a envie de montrer. Quand on est fier de son résultat, on le poste ("Je suis une Visionnaire, et toi ?"), et chaque partage t'amène de nouveaux visiteurs gratuitement. Imagine le résultat dont TES clients seraient fiers : tu l'écriras vraiment dans Tiquiz demain.</p>
+<h2>L'erreur à éviter</h2>
+<p>Un quiz trop long ou qui ressemble à une interro : les gens partent avant de laisser leur email. La solution : 7 questions maximum, un ton sympa, et zéro bonne ou mauvaise réponse. On s'amuse, on ne juge pas.</p>
+<h2>Ta mission du jour</h2>
+<ul>
+<li>Choisis ton titre "Quel type de X es-tu ?".</li>
+<li>Vérifie : 1ère question facile, 5 à 7 questions maximum.</li>
+<li>Imagine le résultat dont tes clients seraient fiers.</li>
 </ul>$html$,
-  $html$<p>Format choisi, angle repéré : tu sais exactement ce que tu crées demain.</p><p>Et demain, c'est le grand jour : ton quiz passe de l'idée à la réalité.</p>$html$,
+  $html$<p>Ton quiz est pensé pour être fini et partagé : la base d'un quiz qui se diffuse tout seul.</p><p>Demain, le grand jour : on crée ton quiz pour de vrai et on le met en ligne.</p>$html$,
   $st2$published$st2$, 40, $r$[]$r$::jsonb, false
 ),
 (
-  4, $s$j4-creer-connecter$s$, $t$Créer et connecter ton quiz$t$, $st$Jalon majeur : ton quiz publié et branché$st$,
-  $html$<p>Le grand jour : ton quiz passe de l'idée à la réalité. Tu le génères avec l'IA, tu l'ajustes, tu l'habilles, tu le branches à Systeme.io et tu le publies. À la fin, ton quiz capture des leads taggués en automatique.</p>
-<h2>À retenir</h2>
+  4, $s$j4-creer-connecter$s$, $t$Crée et connecte ton quiz$t$, $st$Aujourd'hui, ton quiz passe en ligne et capte ses premiers contacts$st$,
+  $html$<p>Le grand jour : tu génères ton quiz avec l'IA, tu le branches à Systeme.io et tu le publies pour de vrai. Le piège à éviter : peaufiner pendant des semaines sans jamais publier. Un quiz en brouillon ne rapporte rien ; un quiz imparfait, mais en ligne, oui. On publie une première version aujourd'hui, tu l'amélioreras après avec tes vrais chiffres.</p>
+<h2>Comment Tiquiz écrit ton quiz (à ta place)</h2>
+<p>Tu dis à l'IA ton sujet et à qui tu parles. Elle te pose 2 ou 3 petites questions, et en 30 secondes elle écrit tout : le titre, les questions et les résultats. Toi, tu relis et tu corriges juste ce qui ne te plaît pas, en cliquant sur le texte. Tu ne pars jamais d'une page blanche.</p>
+<h2>Les étapes d'aujourd'hui</h2>
 <ul>
-<li>Le prompt à 3 couches (cible, transformation, ton) sort un quiz dix fois meilleur.</li>
-<li>L'IA fait 90% du travail. Tu juges et tu ajustes 10% au clic, tu ne réécris pas tout.</li>
-<li>Le réglage qui change le plus ton taux de leads : place la capture email juste avant le résultat.</li>
-<li>Première question facile et fun, jamais un champ email. Personnalise avec le prénom. Teste sur mobile.</li>
-<li>Pense à l'image de résultat partageable et à l'image OG (l'aperçu au partage).</li>
-<li>Publie, fais le quiz toi-même, et vérifie que ton contact arrive taggué dans Systeme.io.</li>
+<li>L'IA écrit le quiz. Toi, tu corriges au clic ce qui ne te ressemble pas.</li>
+<li>Tu branches ta clé API Systeme.io (vue hier) et tu choisis tes tags.</li>
+<li>Tu publies, puis tu fais le quiz toi-même pour vérifier.</li>
+<li>Tu vérifies qu'un contact test arrive bien dans Systeme.io.</li>
 </ul>
-<h2>Le prompt à 3 couches (à copier dans Tiquiz)</h2>
-<p><em>"Crée un quiz pour [cible précise]. Objectif principal : [ton objectif n°1]. À la fin, le répondant doit réaliser que [la transformation]. Ton : [ta voix]. Donne 3 ou 4 profils de résultats avec un nom valorisant, et 6 à 8 questions identitaires, sans bonne ni mauvaise réponse."</em></p>
-<h2>Tes actions du jour</h2>
+<p>La preuve que les détails comptent : BedGear a fait +490% de ventes en ajoutant un conseil personnalisé à la fin de son quiz.</p>
+<h2>Growth hack : la page de fin qui vend</h2>
+<p>À la fin, ne dis pas juste le résultat : propose la bonne solution. Le quiz a déjà trouvé le problème de la personne, donc ta proposition tombe pile et elle dit oui sans se sentir forcée. La trame : le souci (où elle en est), la cause (pourquoi ça bloque, ce n'est pas sa faute), la solution (ce qu'un [profil] doit faire), puis le pont vers ton offre.</p>
+<h2>L'erreur à éviter</h2>
+<p>Retoucher ton quiz pendant des semaines sans jamais le publier. Publie une première version aujourd'hui : un quiz en ligne qui capte bat un quiz parfait resté dans ta tête.</p>
+<h2>Ta mission du jour</h2>
 <ul>
-<li>Génère ton quiz avec le prompt à 3 couches, puis affine.</li>
-<li>Place la capture juste avant le résultat, mets une première question fun, active la personnalisation.</li>
-<li>Applique ton branding et teste sur mobile.</li>
-<li>Connecte ta clé API Systeme.io, configure au moins le tag de capture, publie et teste de bout en bout.</li>
-<li>Poste ton lien dans la communauté.</li>
+<li>Génère ton quiz et corrige au clic ce qui ne te plaît pas (place la capture juste avant le résultat, 1ère question fun, personnalisation au prénom).</li>
+<li>Écris ta page de fin (souci, cause, solution, offre).</li>
+<li>Branche ta clé API + le tag de capture, et publie.</li>
+<li>Fais le quiz toi-même et vérifie le contact dans Systeme.io.</li>
 </ul>$html$,
-  $html$<p>Ton quiz est PUBLIÉ et il capture des leads en automatique. C'est le jalon, félicitations.</p><p>Demain, on le remplit de monde, sans dépenser un euro.</p>$html$,
+  $html$<p>Ton quiz est PUBLIÉ et il capture des leads en automatique. C'est le jalon, félicitations.</p><p>Demain : on le remplit de monde, sans dépenser un euro.</p>$html$,
   $st2$published$st2$, 50, $r$[]$r$::jsonb, false
 ),
 (
-  5, $s$j5-promouvoir-gratos$s$, $t$Promouvoir gratuitement$t$, $st$Remplir ton quiz sans dépenser un euro$st$,
-  $html$<p>Ton quiz est en ligne, il faut du monde dedans. Aujourd'hui, on le remplit sans dépenser un euro, avec des méthodes que presque personne n'utilise. C'est le jour le plus chargé en growth hacks.</p>
-<h2>À retenir</h2>
+  5, $s$j5-promouvoir-gratos$s$, $t$Promouvoir gratuitement$t$, $st$Remplir ton quiz de monde, sans dépenser un euro$st$,
+  $html$<p>Ton quiz est en ligne... mais un quiz sans visiteurs, c'est une belle boutique en plein désert. Bonne nouvelle : pas besoin de pub pour démarrer, tu as déjà des endroits gratuits sous la main. Aujourd'hui, on va chercher du monde, activement, et on rend ton quiz viral.</p>
+<h2>3 sources de trafic gratuit</h2>
 <ul>
-<li>La viralité d'abord : un bonus de partage à valeur asymétrique, l'anti-triche honnête, le résultat qui invite à taguer un ami.</li>
-<li>Récupère le trafic que tu gaspilles déjà : la page de remerciement de ton freebie actuel est ton meilleur gisement.</li>
-<li>Les emplacements dormants : lien en bio, signature email, post épinglé.</li>
-<li>Un quiz = des semaines de contenu : un post par résultat, par question, par statistique.</li>
-<li>Les audiences des autres, gratuitement : le pod d'échange de quiz, le cadeau d'invité, les groupes sans spammer.</li>
+<li>Ce que tu as déjà : ta liste email, ta bio, ta signature, et ta page de remerciement (celle où on arrive après avoir pris ton cadeau gratuit).</li>
+<li>Le public des autres : les commentaires sous les gros posts, les partenaires, les podcasts.</li>
+<li>Ton propre contenu : un seul quiz te donne des dizaines de posts (un par résultat, par question, par chiffre).</li>
 </ul>
-<h2>Phrase de partage (à copier sur ta page de résultat)</h2>
-<p><em>"Tu connais quelqu'un qui est exactement comme ça ? Envoie-lui le test, il va halluciner."</em> Et active l'anti-triche honnête : "partage pour débloquer ton plan détaillé".</p>
-<h2>Tes actions du jour</h2>
+<h2>Le partage pour débloquer : la viralité dans ton quiz</h2>
+<p>Tiquiz peut bloquer une dernière chose à la fin : un bonus. Pour l'ouvrir, la personne doit partager ton quiz une seule fois (pas de "ramène 3 amis"). Résultat : chaque personne qui veut le bonus envoie ton quiz à son réseau. C'est ta pub, faite gratuitement par tes visiteurs. Pour que ça marche, le bonus doit valoir le coup (le plan d'action lié à son profil, un modèle prêt à l'emploi, une vidéo privée), et tu le présentes clairement : "Ton plan d'action sur-mesure t'attend juste derrière. Partage le quiz pour l'ouvrir."</p>
+<h2>La boucle d'auto-viralité</h2>
+<p>Un visiteur finit le quiz, veut le bonus, partage une fois, un proche clique, refait le quiz... et ça recommence. Si chaque visiteur en ramène en moyenne plus d'un, ça ne s'arrête jamais : ton quiz devient sa propre source de trafic.</p>
+<h2>5 growth hacks pour ramener du monde</h2>
 <ul>
-<li>Active ton étape bonus de partage avec un bonus que tu as déjà et qui donne envie.</li>
-<li>Mets ton lien dans au moins 3 emplacements, dont la page de remerciement de ton freebie.</li>
-<li>Publie ton quiz sur ton canal principal avec un premier post.</li>
-<li>Repère 1 ou 2 partenaires pour un échange.</li>
+<li>La chasse au trésor : "j'ai caché un cadeau dans mon quiz, fais-le pour le trouver". Un jeu donne plus envie qu'une pub, et tu fais un pic de visites le jour même.</li>
+<li>Le commentaire malin : sous un gros post de ta niche, ajoute un commentaire vraiment utile, puis "j'ai un quiz qui te dit lequel tu es".</li>
+<li>Branche-le là où tu perds déjà du monde : ta page de remerciement, ta bio, ta signature. Ces gens sont chauds, ils cliquent beaucoup plus.</li>
+<li>L'échange de quiz entre créateurs : associe-toi à 2-3 créateurs voisins (pas concurrents) et partagez vos quiz mutuellement.</li>
+<li>Le résultat qu'on a envie de montrer : soigne l'image de chaque résultat et l'image de partage (OG) pour donner envie de cliquer.</li>
+</ul>
+<h2>L'erreur à éviter</h2>
+<p>Publier ton quiz et attendre que les gens le trouvent tout seuls : personne ne vient. Va chercher le trafic activement, en commençant par les endroits gratuits que tu as déjà.</p>
+<h2>Ta mission du jour</h2>
+<ul>
+<li>Mets ton lien à 3 endroits, dont ta page de remerciement.</li>
+<li>Active l'étape "partage pour débloquer" avec un vrai bonus.</li>
+<li>Écris et publie ton premier post de recyclage.</li>
+<li>Contacte 1 créateur pour un échange de quiz.</li>
 </ul>$html$,
-  $html$<p>Ta viralité est activée et tes premières diffusions sont lancées. Le trafic va monter.</p><p>Demain, on transforme ces leads en communauté vivante.</p>$html$,
+  $html$<p>Ta viralité est activée et tes premières diffusions sont lancées. Le trafic va monter.</p><p>Demain, on transforme ces visiteurs en communauté qui revient et t'en ramène d'autres.</p>$html$,
   $st2$published$st2$, 60, $r$[]$r$::jsonb, false
 ),
 (
-  6, $s$j6-communaute$s$, $t$Créer ta communauté$t$, $st$Transformer tes leads en audience vivante$st$,
-  $html$<p>Un lead seul t'oublie en 48 heures. La différence entre un coup et un business, c'est que les gens reviennent. Aujourd'hui, tu transformes tes leads de quiz en communauté.</p>
-<h2>À retenir</h2>
+  6, $s$j6-communaute$s$, $t$Crée ta communauté$t$, $st$Transforme tes leads en audience vivante qui revient et rachète$st$,
+  $html$<p>Un lead tout seul t'oublie en deux semaines, un email de plus perdu au milieu de 200 autres. Une communauté change tout : un endroit à toi où tes leads te voient régulièrement. Plus ils te voient, plus ils te font confiance. Et on achète à ceux en qui on a confiance.</p>
+<h2>Où la créer : 4 maisons possibles</h2>
+<p>Une communauté, c'est un endroit à toi où tes contacts se retrouvent et te voient souvent, pas une liste d'emails muette. Tu n'en choisis qu'UNE pour commencer, celle où ton audience est déjà présente :</p>
 <ul>
-<li>Une communauté transforme une liste morte en audience vivante qui échange et rachète.</li>
-<li>Choisis la plateforme que tu peux animer dans la durée : Facebook (large), Telegram (direct), Discord (structuré).</li>
-<li>Le quiz est ton moteur d'entrée : la page de résultat invite à rejoindre, taguer un ami fait entrer du monde.</li>
-<li>Le flywheel d'autorité : au bout de 100 à 200 réponses, tu as une donnée que personne d'autre n'a.</li>
-<li>Anime simplement, mais régulièrement.</li>
+<li>Groupe Facebook : simple, tout le monde y est.</li>
+<li>Canal Telegram : tu diffuses, ils reçoivent direct sur leur téléphone.</li>
+<li>Groupe WhatsApp : ultra proche, comme entre amis.</li>
+<li>Skool : pensé pour les communautés (cours, discussions et classement au même endroit).</li>
 </ul>
-<h2>Message d'accueil (à copier)</h2>
-<p><em>"Bienvenue ! Ici, on [la promesse simple de ta communauté]. Pour commencer : présente-toi en une phrase et dis-nous ton résultat au quiz. On t'accueille."</em></p>
-<h2>Tes actions du jour</h2>
+<h2>À quoi ça sert vraiment</h2>
 <ul>
-<li>Choisis ta plateforme et crée ton espace communauté.</li>
-<li>Ajoute une invitation à le rejoindre sur la page de résultat de ton quiz.</li>
-<li>Écris ton premier message d'accueil.</li>
+<li>Partager de la valeur exclusive : du contenu et des coulisses réservés à tes membres.</li>
+<li>Collecter des retours en groupe : tu poses une question, tu as 20 réponses dans l'heure.</li>
+<li>Créer des liens : tes membres se parlent, et toi tu deviens une vraie personne pour eux.</li>
+</ul>
+<p>La preuve que la fidélité paie : garder seulement 5% de clients en plus augmente le profit de 25 à 95% (Bain & Company). Garder les gens près de toi rapporte plus que courir après du nouveau.</p>
+<h2>Comment les faire venir depuis ton quiz</h2>
+<p>Sur la page de résultat, ajoute une invitation claire et personnalisée : "Tu es un Bâtisseur ? Rejoins les autres Bâtisseurs ici." C'est le meilleur moment : la personne vient de recevoir un résultat qui la décrit, elle est curieuse, fière et chaude. Reste aussi disponible en privé : une réponse personnelle transforme un curieux en fan, puis en client.</p>
+<h2>Growth hacks</h2>
+<ul>
+<li>L'invitation personnalisée sur le résultat : "Rejoins les autres comme toi". On veut tous appartenir à un groupe qui nous ressemble.</li>
+<li>Le rendez-vous qui fait revenir : un rituel fixe (le conseil du lundi, le live du mardi). La régularité bat la perfection.</li>
+<li>Les questions des membres = ta machine à contenu : chaque question devient un post, une vidéo, un nouveau quiz. Si une personne la pose, des centaines se la posent en silence.</li>
+</ul>
+<h2>L'erreur à éviter</h2>
+<p>Laisser un membre te monopoliser (il t'écrit sans arrêt et attend des réponses longues et gratuites). Pose un cadre : réponds court, renvoie vers le groupe ("super question, je la poste pour que tout le monde en profite"), ou vers ton offre payante pour du suivi individuel.</p>
+<h2>Ta mission du jour</h2>
+<ul>
+<li>Choisis ta maison : Facebook, Telegram, WhatsApp ou Skool.</li>
+<li>Crée-la : un nom clair, une phrase qui dit à qui c'est.</li>
+<li>Ajoute l'invitation sur ta page de résultat, avec le profil.</li>
+<li>Note 3 questions déjà reçues à transformer en contenu.</li>
 </ul>$html$,
-  $html$<p>Ta communauté démarre, et ton quiz l'alimente. Tu ne fais plus du one-shot.</p><p>Demain, dernier jour : on pilote avec tes vrais chiffres, et on célèbre.</p>$html$,
+  $html$<p>Ta communauté démarre, et ton quiz l'alimente. Tu ne fais plus du one-shot.</p><p>Demain, dernier jour : on regarde tes vrais chiffres pour améliorer ton quiz, et on trace ton plan pour la suite.</p>$html$,
   $st2$published$st2$, 70, $r$[]$r$::jsonb, false
 ),
 (
-  7, $s$j7-adapter-suivre$s$, $t$Adapter, suivre, et après$t$, $st$Piloter avec tes vrais chiffres, et la suite$st$,
-  $html$<p>Dernier jour. Tu as un quiz qui capture, branché, qui ramène du monde, avec une communauté qui démarre. Aujourd'hui, tu apprends à piloter avec tes vrais chiffres, à améliorer ton quiz sans tout casser, et à savoir quoi faire ensuite. Et on célèbre.</p>
-<h2>À retenir</h2>
+  7, $s$j7-adapter-suivre$s$, $t$Regarde tes chiffres et améliore$t$, $st$Tu pilotes avec tes vrais chiffres, pas au feeling$st$,
+  $html$<p>Dernier jour. Avancer au feeling, c'est avancer les yeux fermés : tu crois que ton quiz marche, ou pas, mais tu n'en sais rien, et tu refais les mêmes erreurs. Tes vrais chiffres te disent exactement où ça coince. Pas besoin d'être fort en maths : on lit ça comme une histoire toute simple. Et on célèbre.</p>
+<h2>Les 5 chiffres qui comptent</h2>
 <ul>
-<li>Regarde le funnel Tiquiz : vues, démarrages, complétions, partages, conversions. Cherche où tu perds le plus de monde.</li>
-<li>La règle du point de fuite unique : corrige UNE seule chose à la fois, puis remesure.</li>
-<li>Ta progression, ce sont tes vrais chiffres (leads, partages, ventes), pas des étoiles.</li>
-<li>Un quiz identitaire ne périme jamais : relance-le chaque trimestre avec un nouveau prétexte.</li>
-<li>Ensuite : passe en abo Tiquiz quand tu satures, explore les bonus, regarde le multiprofils et l'affiliation.</li>
+<li>Les vues : combien voient ton quiz.</li>
+<li>Les démarrages : combien le commencent vraiment.</li>
+<li>Les quiz finis : combien vont jusqu'au résultat.</li>
+<li>Les captures : combien te laissent leur email.</li>
+<li>Les ventes : combien achètent ensuite.</li>
 </ul>
-<h2>La question qui fait progresser ton quiz (à copier)</h2>
-<p>Sur ta page de résultat ou dans ton premier email : <em>"Qu'est-ce qui a failli t'empêcher d'aller au bout du quiz ?"</em> Les réponses te donnent, noir sur blanc, ta prochaine version.</p>
-<h2>Tes actions du jour</h2>
+<p>À chaque étape, des gens s'arrêtent, c'est normal. Ton travail : trouver LA marche où tu perds le plus de monde, c'est le seul point à réparer pour l'instant. Beaucoup démarrent mais peu finissent ? Ton quiz est trop long. Beaucoup finissent mais peu laissent leur email ? Ton cadeau ne donne pas assez envie.</p>
+<h2>Laisse l'IA de Tiquiz le faire pour toi (plan Plus)</h2>
+<p>Tu peux tout lire à la main, mais l'analyse IA de Tiquiz (plan Plus) le fait pour toi : elle lit tes résultats et te dit, en clair, ce qui marche et ce qui coince, qui sont tes visiteurs et quoi améliorer en premier. Tu gagnes des heures et tu ne passes à côté de rien.</p>
+<h2>Growth hacks</h2>
 <ul>
-<li>Lis ton funnel Tiquiz et repère ton point de fuite n°1.</li>
-<li>Applique un seul correctif.</li>
-<li>Écris ton plan des 30 prochains jours.</li>
-<li>Poste ton bilan (ton quiz et tes premiers chiffres) dans la communauté.</li>
+<li>Répare une seule chose à la fois : change UN truc au point qui coince, attends quelques jours, recompare. Sinon tu ne sais pas ce qui a aidé.</li>
+<li>Verse plus là où ça marche déjà : repère ta source n°1 de trafic ou de ventes et double-la (loi du 80/20). Les pros doublent ce qui gagne au lieu de s'acharner sur ce qui rate.</li>
+<li>Relance le même quiz : tous les 3 mois, repartage-le avec une nouvelle accroche. Un quiz qui parle des gens reste vrai tout le temps. Beardbrand utilise le même quiz (150 000 leads) depuis des années.</li>
+</ul>
+<h2>L'erreur à éviter</h2>
+<p>Ne jamais regarder tes chiffres et avancer au feeling. Bloque 15 minutes par mois pour les lire : un coup d'oeil régulier te montre où agir et t'évite de travailler dans le vide.</p>
+<h2>Et après</h2>
+<p>Tu as une machine à leads qui tourne. Pour aller plus loin : les bonus (vendre avec ton quiz, le trafic payant, exploiter les sondages et les popquiz) et un parcours de promo pour chaque réseau (Facebook, Instagram, LinkedIn...).</p>
+<h2>Ta mission du jour</h2>
+<ul>
+<li>Repère le point qui coince le plus dans tes chiffres.</li>
+<li>Change une seule chose, et note-la.</li>
+<li>Lance l'analyse IA si tu es sur le plan Plus.</li>
+<li>Écris ton plan pour les 30 prochains jours, et poste ton bilan dans la communauté.</li>
 </ul>$html$,
   $html$<p>Tu es parti de zéro il y a 7 jours, et tu as maintenant une machine à leads qui tourne. Sois fier, tu as construit un actif.</p><p>Les bonus t'attendent quand tu veux pour aller plus loin.</p>$html$,
   $st2$published$st2$, 80, $r$[]$r$::jsonb, false
 ),
 (
-  101, $s$bonus-trafic-payant$s$, $t$Bonus : Trafic payant$t$, $st$La pub presque sans risque$st$,
-  $html$<p>La pub est la seule méthode payante du parcours. Bien faite, elle est presque sans risque, grâce à un mécanisme que les pros connaissent : l'offre auto-liquidante.</p>
-<h2>À retenir</h2>
+  101, $s$bonus-trafic-payant$s$, $t$Bonus : Trafic payant$t$, $st$La pub presque sans risque, grâce à un seul mécanisme$st$,
+  $html$<p>La pub est le seul levier payant de tout l'Atelier. La peur n°1 : cramer son budget. La vérité : la pub n'invente rien, elle accélère. Si ton quiz capte déjà des leads en gratuit, elle le fait juste plus vite et plus fort. Et un mécanisme la rend presque sans risque : l'offre auto-liquidante.</p>
+<h2>La règle d'or : ne jamais payer pour du vide</h2>
+<p>Tu ne lances JAMAIS de pub avant d'avoir prouvé que ton quiz transforme les visiteurs en leads, gratuitement. Sinon, la pub ne fait qu'accélérer ta perte : tu paies pour envoyer des gens dans un trou. D'abord le gratuit qui marche (les 7 jours), ensuite seulement l'essence dans le moteur.</p>
+<h2>L'offre auto-liquidante : le coeur du système</h2>
+<p>Juste après le quiz, tu proposes une petite offre (7 à 27€), ultra ciblée sur le résultat de la personne. But : que ses ventes remboursent ce que tu as dépensé en pub. Tu dépenses 10, l'offre te rend 10. Quand chaque euro de pub te revient, tu en achètes à l'infini sans risque : tes leads se construisent gratuitement, et la pub passe de pari à robinet. La preuve : Dropbox a obtenu des leads à 0,25€ avec le bon mécanisme, contre 200€ et plus en acquisition classique.</p>
+<h2>Le test minimal et le retargeting</h2>
+<p>Commence petit : 5 à 10€ par jour, une cible simple, pas besoin d'un gros budget pour savoir si ça mord. Le poste le plus rentable : le retargeting des abandonneurs. Tu remontres ton quiz à ceux qui l'ont commencé sans le finir : ils te connaissent déjà et étaient intéressés, donc un tout petit budget suffit et ça convertit très fort.</p>
+<h2>Growth hacks</h2>
 <ul>
-<li>Règle d'or : jamais de pub avant d'avoir prouvé que ton quiz convertit en gratuit.</li>
-<li>L'offre auto-liquidante : une petite offre (7 à 27 euros) juste après le quiz, qui rembourse ta pub. Quand chaque euro dépensé te revient, le trafic devient illimité et sans risque.</li>
-<li>Commence petit : 5 à 10 euros par jour.</li>
-<li>Le retargeting des abandonneurs est la pub la plus rentable.</li>
-<li>Ne monte le budget que quand les maths sont bonnes.</li>
+<li>L'offre auto-liquidante : une offre à ~17€ liée au résultat (mini-cours, modèle), proposée juste après le quiz. Ses ventes remboursent ta pub, tes leads deviennent gratuits.</li>
+<li>Le retargeting des abandonneurs : crée une audience "a commencé le quiz sans finir" et relance-la pour quelques centimes ("Tu n'as pas fini ? Ton profil t'attend.").</li>
 </ul>
-<h2>Tes actions</h2>
+<h2>L'erreur à éviter</h2>
+<p>Lancer de la pub "pour voir", sans offre auto-liquidante et sans avoir prouvé que ton quiz capte. D'abord le gratuit qui marche, ensuite l'offre qui rembourse, ensuite seulement la pub. Jamais dans un autre ordre.</p>
+<h2>Ta mission</h2>
 <ul>
-<li>Mets en place une petite offre auto-liquidante après ton quiz.</li>
-<li>Si tu testes la pub, lance 5 euros par jour en retargeting de tes abandonneurs.</li>
-<li>Observe le coût par lead avant de monter le budget.</li>
+<li>Vérifie que ton quiz capte déjà des leads en gratuit.</li>
+<li>Crée une petite offre (7 à 27€) liée à un résultat.</li>
+<li>Prépare une audience de retargeting "quiz commencé non fini".</li>
+<li>Si tu testes : 5€/jour, et tu observes les maths.</li>
 </ul>$html$,
   $html$<p>Tu as les clés pour amplifier ton quiz sans cramer ton budget. À toi de jouer, quand tu seras prête.</p>$html$,
   $st2$published$st2$, 1010, $r$[]$r$::jsonb, true
 ),
 (
-  102, $s$bonus-vendre-avec-un-quiz$s$, $t$Bonus : Vendre avec un quiz$t$, $st$La page de résultat = ta page de vente$st$,
-  $html$<p>Ton quiz a diagnostiqué, donc tu prescris. Vendre devient une suite logique, sans pression ni fausse urgence. Ce bonus te montre comment transformer ta page de résultat en page de vente.</p>
-<h2>À retenir</h2>
+  102, $s$bonus-vendre-avec-un-quiz$s$, $t$Bonus : Vendre avec un quiz$t$, $st$Ta page de résultat devient ta page de vente, sans forcer$st$,
+  $html$<p>Capter, c'est la moitié du chemin : un lead qui n'achète jamais ne paie pas tes factures. Bonne nouvelle, ton quiz a déjà fait le plus dur : il a posé un diagnostic. La personne arrive en sachant qu'elle a un problème. Du coup tu ne "vends" pas, tu prescris la solution à un problème qu'elle a reconnu elle-même. Zéro résistance, c'est l'anti-réactance : comme chez le médecin, on ne se braque pas contre le remède qu'on est venu chercher.</p>
+<h2>Ta page de résultat = ta page de vente (en 4 temps)</h2>
 <ul>
-<li>Le prospect a conclu seul, donc zéro résistance. Tu confirmes, tu ne pousses pas.</li>
-<li>La page de résultat = ta page de vente en 4 temps : miroir, cause cachée, chemin, pont vers l'offre.</li>
-<li>3 façons de vendre : lien direct sur le résultat, email de vente par tag, ou valeur gratuite puis vente.</li>
-<li>L'aiguilleur : chaque résultat pointe vers l'offre adaptée à ce profil.</li>
-<li>Les coupons et promos : coupon-récompense, coupon par profil, coupon de partage, urgence honnête.</li>
+<li>Le miroir : "voici où tu en es, [profil]". La personne se reconnaît.</li>
+<li>La cause cachée : "voici pourquoi tu bloques, et ce n'est pas ta faute". Tu enlèves la culpabilité.</li>
+<li>Le chemin : "voici ce qu'un [profil] doit faire".</li>
+<li>Le pont : "le plus rapide pour y arriver, c'est ça", vers ton offre.</li>
 </ul>
-<h2>Tes actions</h2>
+<h2>Les 3 façons de vendre (choisis-en une)</h2>
 <ul>
-<li>Ajoute un CTA de vente clair sur ta page de résultat.</li>
-<li>Mets en place un coupon-récompense honnête relié à ton offre Systeme.io.</li>
-<li>Installe ta séquence de vente douce à partir du fichier des 7 séquences email.</li>
+<li>Le lien direct sur la page de résultat : un bouton vers l'offre adaptée au profil. Le plus simple pour démarrer.</li>
+<li>L'email de vente déclenché par le tag du résultat : ta séquence part toute seule.</li>
+<li>Valeur gratuite puis vente : tu donnes d'abord, tu vends ensuite. Le plus doux et le plus éthique.</li>
+</ul>
+<p>La preuve que le ciblage paie : Beardbrand a fait 964% de retour sur ses emails parce que chaque message tombait pile sur le bon profil.</p>
+<h2>Growth hacks</h2>
+<ul>
+<li>L'aiguilleur de ventes : chaque résultat pointe vers l'offre faite pour ce profil (découverte à 27€ pour le débutant, programme à 197€ pour l'intermédiaire, accompagnement pour l'avancé).</li>
+<li>Le coupon-récompense : la page de résultat débloque un code perso ("ton profil te donne -20%, valable 72h pour de vrai"). Une vraie raison d'acheter maintenant, sans fausse urgence.</li>
+<li>Valeur gratuite puis vente : 2-3 emails utiles liés au profil, puis l'offre. Quand tu as déjà aidé, l'offre devient évidente.</li>
+</ul>
+<h2>L'erreur à éviter</h2>
+<p>Vendre comme un bourrin dès le résultat (fausse urgence, faux compte à rebours, "achète vite") : ça fait fuir et casse la confiance. Laisse le diagnostic faire le travail, donne de la valeur, propose clairement, reste honnête sur tes promos. La confiance vend mieux que la pression.</p>
+<h2>Ta mission</h2>
+<ul>
+<li>Écris ta page de résultat en 4 temps pour un profil.</li>
+<li>Choisis UNE façon de vendre pour commencer.</li>
+<li>Relie chaque profil à l'offre qui lui correspond.</li>
+<li>Crée un coupon-récompense honnête dans Systeme.io.</li>
 </ul>$html$,
   $html$<p>Ta page de résultat peut maintenant convertir, proprement. Le diagnostic se confirme, il ne se force pas.</p>$html$,
   $st2$published$st2$, 1020, $r$[]$r$::jsonb, true
 ),
 (
   103, $s$bonus-exploiter-sondages$s$, $t$Bonus : Exploiter les sondages$t$, $st$Connaître ta cible mieux que tes concurrents$st$,
-  $html$<p>Le sondage est le petit frère discret du quiz. Il ne révèle pas un type, il récolte. C'est l'outil qui te fait connaître ta cible mieux que tes concurrents.</p>
-<h2>À retenir</h2>
+  $html$<p>La plupart des créateurs inventent ce que veut leur audience, dans leur tête, et passent à côté. Le sondage, c'est le petit frère discret du quiz : pas de résultat fun, juste des questions pour récolter la vérité de ta cible. Bien utilisé, il te fait connaître ton audience mieux que tes concurrents, et te donne des idées de contenu et d'offres que tu n'aurais jamais trouvées seul.</p>
+<h2>Sondage ou quiz : la différence</h2>
+<p>Le quiz donne un résultat à la personne (son profil) : c'est un aimant à leads, fun et viral. Le sondage, lui, te sert TOI : il récolte des réponses pour que tu comprennes ta cible. Le bénéfice est pour toi, pas pour le répondant. Le quiz attire et capte ; le sondage écoute et informe. Ils se complètent.</p>
+<h2>Le sondage pré-quiz : reprends leurs mots, à la source</h2>
+<p>Avant de créer ou d'améliorer un quiz, lance un court sondage : ses douleurs, ses envies, ses mots exacts. Tu construis ensuite un quiz, et des offres, qui sonnent parfaitement juste, parce qu'ils sont écrits AVEC leurs mots. Tu ne devines plus. La preuve : Ryan Levesque a généré 100 M$ avec la méthode ASK, entièrement bâtie sur des sondages qui font parler la cible avant de créer.</p>
+<h2>Faire parler l'ensemble (le flywheel de données)</h2>
+<p>Une réponse, c'est anecdotique. 300 réponses, c'est de l'or : des tendances, des segments, le blocage n°1 qui revient. L'analyse IA de Tiquiz (plans supérieurs) sort ces tendances pour toi. Le flywheel : tes réponses nourrissent ton contenu (un post par statistique), ton autorité ("j'ai sondé 300 personnes") et ta prochaine offre (le blocage qui ressort le plus).</p>
+<h2>Growth hacks</h2>
 <ul>
-<li>Le sondage pré-quiz : avant de créer ou d'améliorer un quiz, sonde ton audience pour récolter ses mots exacts.</li>
-<li>L'analyse IA fait parler l'agrégat : patterns, segments, insights.</li>
-<li>Le flywheel de données : tes réponses nourrissent ton contenu, ton autorité et ta prochaine offre.</li>
+<li>Le sondage pré-quiz : 3 questions à ta liste, et tu notes les formulations qui reviennent pour écrire ton quiz avec leurs mots.</li>
+<li>Une réponse = un contenu : transforme la statistique la plus surprenante en post ("j'ai sondé 300 personnes, voici ce qui ressort"). Autorité + sujets que ta cible veut vraiment.</li>
 </ul>
-<h2>Tes actions</h2>
+<h2>L'erreur à éviter</h2>
+<p>Inventer ce que veut ton audience depuis ton bureau, et créer un quiz ou une offre dans le vide. Demande d'abord : un sondage court te donne leurs vrais mots, et tu crées du sur-mesure au lieu de deviner.</p>
+<h2>Ta mission</h2>
 <ul>
-<li>Lance un sondage court à ton audience cette semaine.</li>
-<li>Récupère 5 formulations exactes pour ton prochain quiz.</li>
-<li>Sors un insight de l'analyse IA et fais-en un post.</li>
+<li>Écris 3 questions de sondage pour ta cible.</li>
+<li>Lance-le à ta liste ou ta communauté.</li>
+<li>Repère les mots et blocages qui reviennent.</li>
+<li>Transforme le plus surprenant en un contenu.</li>
 </ul>$html$,
   $html$<p>Tu sais maintenant écouter ton marché à la source. La data devient du contenu et des idées d'offres.</p>$html$,
   $st2$published$st2$, 1030, $r$[]$r$::jsonb, true
 ),
 (
   104, $s$bonus-exploiter-popquiz$s$, $t$Bonus : Exploiter les popquiz$t$, $st$Capter au pic d'attention de tes vidéos$st$,
-  $html$<p>Le popquiz, c'est un quiz incrusté dans une vidéo, un format que personne d'autre ne propose. Ce bonus te montre deux usages qui peuvent remplacer des heures de travail.</p>
-<h2>À retenir</h2>
+  $html$<p>Et si ton quiz vivait DANS ta vidéo ? Le popquiz, c'est un quiz incrusté directement dans une vidéo, un format que presque personne ne propose. Au lieu d'envoyer les gens vers un quiz à côté, tu captures pile au moment où ils sont scotchés. Deux usages peuvent te faire gagner des heures : le cliffhanger et le webinaire automatique.</p>
+<h2>Un popquiz, c'est quoi exactement ?</h2>
+<p>C'est un point d'arrêt (un "cuepoint") placé dans ta vidéo : à un moment choisi, un quiz apparaît par-dessus l'image. Tu peux en mettre plusieurs sur une même vidéo, et choisir s'ils sont bloquants (on doit répondre pour continuer) ou optionnels. Et tu peux l'embarquer (l'embed) sur n'importe quel site : la vidéo et le quiz voyagent ensemble.</p>
+<h2>Le popquiz cliffhanger : capte au pic de tension</h2>
+<p>Tu places un quiz bloquant juste avant la révélation clé de ta vidéo, le moment que tout le monde attend. Pour avoir la suite, le spectateur doit répondre, donc laisser son email. C'est le moment où l'envie de savoir est la plus forte : le taux de capture explose, parce qu'on ne s'arrête pas si près du but.</p>
+<h2>Le popquiz qui remplace un webinaire</h2>
+<p>Prends ta meilleure vidéo de valeur et incruste ton quiz à son moment fort : tu obtiens l'effet d'un webinaire (du contenu qui capture et qui vend), mais sans live, 24h/24, en automatique. Et la présence est de 100% : comme c'est asynchrone, personne ne "rate" la session, là où un live perd souvent plus de la moitié des inscrits.</p>
+<h2>Growth hacks</h2>
 <ul>
-<li>Bases avancées : plusieurs cuepoints sur une vidéo, comportement bloquant ou optionnel, embed partout.</li>
-<li>Le cliffhanger : un quiz bloquant juste avant la révélation clé d'une vidéo. Pour la suite, il faut répondre, donc laisser son mail.</li>
-<li>Le popquiz qui remplace un webinaire : ta meilleure vidéo de valeur + un quiz au moment fort, 24h sur 24, sans live.</li>
+<li>Le cliffhanger : coupe ta vidéo juste avant le moment clé avec un popquiz bloquant qui demande l'email ("Réponds pour débloquer l'erreur n°3"). Personne ne lâche si près du but.</li>
+<li>Le webinaire automatique : incruste ton quiz dans ta meilleure vidéo de valeur, mets-la sur une page dédiée et laisse-la tourner. Elle capture et vend pendant que tu dors.</li>
 </ul>
-<h2>Tes actions</h2>
+<h2>L'erreur à éviter</h2>
+<p>Mettre le popquiz à la fin de la vidéo, quand l'attention est déjà retombée et que les gens sont partis. Place-le au pic, juste avant le moment le plus attendu : c'est là qu'on accepte de laisser son email.</p>
+<h2>Ta mission</h2>
 <ul>
 <li>Choisis ta meilleure vidéo de valeur.</li>
-<li>Incruste un popquiz au moment où l'attention est la plus forte.</li>
-<li>Récupère l'embed et place-le là où ta vidéo est vue.</li>
+<li>Repère son moment le plus attendu.</li>
+<li>Place un popquiz bloquant juste avant.</li>
+<li>Embarque la vidéo sur une page dédiée.</li>
 </ul>$html$,
   $html$<p>Tes vidéos peuvent désormais capter au pic d'attention, en automatique. Un format que tes concurrents n'ont pas.</p>$html$,
   $st2$published$st2$, 1040, $r$[]$r$::jsonb, true
@@ -341,9 +437,10 @@ with q(day_number, type, prompt, help_text, options, required, sort_order) as (
   (2, $p$action$p$, $p$Quel sera le premier email de bienvenue que reçoit ton lead ?$p$, $p$Le coach peut t'aider à l'affiner.$p$, $j$[]$j$::jsonb, false, 3),
   (2, $p$self_eval$p$, $p$Où en es-tu sur la tuyauterie ?$p$, $p$Si tu bloques, le coach intervient.$p$, $j$[{"value":"pret","label":"Tout est prêt"},{"value":"presque","label":"Presque"},{"value":"bloque","label":"Je bloque"}]$j$::jsonb, false, 4),
   -- J3
-  (3, $p$decision$p$, $p$Pour ton objectif, quel format choisis-tu ?$p$, $p$C'est ce que tu crées demain.$p$, $j$[{"value":"quiz","label":"Quiz"},{"value":"sondage","label":"Sondage"},{"value":"popquiz","label":"Popquiz"}]$j$::jsonb, true, 1),
-  (3, $p$recall$p$, $p$Pour ancrer : la principale différence entre un quiz et un sondage ?$p$, $p$Aucun piège, c'est pour fixer l'idée.$p$, $j$[{"value":"perso","label":"Le quiz personnalise et segmente le répondant, le sondage agrège pour m'informer"},{"value":"pareil","label":"Le quiz et le sondage font la même chose"}]$j$::jsonb, false, 2),
-  (3, $p$self_eval$p$, $p$Es-tu au clair sur ce que tu vas créer demain ?$p$, $p$Si doute, le coach t'aide à trancher.$p$, $j$[{"value":"pret","label":"Oui, prêt"},{"value":"doute","label":"J'ai un doute"}]$j$::jsonb, false, 3),
+  (3, $p$decision$p$, $p$Ton titre est-il du type "Quel type de X es-tu ?"$p$, $p$Il parle de la personne, ce n'est pas une interro de connaissances.$p$, $j$[{"value":"oui","label":"Oui, il parle de la personne"},{"value":"a_reformuler","label":"Pas encore, je le reformule"}]$j$::jsonb, true, 1),
+  (3, $p$decision$p$, $p$Combien de questions prévois-tu ?$p$, $p$5 à 7 maximum, sinon on abandonne.$p$, $j$[{"value":"5_7","label":"5 à 7 questions"},{"value":"plus","label":"Plus de 7 (je raccourcis)"}]$j$::jsonb, true, 2),
+  (3, $p$decision$p$, $p$Ta première question est-elle facile et fun ?$p$, $p$Un début facile et intrigant donne envie d'aller au bout.$p$, $j$[{"value":"oui","label":"Oui"},{"value":"a_revoir","label":"À revoir"}]$j$::jsonb, false, 3),
+  (3, $p$action$p$, $p$Décris le résultat dont tes clients seraient FIERS.$p$, $p$Celui qu'on a envie de montrer ("je suis Le Bâtisseur"). Tu l'écriras dans Tiquiz demain.$p$, $j$[]$j$::jsonb, true, 4),
   -- J4
   (4, $p$decision$p$, $p$As-tu généré ton quiz avec le prompt à 3 couches ?$p$, $p$Cible + transformation + ton.$p$, $j$[{"value":"oui","label":"Oui"},{"value":"pas_encore","label":"Pas encore"}]$j$::jsonb, true, 1),
   (4, $p$decision$p$, $p$Ta capture email est-elle placée juste avant le résultat ?$p$, $p$C'est le réglage qui fait le plus bouger ton taux de leads.$p$, $j$[{"value":"oui","label":"Oui"},{"value":"corrige","label":"Non, je corrige"}]$j$::jsonb, true, 2),
@@ -355,7 +452,7 @@ with q(day_number, type, prompt, help_text, options, required, sort_order) as (
   (5, $p$decision$p$, $p$Dans combien d'emplacements dormants as-tu mis ton lien ?$p$, $p$Lien en bio, signature, post épinglé...$p$, $j$[{"value":"aucun","label":"Aucun"},{"value":"un_deux","label":"1 ou 2"},{"value":"trois_plus","label":"3 et plus"}]$j$::jsonb, true, 3),
   (5, $p$action$p$, $p$Écris le premier post que tu vas publier pour lancer ton quiz.$p$, $p$Le coach peut l'affiner.$p$, $j$[]$j$::jsonb, true, 4),
   -- J6
-  (6, $p$decision$p$, $p$Quelle plateforme pour ta communauté ?$p$, $p$Celle que tu peux animer dans la durée.$p$, $j$[{"value":"facebook","label":"Facebook"},{"value":"telegram","label":"Telegram"},{"value":"discord","label":"Discord"},{"value":"autre","label":"Autre"}]$j$::jsonb, true, 1),
+  (6, $p$decision$p$, $p$Quelle maison pour ta communauté ?$p$, $p$Celle où ton audience est déjà, et que tu peux animer dans la durée.$p$, $j$[{"value":"facebook","label":"Groupe Facebook"},{"value":"telegram","label":"Canal Telegram"},{"value":"whatsapp","label":"Groupe WhatsApp"},{"value":"skool","label":"Skool"}]$j$::jsonb, true, 1),
   (6, $p$decision$p$, $p$As-tu créé ton espace et ajouté l'invitation sur ta page de résultat ?$p$, $p$Le quiz devient ton moteur d'entrée.$p$, $j$[{"value":"oui","label":"Oui"},{"value":"pas_encore","label":"Pas encore"}]$j$::jsonb, true, 2),
   (6, $p$action$p$, $p$Écris ton premier message d'accueil pour la communauté.$p$, $p$Le coach peut t'aider.$p$, $j$[]$j$::jsonb, true, 3),
   -- J7
