@@ -93,46 +93,66 @@ values
   $st2$published$st2$, 20, $r$[]$r$::jsonb, false
 ),
 (
-  2, $s$j2-prerequis-systemeio$s$, $t$Les prérequis : Systeme.io, tags, emails$t$, $st$La tuyauterie qui accueille tes leads$st$,
-  $html$<p>Aujourd'hui, on prépare la tuyauterie qui rend tout le reste possible. Sans elle, tes leads tombent dans le vide. Trente minutes de mise en place, et tes leads arriveront au bon endroit, taggués et accueillis.</p>
-<h2>À retenir</h2>
+  2, $s$j2-prerequis-systemeio$s$, $t$Accueille tes contacts en automatique$t$, $st$Branche Systeme.io : chaque contact arrive rangé et reçoit le bon message$st$,
+  $html$<p>Quelqu'un fait ton quiz et te laisse son email. Et après ? Souvent, rien : sans message d'accueil, il t'oublie en deux jours et n'achètera jamais. Aujourd'hui, tu branches le système qui accueille et range chaque contact tout seul. Toi, tu règles une fois ; tes contacts arrivent rangés et reçoivent le bon message.</p>
+<h2>3 mots tout simples</h2>
 <ul>
-<li>Systeme.io est le socle où vivent tes leads. Tiquiz s'y branche en natif.</li>
-<li>Un tag est une étiquette posée sur un contact. Tiquiz peut en poser plusieurs en automatique : capture, par résultat, partage, par réponse.</li>
-<li>La chaîne à retenir : résultat = tag = segment = offre.</li>
-<li>Une automatisation : quand le contact reçoit le tag X, démarre la séquence Y.</li>
-<li>L'email qui parle du résultat explose les ouvertures, sans effort manuel.</li>
+<li>Autorépondeur : l'outil qui garde tes contacts et leur envoie des emails tout seul. Le tien, c'est Systeme.io.</li>
+<li>Tag : une étiquette qu'on colle sur un contact pour le ranger (ex : "profil Bâtisseur").</li>
+<li>Automatisation : une règle "si... alors...". Si le contact reçoit le tag X, alors il reçoit l'email Y, tout seul.</li>
 </ul>
-<h2>Gabarit d'email de bienvenue (à copier)</h2>
-<p><em>"Salut {prenom}, ton résultat dit que tu es [profil]. Concrètement, ça veut dire [insight court]. Avant d'aller plus loin, réponds-moi en une ligne : quel est ton plus gros défi avec [ton sujet] en ce moment ? Je lis tout."</em></p>
-<h2>Tes actions du jour</h2>
+<h2>La clé API : le pont entre Tiquiz et Systeme.io</h2>
+<p>Une clé API, c'est un code secret qui relie deux outils pour qu'ils se parlent. Ici, elle relie Tiquiz à Systeme.io : chaque contact capté par ton quiz arrive direct dans Systeme.io, tout seul. Tu la trouves dans Systeme.io, tu la colles dans Tiquiz, et c'est branché. Sans elle, tu devras exporter ta liste à la main, c'est pénible. On a choisi Systeme.io pour son rapport qualité-prix : emails, automatisations, tags, pages de vente, tout y est déjà.</p>
+<h2>Pour toi : automatique. Pour lui : du sur-mesure.</h2>
+<p>Tu règles l'automatisation une seule fois, et ça tourne pour des centaines de personnes. De son côté, ton visiteur reçoit son prénom (si tu l'as capturé) et son profil : il a l'impression que le message est écrit pour lui seul. Le chemin à retenir : résultat du quiz, puis tag, puis groupe de gens, puis le bon email, avec son prénom.</p>
+<h2>Growth hack 1 : un tag sur une réponse</h2>
+<p>Colle un tag quand quelqu'un répond un truc précis (ex : "je n'ai pas de liste"). Tu sais ce qu'il a répondu, donc tu lui envoies pile le message fait pour lui, et il a l'impression que tu lis dans ses pensées. Dans Tiquiz (onglet Partage), relie une réponse à un tag Systeme.io, puis crée la série d'emails de ce tag.</p>
+<h2>Growth hack 2 : l'email qui dit ton résultat</h2>
+<p>Ton premier email annonce le résultat exact de la personne, dès le titre, avec son prénom : "Marie, voici ton plan de Visionnaire". Elle se sent vue, donc elle ouvre, elle lit, et souvent elle répond. Beardbrand gagne 9€ pour 1€ dépensé avec ces emails qui parlent du résultat. Dans Systeme.io, crée un email par tag de résultat.</p>
+<h2>L'erreur à éviter</h2>
+<p>Capter des emails et les laisser dormir, sans aucun message : tes contacts refroidissent et n'achètent jamais. La solution : branche au moins un email de bienvenue automatique dès aujourd'hui. Le reste viendra après.</p>
+<h2>Ta mission du jour</h2>
 <ul>
-<li>Crée ou prépare ton compte Systeme.io et repère ta clé API.</li>
-<li>Crée tes premiers tags : capture + un par profil de résultat.</li>
-<li>Installe ta séquence de bienvenue à partir du fichier des 7 séquences email.</li>
+<li>Branche ta clé API Systeme.io dans Tiquiz.</li>
+<li>Crée tes tags : un par résultat.</li>
+<li>Branche ton email de bienvenue automatique (avec le prénom).</li>
 </ul>$html$,
-  $html$<p>Ta tuyauterie est prête : tes futurs leads seront accueillis et triés tout seuls.</p><p>Demain, on choisit le bon format Tiquiz pour ton objectif.</p>$html$,
+  $html$<p>Ta tuyauterie est prête : tes futurs leads seront accueillis et triés tout seuls.</p><p>Demain, on conçoit un quiz qu'on finit et qu'on a envie de partager : le potentiel viral.</p>$html$,
   $st2$published$st2$, 30, $r$[]$r$::jsonb, false
 ),
 (
-  3, $s$j3-formats-tiquiz$s$, $t$Tiquiz : quiz, sondage, popquiz$t$, $st$Quel format pour quel objectif$st$,
-  $html$<p>Dans Tiquiz, tu as trois formats : quiz, sondage, popquiz. Trois outils pour trois objectifs. Aujourd'hui, tu apprends lequel choisir, pour ne pas perdre de temps demain au moment de créer.</p>
-<h2>À retenir</h2>
+  3, $s$j3-quiz-viral$s$, $t$Un quiz qu'on finit (et qu'on partage)$t$, $st$Les 2 moteurs viraux : on le finit, on le partage$st$,
+  $html$<p>Aujourd'hui, tu conçois un quiz qu'on termine ET qu'on a envie de partager : c'est ça, le potentiel viral. Un quiz qu'on finit te donne l'email ; un quiz qu'on partage t'amène de nouveaux visiteurs, gratuitement.</p>
+<h2>Pourquoi les gens abandonnent un quiz</h2>
+<p>Un quiz trop long, on le quitte avant la fin. Un quiz qui ressemble à une interro fait peur (peur de la mauvaise réponse), alors on s'en va. Un bon quiz, au contraire, on le finit sans s'en rendre compte, et on a envie de montrer son résultat.</p>
+<h2>Les 2 moteurs viraux</h2>
 <ul>
-<li>Le quiz révèle un type, capture l'email et segmente le lead. C'est ton outil d'acquisition principal.</li>
-<li>Le sondage récolte des données et des avis. Il t'informe toi, il ne personnalise pas le répondant.</li>
-<li>Le popquiz est un quiz incrusté dans une vidéo, pour capter au pic d'attention.</li>
-<li>La règle : quiz pour des leads segmentés, sondage pour comprendre ton marché, popquiz pour capter sur tes vidéos.</li>
-<li>On peut les combiner (à voir en bonus).</li>
+<li>On le FINIT : la personne va jusqu'au bout, donc tu récupères son email.</li>
+<li>On le PARTAGE : elle montre son résultat à ses amis, qui viennent jouer à leur tour.</li>
 </ul>
-<h2>La question à copier (avant de créer)</h2>
-<p>Pose-la à {audience}, elle vaut de l'or : <em>"Quel est ton plus gros défi avec [ton sujet] en ce moment ?"</em> Leurs réponses deviennent tes questions, tes profils et tes titres.</p>
-<h2>Tes actions du jour</h2>
+<p>La preuve : 30 à 40 personnes sur 100 finissent un bon quiz et laissent leur email. Avec un PDF, c'est moins de 3 sur 100.</p>
+<h2>Pour qu'on aille au bout</h2>
 <ul>
-<li>Choisis ton format selon ton objectif du Jour 1 (pour la plupart, ce sera le quiz).</li>
-<li>Repère le template ou l'angle dont tu vas partir demain.</li>
+<li>Ton quiz dit qui on est, il ne teste pas ce qu'on sait.</li>
+<li>La première question est facile et amusante.</li>
+<li>5 à 7 questions, pas plus. Sinon on abandonne.</li>
+<li>Un résultat dont on est fier donne envie de le partager.</li>
+</ul>
+<h2>Growth hack 1 : un quiz qui parle de toi</h2>
+<p>Demande "Quel type de X es-tu ?", pas "connais-tu la réponse ?". Parler de soi, c'est agréable, donc on continue ; une interro fait honte, on part. Au début, dis à l'IA de Tiquiz que ton quiz est un "Quel type de X es-tu ?", sans bonne ni mauvaise réponse.</p>
+<h2>Growth hack 2 : la question qui accroche au début</h2>
+<p>Commence par une question facile et intrigante : si le début est simple et donne envie, le cerveau veut connaître la fin. Exemple d'intro : "La plupart des gens se trompent sur eux-mêmes. Et toi ?", puis une 1ère question facile comme "Tu es plutôt du matin ou du soir ?".</p>
+<h2>Growth hack 3 : un résultat dont on est fier</h2>
+<p>Un résultat valorisant et un peu surprenant, c'est le genre qu'on a envie de montrer. Quand on est fier de son résultat, on le poste ("Je suis une Visionnaire, et toi ?"), et chaque partage t'amène de nouveaux visiteurs gratuitement. Imagine le résultat dont TES clients seraient fiers : tu l'écriras vraiment dans Tiquiz demain.</p>
+<h2>L'erreur à éviter</h2>
+<p>Un quiz trop long ou qui ressemble à une interro : les gens partent avant de laisser leur email. La solution : 7 questions maximum, un ton sympa, et zéro bonne ou mauvaise réponse. On s'amuse, on ne juge pas.</p>
+<h2>Ta mission du jour</h2>
+<ul>
+<li>Choisis ton titre "Quel type de X es-tu ?".</li>
+<li>Vérifie : 1ère question facile, 5 à 7 questions maximum.</li>
+<li>Imagine le résultat dont tes clients seraient fiers.</li>
 </ul>$html$,
-  $html$<p>Format choisi, angle repéré : tu sais exactement ce que tu crées demain.</p><p>Et demain, c'est le grand jour : ton quiz passe de l'idée à la réalité.</p>$html$,
+  $html$<p>Ton quiz est pensé pour être fini et partagé : la base d'un quiz qui se diffuse tout seul.</p><p>Demain, le grand jour : on crée ton quiz pour de vrai et on le met en ligne.</p>$html$,
   $st2$published$st2$, 40, $r$[]$r$::jsonb, false
 ),
 (
@@ -341,9 +361,10 @@ with q(day_number, type, prompt, help_text, options, required, sort_order) as (
   (2, $p$action$p$, $p$Quel sera le premier email de bienvenue que reçoit ton lead ?$p$, $p$Le coach peut t'aider à l'affiner.$p$, $j$[]$j$::jsonb, false, 3),
   (2, $p$self_eval$p$, $p$Où en es-tu sur la tuyauterie ?$p$, $p$Si tu bloques, le coach intervient.$p$, $j$[{"value":"pret","label":"Tout est prêt"},{"value":"presque","label":"Presque"},{"value":"bloque","label":"Je bloque"}]$j$::jsonb, false, 4),
   -- J3
-  (3, $p$decision$p$, $p$Pour ton objectif, quel format choisis-tu ?$p$, $p$C'est ce que tu crées demain.$p$, $j$[{"value":"quiz","label":"Quiz"},{"value":"sondage","label":"Sondage"},{"value":"popquiz","label":"Popquiz"}]$j$::jsonb, true, 1),
-  (3, $p$recall$p$, $p$Pour ancrer : la principale différence entre un quiz et un sondage ?$p$, $p$Aucun piège, c'est pour fixer l'idée.$p$, $j$[{"value":"perso","label":"Le quiz personnalise et segmente le répondant, le sondage agrège pour m'informer"},{"value":"pareil","label":"Le quiz et le sondage font la même chose"}]$j$::jsonb, false, 2),
-  (3, $p$self_eval$p$, $p$Es-tu au clair sur ce que tu vas créer demain ?$p$, $p$Si doute, le coach t'aide à trancher.$p$, $j$[{"value":"pret","label":"Oui, prêt"},{"value":"doute","label":"J'ai un doute"}]$j$::jsonb, false, 3),
+  (3, $p$decision$p$, $p$Ton titre est-il du type "Quel type de X es-tu ?"$p$, $p$Il parle de la personne, ce n'est pas une interro de connaissances.$p$, $j$[{"value":"oui","label":"Oui, il parle de la personne"},{"value":"a_reformuler","label":"Pas encore, je le reformule"}]$j$::jsonb, true, 1),
+  (3, $p$decision$p$, $p$Combien de questions prévois-tu ?$p$, $p$5 à 7 maximum, sinon on abandonne.$p$, $j$[{"value":"5_7","label":"5 à 7 questions"},{"value":"plus","label":"Plus de 7 (je raccourcis)"}]$j$::jsonb, true, 2),
+  (3, $p$decision$p$, $p$Ta première question est-elle facile et fun ?$p$, $p$Un début facile et intrigant donne envie d'aller au bout.$p$, $j$[{"value":"oui","label":"Oui"},{"value":"a_revoir","label":"À revoir"}]$j$::jsonb, false, 3),
+  (3, $p$action$p$, $p$Décris le résultat dont tes clients seraient FIERS.$p$, $p$Celui qu'on a envie de montrer ("je suis Le Bâtisseur"). Tu l'écriras dans Tiquiz demain.$p$, $j$[]$j$::jsonb, true, 4),
   -- J4
   (4, $p$decision$p$, $p$As-tu généré ton quiz avec le prompt à 3 couches ?$p$, $p$Cible + transformation + ton.$p$, $j$[{"value":"oui","label":"Oui"},{"value":"pas_encore","label":"Pas encore"}]$j$::jsonb, true, 1),
   (4, $p$decision$p$, $p$Ta capture email est-elle placée juste avant le résultat ?$p$, $p$C'est le réglage qui fait le plus bouger ton taux de leads.$p$, $j$[{"value":"oui","label":"Oui"},{"value":"corrige","label":"Non, je corrige"}]$j$::jsonb, true, 2),
