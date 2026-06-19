@@ -17,10 +17,11 @@
 - Le PDF : on télécharge, on n'ouvre jamais. Aucune info sur la personne. Liste froide.
 - Le quiz : interactif, il qualifie, il segmente, il se partage, il se crée en 5 minutes.
 - Les maths : une page de capture classique convertit 1 à 3% des visiteurs. Un bon quiz, 20 à 50%. Donc pour 50 leads il te faut quelques centaines de visiteurs, pas des milliers. Ton premier résultat devient de l'arithmétique, pas de la chance.
-- À L'ÉCRAN : le visuel 2% vs 30%, et 1 ou 2 cas clients réels (insère tes vrais exemples, Jocelyne).
+- La preuve : le quiz "Quel type de barbu es-tu ?" de Beardbrand a capté 150 000 emails.
+- À L'ÉCRAN : le visuel 2% vs 30%, la preuve Beardbrand, et 1 ou 2 cas clients réels.
 
 **2. Les 16 objectifs qu'un quiz peut servir.**
-- Fais comprendre qu'un quiz n'a pas un seul usage. Présente la liste, et demande-leur de choisir LE leur.
+- Fais comprendre qu'un quiz n'a pas un seul usage, et qu'ON PEUT EN COMBINER plusieurs (capter ET segmenter ET vendre). Présente la liste, et fais-leur choisir leur objectif principal.
   1. Capter des emails (lead magnet)
   2. Qualifier un prospect (savoir qui il est)
   3. Segmenter sa liste (tags par profil)
@@ -45,8 +46,9 @@
 - Viralité : on partage ce qui nous définit, jamais une note.
 - Miroir d'identité : un quiz révèle qui on est, il ne note pas. On bannit la logique bonne/mauvaise réponse.
 
-**4. Comment penser son quiz (les 3 décisions, à l'envers).**
-- Fixe ton objectif principal parmi les 16.
+**4. Comment penser son quiz (les décisions, à l'envers).**
+- Choisis tes objectifs (combinables) parmi les 16. Tu peux en viser plusieurs à la fois (capter ET segmenter ET vendre).
+- Profil ou score : le quiz de profil range la personne dans un type ("Le Bâtisseur"), parfait pour le partage et la portée. Le quiz de score la situe sur un niveau (Débutant, Confirmé, Expert), parfait pour montrer un manque à combler et donner envie d'acheter. À toi de choisir.
 - Construis à l'envers : "après mon quiz, le prospect réalise que ___ et donc mon offre devient logique."
 - Définis tes 3-4 résultats AVANT les questions (méthode inversée). Chaque résultat = un segment = un tag = une offre. Chaque profil valorise (résultat flatteur mais actionnable).
 - Le vol de langage : récupère les mots exacts de ta cible (avis Amazon, commentaires YouTube, groupes) et réinjecte-les.
@@ -59,7 +61,8 @@
 - Question (décision) : "Quel est l'objectif n°1 de ton quiz ?" (choix parmi les 16, oriente la suite)
 - Question (saisie) : "Complète : après mon quiz, le prospect réalise que ___."
 - Question (saisie) : "Note 3 phrases que ta cible emploie vraiment (volées dans des avis ou commentaires)."
-- Question (saisie) : "Écris tes 3 ou 4 profils de résultats (un nom valorisant chacun)."
+- Question (action) : "Écris tes 3 ou 4 profils de résultats (un nom valorisant chacun)."
+- Question (décision) : "Ton quiz sera un quiz de profil ou un quiz de score ?" (profil = un type, partage et portée ; score = un niveau, montre un manque et donne envie d'acheter)
 
 ## Notes de tournage
 - C'est LA vidéo. Prépare le visuel des maths et la liste des 16 objectifs.

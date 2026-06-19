@@ -17,11 +17,13 @@
 - Un lead dans une communauté reste, échange, et rachète. C'est la différence entre une liste morte et une audience vivante.
 - Tes valeurs : solidarité, entraide. Une communauté, c'est ça.
 
-**2. Quelle plateforme choisir (FB / Telegram / Discord).**
-- Facebook : large, simple, là où sont beaucoup de solopreneurs. Bon pour le grand public.
-- Telegram : direct, mobile, taux de lecture élevé. Bon pour des annonces et une proximité.
-- Discord : structuré en salons, communauté engagée. Bon pour un public plus tech ou très actif.
-- La vraie règle : choisis celle que TU peux animer dans la durée. Mieux vaut un endroit simple tenu qu'un endroit ambitieux abandonné.
+**2. Où la créer : les 4 maisons.**
+- Groupe Facebook : simple, tout le monde y est. Bon pour le grand public.
+- Canal Telegram : tu diffuses, ils reçoivent direct sur leur téléphone. Bon pour la proximité.
+- Groupe WhatsApp : ultra proche, comme entre amis.
+- Skool : pensé pour les communautés (cours, discussions et classement au même endroit).
+- La vraie règle : choisis celle où ton audience est déjà, et que TU peux animer dans la durée. Une seule pour commencer. Mieux vaut un endroit simple tenu qu'un endroit ambitieux abandonné.
+- La preuve : garder 5% de clients en plus augmente le profit de 25 à 95% (Bain & Company). La fidélité rapporte plus que la course au nouveau.
 
 **3. Le quiz comme moteur de communauté.**
 - Le résultat invite à rejoindre : sur la page de résultat, "rejoins les autres [profil] dans le groupe".
@@ -40,7 +42,7 @@
 "Ta mission : tu choisis ta plateforme, tu crées ton espace, et tu ajoutes une invitation à le rejoindre sur la page de résultat de ton quiz. Réponds au quiz du jour pour débloquer le dernier jour. Demain, on boucle : adapter ton quiz, lire tes vrais chiffres, et savoir quoi faire ensuite pour que tout ça tourne longtemps."
 
 ## La mission = le quiz du Jour 6 (questions)
-- Question (décision) : "Quelle plateforme pour ta communauté : Facebook, Telegram, Discord ?"
+- Question (décision) : "Quelle maison pour ta communauté : Facebook, Telegram, WhatsApp ou Skool ?"
 - Question (action) : "As-tu créé ton espace et ajouté l'invitation sur ta page de résultat ?"
 - Question (saisie) : "Écris ton premier message d'accueil pour la communauté." (le coach peut aider)
 
