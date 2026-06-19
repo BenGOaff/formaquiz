@@ -12,7 +12,7 @@ import "server-only";
 export const CERT_BRAND = "L'Atelier du Quiz";
 export const CERT_TITLE = "Certificat de fin de formation";
 /** Part de bonnes reponses pour valider (ni trop simple, ni trop dur). */
-export const CERT_PASS_RATIO = 0.7;
+export const CERT_PASS_RATIO = 0.8;
 
 export interface ExamOption {
   value: string;
@@ -36,8 +36,9 @@ export interface PublicExamQuestion {
   options: ExamOption[];
 }
 
-// 12 questions couvrant les 7 jours du parcours. Une seule bonne reponse
-// par question. Positions des bonnes reponses volontairement variees.
+// 10 questions couvrant les 7 jours du parcours (au moins une par jour).
+// Une seule bonne reponse par question. Positions des bonnes reponses
+// volontairement variees.
 const EXAM: ExamQuestionFull[] = [
   {
     id: "q1",
@@ -74,17 +75,6 @@ const EXAM: ExamQuestionFull[] = [
   },
   {
     id: "q4",
-    prompt: "Le miroir d'identité, dans un bon quiz, c'est :",
-    options: [
-      { value: "a", label: "Un quiz qui révèle qui on est, sans logique bonne ou mauvaise réponse." },
-      { value: "b", label: "Un quiz qui note les bonnes et mauvaises réponses." },
-      { value: "c", label: "Mettre une photo de miroir sur la page." },
-      { value: "d", label: "Copier le quiz d'un concurrent." },
-    ],
-    correct: "a",
-  },
-  {
-    id: "q5",
     prompt: "Quel est le bon chemin d'automatisation après le quiz ?",
     options: [
       { value: "a", label: "Email, puis résultat, puis tag." },
@@ -95,7 +85,7 @@ const EXAM: ExamQuestionFull[] = [
     correct: "d",
   },
   {
-    id: "q6",
+    id: "q5",
     prompt: "Quels sont les 2 moteurs qui rendent un quiz viral ?",
     options: [
       { value: "a", label: "Le prix et la publicité." },
@@ -106,18 +96,7 @@ const EXAM: ExamQuestionFull[] = [
     correct: "b",
   },
   {
-    id: "q7",
-    prompt: "À quoi doit ressembler la première question d'un quiz ?",
-    options: [
-      { value: "a", label: "À un champ email obligatoire." },
-      { value: "b", label: "À la question la plus difficile, pour filtrer." },
-      { value: "c", label: "À une question facile et fun, jamais un champ email." },
-      { value: "d", label: "À une demande de paiement." },
-    ],
-    correct: "c",
-  },
-  {
-    id: "q8",
+    id: "q6",
     prompt: "Où placer la capture de l'email pour maximiser tes leads ?",
     options: [
       { value: "a", label: "Juste avant d'afficher le résultat." },
@@ -128,7 +107,7 @@ const EXAM: ExamQuestionFull[] = [
     correct: "a",
   },
   {
-    id: "q9",
+    id: "q7",
     prompt: "Quelle est la trame d'une page de fin qui vend (sans forcer) ?",
     options: [
       { value: "a", label: "Juste le prix de l'offre." },
@@ -139,7 +118,7 @@ const EXAM: ExamQuestionFull[] = [
     correct: "c",
   },
   {
-    id: "q10",
+    id: "q8",
     prompt: "Que dit la règle des 7 contacts ?",
     options: [
       { value: "a", label: "Il faut créer 7 quiz différents." },
@@ -150,7 +129,7 @@ const EXAM: ExamQuestionFull[] = [
     correct: "b",
   },
   {
-    id: "q11",
+    id: "q9",
     prompt: "Comment choisir la maison de ta communauté (Facebook, Telegram, WhatsApp, Skool) ?",
     options: [
       { value: "a", label: "Prendre la plus à la mode du moment." },
@@ -161,7 +140,7 @@ const EXAM: ExamQuestionFull[] = [
     correct: "c",
   },
   {
-    id: "q12",
+    id: "q10",
     prompt: "Une fois ton quiz en ligne, comment l'améliores-tu ?",
     options: [
       { value: "a", label: "Au feeling, sans rien regarder." },

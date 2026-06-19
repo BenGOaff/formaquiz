@@ -15,14 +15,52 @@ Les réseaux peuvent t'amener un flux constant de visiteurs vers ton quiz, gratu
 - Va plus vite : programme tes posts (outils natifs gratuits) et fais écrire un mois d'idées à l'IA à partir de ton quiz.
 - La règle des 7 contacts : on doit te voir ~7 fois avant d'agir. D'où la régularité.
 
-## Le guide par réseau
+## Le guide réseau par réseau
 
-- Facebook : tout se passe dans les groupes. Deviens la référence qui répond le mieux, et ramène vers ton quiz.
-- Instagram : mise sur les Reels (être vue par des inconnus). Le trafic passe par le lien en bio.
-- LinkedIn : moins de volume, mais des gens qui achètent. Tu enseignes, on te fait confiance. Soigne ta 1ère ligne.
-- Reddit : la plus exigeante. Lis les règles de chaque subreddit, sois utile et honnête. Trafic ultra qualifié.
-- Threads : jeune, portée gratuite encore généreuse. Questions ouvertes, avis tranchés, petits fils.
-- X : tout va vite et tout peut exploser. Texte court et percutant, une idée forte par tweet.
+Choisis-EN UN pour commencer (là où ta cible est déjà), applique son guide, puis ajoute le suivant. Inutile d'être partout en même temps.
+
+### Facebook : le réseau des groupes
+
+Facebook vit dans ses groupes, où ta cible se réunit et pose des questions tous les jours.
+- Rejoins 3 à 5 groupes actifs et deviens la référence qui répond le mieux, sans coller ton lien.
+- Écris pour faire commenter, lien en commentaire épinglé (l'algo freine les liens sortants).
+- Le hack : la réponse-référence à LA question qui revient. On te tague à chaque fois.
+- À terme, crée ton propre groupe : une audience que Facebook ne peut pas t'enlever.
+
+### Instagram : l'image et les Reels
+
+On y scrolle vite. Les Reels te font découvrir par des inconnus, le lien en bio capte.
+- 3 à 5 Reels par semaine : accroche en 1ère seconde, sous-titre toujours, "le quiz est en bio".
+- Stories quasi quotidiennes avec le sticker lien (le moyen n°1 de faire cliquer).
+- Le hack : des Reels et carrousels qu'on a envie d'enregistrer et d'envoyer à un ami.
+
+### LinkedIn : le réseau pro de l'autorité
+
+Moins de volume, mais des gens qui achètent. Tu enseignes, on te fait confiance.
+- Soigne ta 1ère ligne, écris aéré, une idée par post (expérience, conseil, opinion de métier).
+- Lien en premier commentaire, finis par une question ouverte.
+- Le hack : sois le meilleur commentaire sous les gros comptes, et publie des carrousels PDF.
+
+### Reddit : les communautés de passionnés
+
+La plus exigeante : un lien sans contexte se fait bannir. Mais le trafic est ultra qualifié.
+- Lis les règles de chaque subreddit avant de poster, observe quelques jours.
+- Donne sans lien pour gagner du karma. Sois vraie et transparente, pas de marketing lisse.
+- Le hack : le post-étude de cas sans filtre (vrais chiffres et ratés inclus).
+
+### Threads : la conversation légère
+
+Réseau texte de Meta, relié à Instagram. Jeune, donc portée gratuite encore généreuse.
+- Parle léger et humain, poste souvent et réponds beaucoup.
+- Le hack : l'avis tranché qui lance le débat, et le fil qui raconte une histoire vers ton quiz.
+- Rebondis sous les gros comptes pour te faire connaître vite.
+
+### X : le temps réel et les fils viraux
+
+Tout va vite, mais un bon contenu peut exploser. Texte court et percutant.
+- Une idée forte par tweet, mise sur les fils pour enseigner et durer, poste souvent.
+- Le hack : le self-reply (contenu sans lien, puis ton lien de quiz en réponse à ton tweet).
+- Épingle un tweet qui mène à ton quiz.
 
 ## L'erreur à éviter
 
