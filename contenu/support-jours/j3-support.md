@@ -1,35 +1,48 @@
-# Jour 3 : Tiquiz, quiz / sondages / popquiz (contenu de la page)
+# Jour 3 : Un quiz qu'on finit (et qu'on partage) (contenu de la page)
 
-> Contenu vu par l'élève. À seeder. Tutoiement, zéro tiret long.
+> Contenu vu par l'élève. Reflète le seed. Tutoiement, zéro tiret long.
+> NB : ce jour a été re-thématisé (avant : formats quiz/sondage/popquiz, désormais couverts par les bonus).
 
 ## Résumé
 
-Dans Tiquiz, tu as trois formats : quiz, sondage, popquiz. Ce ne sont pas trois mots pour la même chose, ce sont trois outils pour trois objectifs. Aujourd'hui, tu apprends lequel choisir selon ce que tu veux obtenir, pour ne pas perdre de temps demain au moment de créer.
+Aujourd'hui, tu conçois un quiz qu'on termine ET qu'on a envie de partager : c'est ça, le potentiel viral. Un quiz qu'on finit te donne l'email ; un quiz qu'on partage t'amène de nouveaux visiteurs, gratuitement.
 
-## Points clés à retenir
+## Pourquoi les gens abandonnent un quiz
 
-- Le quiz révèle un type, capture l'email et segmente le lead. C'est ton outil d'acquisition principal.
-- Le sondage récolte des données et des avis. Il t'informe toi, il ne personnalise pas le répondant.
-- Le popquiz est un quiz incrusté dans une vidéo, pour capter au pic d'attention. Personne d'autre ne le fait.
-- La règle : quiz pour des leads segmentés, sondage pour comprendre ton marché, popquiz pour capter sur tes vidéos.
-- On peut les combiner (un sondage pour préparer, un quiz pour capter, un popquiz pour diffuser). À voir en bonus.
+Un quiz trop long, on le quitte. Une interro fait peur (peur de la mauvaise réponse), on s'en va. Un bon quiz, on le finit sans s'en rendre compte, et on a envie de montrer son résultat.
+
+## Les 2 moteurs viraux
+
+- On le FINIT : la personne va au bout, tu récupères son email.
+- On le PARTAGE : elle montre son résultat, ses amis viennent jouer.
+- La preuve : 30 à 40 sur 100 finissent un bon quiz et laissent leur email. Avec un PDF, moins de 3 sur 100.
+
+## Pour qu'on aille au bout
+
+- Ton quiz dit qui on est, il ne teste pas ce qu'on sait.
+- La première question est facile et amusante.
+- 5 à 7 questions, pas plus.
+- Un résultat dont on est fier donne envie de le partager.
+
+## Growth hacks
+
+- Un quiz qui parle de toi : "Quel type de X es-tu ?", pas "connais-tu la réponse ?".
+- La question qui accroche au début : facile et intrigante, le cerveau veut la suite.
+- Un résultat dont on est fier : valorisant et un peu surprenant, on le poste, et chaque partage ramène du monde.
+
+## L'erreur à éviter
+
+Un quiz trop long ou qui ressemble à une interro. Maximum 7 questions, un ton sympa, zéro bonne ou mauvaise réponse.
 
 ## Actions à mener
 
-- Choisis ton format selon ton objectif du Jour 1 (pour la plupart, ce sera le quiz).
-- Repère le template ou l'angle dont tu vas partir demain.
+- Choisis ton titre "Quel type de X es-tu ?".
+- Vérifie : 1ère question facile, 5 à 7 questions max.
+- Imagine le résultat dont tes clients seraient fiers.
 
 ## Le quiz à valider
 
-1. **(Choix unique)** Pour ton objectif, quel format choisis-tu ?
-   - Quiz / Sondage / Popquiz
-   - Validation : un choix. C'est ce que tu crées demain.
-
-2. **(Rappel léger)** Quelle est la principale différence entre un quiz et un sondage ?
-   - Le quiz personnalise et segmente le répondant, le sondage agrège pour m'informer
-   - Le quiz et le sondage font la même chose
-   - Validation : bonne réponse = la première. Pour feedback, pas pour bloquer.
-
-3. **(Auto-évaluation)** Es-tu au clair sur ce que tu vas créer demain ?
-   - Oui, prêt / J'ai un doute
-   - Validation : un choix. Si doute, le coach t'aide à trancher.
+1. **(Choix unique)** Ton titre est-il du type "Quel type de X es-tu ?" (Oui / Pas encore, je le reformule)
+2. **(Choix unique)** Combien de questions prévois-tu ? (5 à 7 / Plus de 7, je raccourcis)
+3. **(Choix unique)** Ta première question est-elle facile et fun ? (Oui / À revoir)
+4. **(Saisie libre, obligatoire)** Décris le résultat dont tes clients seraient FIERS.

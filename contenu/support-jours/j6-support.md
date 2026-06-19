@@ -1,34 +1,50 @@
-# Jour 6 : Créer sa communauté avec son quiz (contenu de la page)
+# Jour 6 : Crée ta communauté (contenu de la page)
 
-> Contenu vu par l'élève. À seeder. Tutoiement, zéro tiret long.
+> Contenu vu par l'élève. Reflète le seed. Tutoiement, zéro tiret long.
 
 ## Résumé
 
-Un lead seul t'oublie en 48 heures. La différence entre un coup et un business, c'est que les gens reviennent. Aujourd'hui, tu transformes tes leads de quiz en communauté, et tu vois comment ton quiz peut, à lui seul, la faire grandir et l'alimenter.
+Un lead tout seul t'oublie en deux semaines. Une communauté change tout : un endroit à toi où tes leads te voient souvent. Plus ils te voient, plus ils te font confiance. Et on achète à ceux en qui on a confiance.
 
-## Points clés à retenir
+## Où la créer : 4 maisons possibles
 
-- Une communauté transforme une liste morte en audience vivante qui échange et rachète.
-- Choisis la plateforme que tu peux animer dans la durée : Facebook (large), Telegram (direct, mobile), Discord (structuré, engagé).
-- Le quiz est ton moteur d'entrée : la page de résultat invite à rejoindre, taguer un ami fait entrer du monde, les résultats agrégés nourrissent les échanges.
-- Le flywheel d'autorité : au bout de 100-200 réponses, tu as une donnée que personne d'autre n'a. "J'ai analysé 500 personnes, voici ce qui ressort." Autorité incopiable.
-- Anime simplement, mais régulièrement. Mieux vaut un endroit tenu qu'un endroit ambitieux abandonné.
+Tu n'en choisis qu'UNE pour commencer, celle où ton audience est déjà :
+
+- Groupe Facebook : simple, tout le monde y est.
+- Canal Telegram : tu diffuses, ils reçoivent sur leur téléphone.
+- Groupe WhatsApp : ultra proche, comme entre amis.
+- Skool : pensé pour les communautés (cours, discussions, classement).
+
+## À quoi ça sert vraiment
+
+- Partager de la valeur exclusive.
+- Collecter des retours en groupe (20 réponses dans l'heure).
+- Créer des liens : tu deviens une vraie personne pour eux.
+- La preuve : garder 5% de clients en plus augmente le profit de 25 à 95% (Bain & Company).
+
+## Comment les faire venir depuis ton quiz
+
+Sur la page de résultat, une invitation personnalisée : "Tu es un Bâtisseur ? Rejoins les autres Bâtisseurs ici." C'est le meilleur moment : la personne est curieuse, fière, chaude. Reste aussi dispo en privé.
+
+## Growth hacks
+
+- L'invitation personnalisée sur le résultat ("Rejoins les autres comme toi").
+- Le rendez-vous qui fait revenir : un rituel fixe (le conseil du lundi).
+- Les questions des membres = ta machine à contenu (post, vidéo, nouveau quiz).
+
+## L'erreur à éviter
+
+Laisser un membre te monopoliser. Pose un cadre : réponds court, renvoie vers le groupe ou vers ton offre payante pour du suivi individuel.
 
 ## Actions à mener
 
-- Choisis ta plateforme et crée ton espace communauté.
-- Ajoute une invitation à le rejoindre sur la page de résultat de ton quiz.
-- Écris ton premier message d'accueil.
+- Choisis ta maison : Facebook, Telegram, WhatsApp ou Skool.
+- Crée-la : un nom clair, une phrase qui dit à qui c'est.
+- Ajoute l'invitation sur ta page de résultat, avec le profil.
+- Note 3 questions déjà reçues à transformer en contenu.
 
 ## Le quiz à valider
 
-1. **(Choix unique)** Quelle plateforme pour ta communauté ?
-   - Facebook / Telegram / Discord / Autre
-   - Validation : un choix.
-
-2. **(Choix unique)** As-tu créé ton espace et ajouté l'invitation sur ta page de résultat ?
-   - Oui / Pas encore
-   - Validation : doit être "Oui".
-
+1. **(Choix unique)** Quelle maison pour ta communauté ? (Groupe Facebook / Canal Telegram / Groupe WhatsApp / Skool)
+2. **(Choix unique)** As-tu créé ton espace et ajouté l'invitation sur ta page de résultat ? (Oui / Pas encore)
 3. **(Saisie libre, obligatoire)** Écris ton premier message d'accueil pour la communauté.
-   - Validation : réponse non vide. Le coach peut t'aider.

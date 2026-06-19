@@ -1,4 +1,4 @@
-# Jour 6 : Créer sa communauté avec son quiz (Facebook / Telegram / Discord)
+# Jour 6 : Créer sa communauté avec son quiz (Facebook / Telegram / WhatsApp / Skool)
 
 > Contenu de tournage, format hybride. Hook et CTA mot à mot, coeur en trame. "À L'ÉCRAN" = quoi montrer. La mission = questions du quiz du jour. Tutoiement, zéro tiret long.
 >
