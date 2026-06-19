@@ -21,47 +21,75 @@ delete from days where day_number not in (0,1,2,3,4,5,6,7,101,102,103,104);
 insert into days (day_number, slug, title, subtitle, intro_html, result_html, status, sort_order, resources, is_bonus)
 values
 (
-  0, $s$j0-bienvenue$s$, $t$Bienvenue$t$, $st$Comment ça marche, et le pacte$st$,
-  $html$<p>Bienvenue dans L'Atelier du Quiz. Ici, tu n'apprends pas les quiz en regardant des cours : tu avances dans un quiz pour apprendre à en faire un. En 7 jours, tu auras un quiz lead-magnet publié, branché à Systeme.io, qui capte des leads qualifiés en automatique. Aujourd'hui, on pose les bases.</p>
-<h2>À retenir</h2>
+  0, $s$j0-bienvenue$s$, $t$Bienvenue$t$, $st$Le quizing, comment marche l'Atelier, et ton engagement$st$,
+  $html$<p>Bienvenue dans la boucle : ici, tu apprends à faire un quiz... en faisant un quiz. Un quizing, c'est une formation que tu ne regardes pas, tu la fais. Chaque jour, une courte vidéo explique, puis un quiz te fait avancer sur TON projet. En 7 jours, tu repars avec un vrai quiz en ligne, branché à Systeme.io, qui capte des leads tout seul.</p>
+<h2>Comment marche l'Atelier</h2>
 <ul>
-<li>Chaque jour : une vidéo qui enseigne, un quiz qui te fait agir. Finir le quiz du jour débloque le suivant.</li>
-<li>Tes réponses ne sont pas un test : elles construisent ton projet et remplissent ton carnet de bord.</li>
-<li>Un coach IA est là en bulle, à toute heure, dès que tu bloques.</li>
-<li>L'engagement public change tout : ceux qui s'engagent à voix haute finissent.</li>
-<li>On agit avant d'être prêt. Le quiz parfait qui reste en brouillon ne rapporte rien.</li>
+<li>1 jour = 1 courte vidéo, puis 1 quiz qui te fait passer à l'action.</li>
+<li>Finir le quiz du jour débloque le jour suivant.</li>
+<li>Un coach répond à tes questions, jour et nuit.</li>
+<li>Tes réponses ne sont pas un test : elles construisent ton projet, jour après jour.</li>
 </ul>
-<h2>Tes actions du jour</h2>
+<h2>Ce que tu repars avec dans 7 jours</h2>
+<ul>
+<li>Un quiz en ligne, prêt à partager.</li>
+<li>Branché à ton Systeme.io : tes contacts arrivent tout seuls.</li>
+<li>Une méthode claire pour le remplir de monde.</li>
+<li>La fierté de l'avoir fait, pas juste regardé.</li>
+</ul>
+<h2>Growth hack : dis-le à voix haute</h2>
+<p>Écris ta promesse devant tout le monde : "je publie mon quiz dans 7 jours". On tient plus facilement parole quand on s'est engagé en public, et ceux qui le disent tout haut finissent beaucoup plus souvent. Va dans le groupe de l'Atelier et écris-la aujourd'hui (tu peux taguer quelqu'un pour qu'il te suive).</p>
+<h2>L'erreur à éviter</h2>
+<p>Tout regarder d'un coup, façon Netflix, sans rien faire : tu finis avec zéro quiz. La solution : fais la mission de chaque jour avant de passer au suivant. Un petit pas par jour, et c'est gagné.</p>
+<h2>Ta mission du jour</h2>
 <ul>
 <li>Crée ton compte Tiquiz gratuit avec le lien fourni.</li>
-<li>Rejoins la communauté et présente-toi en une phrase.</li>
+<li>Rejoins le groupe et dis bonjour en une phrase.</li>
+<li>Écris ta promesse : je publie mon quiz dans 7 jours.</li>
 <li>Réponds au quiz ci-dessous pour débloquer le Jour 1.</li>
 </ul>$html$,
-  $html$<p>Le pacte est scellé et ton compte est prêt. Tu viens de multiplier tes chances d'aller au bout.</p><p>Demain, on attaque le vrai sujet : pourquoi un quiz, et comment le penser pour qu'il rapporte.</p>$html$,
+  $html$<p>Bravo, Jour 0 bouclé. Le pacte est scellé et ton compte est prêt : tu viens de multiplier tes chances d'aller au bout.</p><p>Demain : pourquoi un quiz marche mille fois mieux qu'un PDF, et comment le penser pour qu'il rapporte.</p>$html$,
   $st2$published$st2$, 10, $r$[]$r$::jsonb, false
 ),
 (
-  1, $s$j1-pourquoi-penser$s$, $t$Pourquoi un quiz, et comment le penser$t$, $st$Les 3 décisions qui font qu'un quiz rapporte$st$,
-  $html$<p>Aujourd'hui, tu comprends pourquoi un quiz capte cinq à dix fois mieux qu'un PDF, et tu prends les trois décisions qui font qu'un quiz rapporte au lieu d'amuser.</p>
-<h2>À retenir</h2>
+  1, $s$j1-pourquoi-penser$s$, $t$Pourquoi un quiz, et comment le penser$t$, $st$Pourquoi le quiz bat le PDF, et tes décisions de départ$st$,
+  $html$<p>Le quiz, c'est le chemin. Le client, c'est le but. Aujourd'hui, tu comprends pourquoi un quiz marche tellement mieux qu'un PDF, et tu poses les bases d'un quiz qui rapporte au lieu d'amuser.</p>
+<h2>Pourquoi tes lead magnets ne marchent pas</h2>
 <ul>
-<li>Le PDF est passif et finit oublié. Le quiz est interactif, il qualifie, segmente, se partage et se crée en 5 minutes.</li>
-<li>Les maths jouent pour toi : une page classique convertit 1 à 3% des visiteurs, un bon quiz 20 à 50%.</li>
-<li>Un quiz peut servir 16 objectifs. Choisis-en UN principal, sinon ton quiz ne fait rien de bien.</li>
-<li>On construit à l'envers : d'abord la prise de conscience visée, puis les résultats, puis les questions.</li>
-<li>Un quiz révèle une identité, il ne note pas. On bannit la logique bonne ou mauvaise réponse.</li>
-<li>Vole le langage de {audience} : ses mots exacts, pris dans les avis et commentaires.</li>
+<li>Le PDF gratuit, on le télécharge... et on ne l'ouvre jamais. Tu récupères surtout des prospects froids, qui n'ouvrent même pas tes emails.</li>
+<li>Un quiz, on le finit, on le partage, et il te dit qui est la personne en face : tu sais enfin à qui tu parles.</li>
+<li>La preuve : le quiz "Quel type de barbu es-tu ?" de Beardbrand a capté 150 000 emails.</li>
 </ul>
-<h2>Gabarit de résultat (copie, puis remplis)</h2>
-<p>Garde cette trame pour chaque profil, elle vend sans vendre : <em>"Tu es [nom valorisant]. Si ça coince, ce n'est pas ta faute : c'est [le vrai coupable, une méthode ou un mythe]. La bonne nouvelle, c'est que [ce qui devient possible]. Ta prochaine étape : [le pont vers la suite]."</em></p>
-<h2>Tes actions du jour</h2>
+<h2>Un seul type de quiz compte</h2>
+<p>On ne fait pas un quiz pour rigoler, ni pour noter des élèves, ni un quiz hors sujet. On fait un quiz qui attire les bonnes personnes et les transforme en clients. Un quiz révèle une identité, il ne note pas : on bannit la logique bonne ou mauvaise réponse.</p>
+<h2>16 objectifs, et ils se combinent</h2>
+<p>Un seul quiz peut viser plusieurs objectifs à la fois : capter des emails, savoir qui est ton prospect, ranger tes contacts, faire prendre conscience d'un problème, orienter vers la bonne offre, vendre, devenir viral, nourrir ta communauté, réveiller une liste qui dort... Tu peux en combiner plusieurs (par exemple capter ET segmenter ET vendre).</p>
+<h2>Les 2 sortes de quiz</h2>
 <ul>
-<li>Choisis l'objectif n°1 de ton quiz.</li>
-<li>Complète : "après mon quiz, le prospect réalise que ___".</li>
-<li>Note 3 phrases que ta cible emploie vraiment.</li>
-<li>Écris tes 3 ou 4 profils de résultats, avec un nom valorisant chacun.</li>
+<li>Le quiz de profil range la personne dans un type ("Le Bâtisseur"). Idéal pour être partagé et toucher beaucoup de monde.</li>
+<li>Le quiz de score situe la personne sur un niveau (Débutant, Confirmé, Expert). Idéal pour montrer un manque à combler : ça donne envie de progresser, et d'acheter.</li>
+</ul>
+<h2>Tes décisions de départ</h2>
+<ul>
+<li>Choisis tes objectifs (tu peux en combiner).</li>
+<li>Décide à qui tu parles : ta cible.</li>
+<li>Décide l'action voulue à la fin : s'inscrire, télécharger, réserver un appel, prendre un code promo.</li>
+<li>Choisis tes 3 à 5 résultats. Ensuite, l'IA de Tiquiz écrit les questions pour toi.</li>
+</ul>
+<h2>Growth hack 1 : le résultat qui donne envie</h2>
+<p>Ton résultat valorise la personne et lui donne la suite (un type ou un niveau). S'il fait plaisir ou montre un progrès possible, on le garde et on le montre ; s'il rabaisse, on le cache et on s'en va. Exemple : au lieu de "niveau 2 sur 5", écris "Tu es Le Régulier : tu tiens sur la durée, mais il te manque de l'explosivité. Voici comment en gagner." La personne se reconnaît, sourit, et veut la suite.</p>
+<h2>Growth hack 2 : copie les mots de tes clients</h2>
+<p>Reprends mot pour mot les phrases que ta cible emploie déjà (avis Amazon, commentaires) et mets-les dans ton quiz. Le visiteur lit ses propres mots, se dit "c'est exactement moi", finit le quiz et te voit comme la bonne personne pour l'aider. Quand l'IA de Tiquiz te pose ses questions au début, réponds avec ces phrases exactes.</p>
+<h2>L'erreur à éviter</h2>
+<p>Lancer un quiz sans objectif, juste "pour voir" : tu attires des curieux, pas des clients. Décide au moins un objectif clair, et surtout l'action que tu veux à la fin.</p>
+<h2>Ta mission du jour</h2>
+<ul>
+<li>Choisis tes objectifs (tu peux en combiner).</li>
+<li>Profil ou score : ton choix.</li>
+<li>L'action voulue à la fin (s'inscrire, télécharger, réserver, code promo...).</li>
+<li>Tes 3 ou 4 résultats, avec un nom valorisant chacun.</li>
 </ul>$html$,
-  $html$<p>Ton angle, tes résultats, les mots de {audience} : la matière de ton quiz est posée.</p><p>Demain, on prépare la tuyauterie qui rend tout le reste possible : Systeme.io.</p>$html$,
+  $html$<p>Ton angle, tes résultats, les mots de {audience} : la matière de ton quiz est posée.</p><p>Demain, on prépare le tuyau qui range tes contacts tout seul : Systeme.io.</p>$html$,
   $st2$published$st2$, 20, $r$[]$r$::jsonb, false
 ),
 (
@@ -301,10 +329,12 @@ with q(day_number, type, prompt, help_text, options, required, sort_order) as (
   (0, $p$decision$p$, $p$As-tu créé ton compte Tiquiz gratuit ?$p$, $p$Si pas encore, le lien est juste au-dessus.$p$, $j$[{"value":"oui","label":"Oui, c'est fait"},{"value":"pas_encore","label":"Pas encore"}]$j$::jsonb, true, 3),
   (0, $p$decision$p$, $p$Le pacte : je m'engage à publier mon quiz d'ici la fin du parcours.$p$, $p$Un engagement à voix haute, c'est ce qui fait aller au bout.$p$, $j$[{"value":"oui","label":"Oui, je m'engage"}]$j$::jsonb, true, 4),
   -- J1
-  (1, $p$decision$p$, $p$Quel est l'objectif n°1 de ton quiz ?$p$, $p$Un seul principal, sinon ton quiz ne fait rien de bien.$p$, $j$[{"value":"capter","label":"Capter des emails"},{"value":"qualifier","label":"Qualifier"},{"value":"segmenter","label":"Segmenter"},{"value":"diagnostiquer","label":"Diagnostiquer"},{"value":"orienter","label":"Orienter vers une offre"},{"value":"vendre","label":"Vendre"},{"value":"viralite","label":"Générer de la viralité"},{"value":"donnees","label":"Récolter des données"},{"value":"autorite","label":"Construire mon autorité"},{"value":"communaute","label":"Faire entrer dans ma communauté"},{"value":"autre","label":"Autre"}]$j$::jsonb, true, 1),
+  (1, $p$decision$p$, $p$Quel est l'objectif principal de ton quiz ?$p$, $p$Tu peux en combiner plusieurs (capter ET segmenter ET vendre...). Indique le principal ici.$p$, $j$[{"value":"capter","label":"Capter des emails"},{"value":"qualifier","label":"Qualifier"},{"value":"segmenter","label":"Segmenter"},{"value":"diagnostiquer","label":"Diagnostiquer"},{"value":"orienter","label":"Orienter vers une offre"},{"value":"vendre","label":"Vendre"},{"value":"viralite","label":"Générer de la viralité"},{"value":"donnees","label":"Récolter des données"},{"value":"autorite","label":"Construire mon autorité"},{"value":"communaute","label":"Faire entrer dans ma communauté"},{"value":"autre","label":"Autre"}]$j$::jsonb, true, 1),
   (1, $p$action$p$, $p$Complète : après mon quiz, le prospect réalise que ___.$p$, $p$C'est la boussole de ton quiz.$p$, $j$[]$j$::jsonb, true, 2),
   (1, $p$action$p$, $p$Note 3 phrases que ta cible emploie vraiment.$p$, $p$Volées dans des avis ou commentaires. Ces mots iront dans ton quiz.$p$, $j$[]$j$::jsonb, false, 3),
   (1, $p$action$p$, $p$Écris tes 3 ou 4 profils de résultats, avec un nom valorisant chacun.$p$, $p$Alimente ton carnet et la génération du Jour 4.$p$, $j$[]$j$::jsonb, true, 4),
+  (1, $p$decision$p$, $p$Ton quiz sera un quiz de profil ou un quiz de score ?$p$, $p$Profil = un type (partage, portée). Score = un niveau (montre un manque, donne envie d'acheter).$p$, $j$[{"value":"profil","label":"Quiz de profil (un type)"},{"value":"score","label":"Quiz de score (un niveau)"}]$j$::jsonb, true, 5),
+  (1, $p$action$p$, $p$Quelle action veux-tu à la fin du quiz ?$p$, $p$S'inscrire, télécharger, réserver un appel, prendre un code promo...$p$, $j$[]$j$::jsonb, true, 6),
   -- J2
   (2, $p$decision$p$, $p$As-tu ton compte Systeme.io et sais-tu où trouver ta clé API ?$p$, $p$Si pas encore, le coach te guide.$p$, $j$[{"value":"oui","label":"Oui"},{"value":"pas_encore","label":"Pas encore (le coach me guide)"}]$j$::jsonb, true, 1),
   (2, $p$decision$p$, $p$Combien de tags as-tu créés ?$p$, $p$La capture au minimum.$p$, $j$[{"value":"capture","label":"Juste la capture"},{"value":"capture_profils","label":"Capture + un par profil"},{"value":"pas_encore","label":"Pas encore"}]$j$::jsonb, true, 2),
