@@ -9,7 +9,13 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendEmail } from "@/lib/email/resend";
 import { resetPasswordEmail } from "@/lib/email/templates";
 
-const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://quizing.tipote.com").trim();
+// Runtime (APP_URL) plutôt que NEXT_PUBLIC_* (inliné au build) : voir
+// grantAccess.ts (drame localhost:3002 dans les liens, 18 juin 2026).
+const APP_URL = (
+  process.env.APP_URL ??
+  process.env.NEXT_PUBLIC_APP_URL ??
+  "https://quizing.tipote.com"
+).trim().replace(/\/$/, "");
 const schema = z.object({ email: z.string().email() });
 
 export async function POST(req: NextRequest) {

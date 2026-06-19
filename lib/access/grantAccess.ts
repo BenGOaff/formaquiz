@@ -13,7 +13,15 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendEmail } from "@/lib/email/resend";
 import { welcomeEmail } from "@/lib/email/templates";
 
-const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://quizing.tipote.com").trim();
+// URL de base des liens d'action (emails). Lue au RUNTIME via APP_URL :
+// NEXT_PUBLIC_* est inliné au build par Next, ce qui avait gravé un
+// localhost:3002 de dev dans les liens d'accès en prod (drame 18 juin 2026).
+// APP_URL (non public) est lu à l'exécution, donc corrigible sans rebuild.
+const APP_URL = (
+  process.env.APP_URL ??
+  process.env.NEXT_PUBLIC_APP_URL ??
+  "https://quizing.tipote.com"
+).trim().replace(/\/$/, "");
 
 export async function findUserByEmail(email: string): Promise<{ id: string } | null> {
   const lower = email.toLowerCase();
