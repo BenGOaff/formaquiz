@@ -13,7 +13,7 @@
 -- Idempotent. Nettoie l'ancienne structure (J-3, J8 à J14, ancien bonus 99).
 
 -- Nettoyage de l'ancienne structure (cascade sur questions/réponses de test).
-delete from days where day_number not in (0,1,2,3,4,5,6,7,101,102,103,104);
+delete from days where day_number not in (0,1,2,3,4,5,6,7,101,102,103,104,105);
 
 -- ───────────────────────────────────────────────────────────────
 -- 1. Les jours (J0 à J7) + bonus (101 à 104)
@@ -399,6 +399,38 @@ values
 </ul>$html$,
   $html$<p>Tes vidéos peuvent désormais capter au pic d'attention, en automatique. Un format que tes concurrents n'ont pas.</p>$html$,
   $st2$published$st2$, 1040, $r$[]$r$::jsonb, true
+),
+(
+  105, $s$bonus-promo-reseaux$s$, $t$Bonus : Promouvoir par réseau$t$, $st$Les bases qui marchent partout, puis le guide de chaque réseau$st$,
+  $html$<p>Les réseaux peuvent t'amener un flux constant de visiteurs vers ton quiz, gratuitement, mais pas en postant au hasard. Avant les astuces propres à chaque réseau, il y a des bases qui marchent partout. On les pose une bonne fois, puis chaque réseau a son guide.</p>
+<h2>Les bases (valables partout)</h2>
+<ul>
+<li>Ton profil = ta vitrine en 3 secondes : photo nette (un vrai visage), bio orientée bénéfice (ce que tu fais POUR les gens), et un lien, toujours. En pro, zéro polémique.</li>
+<li>Ton lien en bio = la porte vers ton quiz : il mène à une mini-page (Systeme.io) avec un gros bouton vers ton quiz. Tu importes les templates fournis.</li>
+<li>Quoi poster : 5 types de contenu, en alternance (valeur, preuve sociale, curiosité, vente, gratitude). La plupart du temps tu donnes, de temps en temps tu vends.</li>
+<li>Rythme : 3 posts par semaine tenables toute l'année battent 2 par jour pendant 15 jours puis plus rien. La régularité bat l'intensité.</li>
+<li>Va plus vite : programme tes posts (outils natifs gratuits) et fais écrire un mois d'idées à l'IA à partir de ton quiz (ses questions, profils et résultats sont une mine).</li>
+</ul>
+<p>La règle des 7 contacts : on doit te voir environ 7 fois avant de te faire confiance et d'agir. D'où l'importance de poster régulièrement.</p>
+<h2>Le guide par réseau</h2>
+<ul>
+<li>Facebook : tout se passe dans les groupes. Deviens la référence qui répond le mieux aux questions de ta cible, et ramène-la vers ton quiz.</li>
+<li>Instagram : mise sur les Reels (ta plus grosse chance d'être vue par des inconnus). Instagram déteste qu'on sorte de l'appli : le trafic passe par le lien en bio.</li>
+<li>LinkedIn : moins de volume, mais des gens qui achètent. Tu enseignes, on te fait confiance. Soigne ta 1ère ligne, elle décide si on lit.</li>
+<li>Reddit : la communauté la plus exigeante. Lis les règles de chaque subreddit, sois utile et honnête (jamais de lien balancé sans contexte), et le trafic est ultra qualifié.</li>
+<li>Threads : jeune, donc la portée gratuite est encore généreuse. Profites-en : questions ouvertes, avis tranchés, petits fils. Le 1er message doit donner envie de lire la suite.</li>
+<li>X : tout va vite et tout peut exploser. Texte court et percutant, fils qui enseignent. Une idée forte par tweet.</li>
+</ul>
+<h2>L'erreur à éviter</h2>
+<p>Sauter les bases (profil, lien, régularité) pour foncer sur les astuces d'un réseau. Si les fondations sont bâclées, le reste ne sert à rien.</p>
+<h2>Ta mission</h2>
+<ul>
+<li>Soigne ton profil (photo, bio bénéfice, lien) et crée ta mini-page de bio vers ton quiz.</li>
+<li>Choisis UN réseau prioritaire, celui où ta cible est déjà.</li>
+<li>Prépare et programme 3 posts (valeur, preuve, curiosité) qui mènent à ton quiz.</li>
+</ul>$html$,
+  $html$<p>Tes réseaux peuvent maintenant alimenter ton quiz en continu, gratuitement. Choisis un réseau, tiens le rythme, et le trafic suit.</p>$html$,
+  $st2$published$st2$, 1050, $r$[]$r$::jsonb, true
 )
 on conflict (day_number) do update set
   slug = excluded.slug,
@@ -472,7 +504,10 @@ with q(day_number, type, prompt, help_text, options, required, sort_order) as (
   (103, $p$decision$p$, $p$Vas-tu lancer un sondage cette semaine ?$p$, $p$Même court, ça rapporte beaucoup.$p$, $j$[{"value":"oui","label":"Oui"},{"value":"plus_tard","label":"Plus tard"}]$j$::jsonb, false, 2),
   -- Bonus 104 : popquiz
   (104, $p$recall$p$, $p$Pour ancrer : qu'est-ce qu'un popquiz cliffhanger ?$p$, $p$Feedback, pas blocage.$p$, $j$[{"value":"bloquant","label":"Un quiz bloquant juste avant la révélation d'une vidéo, à compléter pour la suite"},{"value":"fin","label":"Un quiz qu'on met en fin de page"}]$j$::jsonb, false, 1),
-  (104, $p$decision$p$, $p$As-tu une vidéo où incruster un popquiz ?$p$, $p$Ta meilleure vidéo de valeur.$p$, $j$[{"value":"oui","label":"Oui"},{"value":"pas_encore","label":"Pas encore"}]$j$::jsonb, false, 2)
+  (104, $p$decision$p$, $p$As-tu une vidéo où incruster un popquiz ?$p$, $p$Ta meilleure vidéo de valeur.$p$, $j$[{"value":"oui","label":"Oui"},{"value":"pas_encore","label":"Pas encore"}]$j$::jsonb, false, 2),
+  -- Bonus 105 : promo par réseau
+  (105, $p$decision$p$, $p$Quel réseau attaques-tu en premier ?$p$, $p$Celui où ta cible est déjà présente.$p$, $j$[{"value":"facebook","label":"Facebook"},{"value":"instagram","label":"Instagram"},{"value":"linkedin","label":"LinkedIn"},{"value":"reddit","label":"Reddit"},{"value":"threads","label":"Threads"},{"value":"x","label":"X"}]$j$::jsonb, false, 1),
+  (105, $p$decision$p$, $p$Ton profil et ton lien en bio (vers ton quiz) sont-ils prêts ?$p$, $p$Photo nette, bio orientée bénéfice, mini-page Systeme.io.$p$, $j$[{"value":"oui","label":"Oui"},{"value":"pas_encore","label":"Pas encore"}]$j$::jsonb, false, 2)
 )
 insert into questions (day_id, type, prompt, help_text, options, required, sort_order)
 select d.id, q.type, q.prompt, q.help_text, q.options, q.required, q.sort_order
