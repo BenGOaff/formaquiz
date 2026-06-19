@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CheckCircle2, Lock, Play, Sparkles, Gift, Trophy } from "lucide-react";
+import { CheckCircle2, Lock, Play, Sparkles, Gift, Trophy, Award } from "lucide-react";
 import { getViewer, getDaysWithProgress } from "@/lib/parcours";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
@@ -69,6 +69,32 @@ export default async function DashboardPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Certificat : debloque une fois le parcours termine */}
+      {allDone && (
+        <Link href="/certificat" className="block">
+          <Card className="border-primary/40 bg-gradient-to-br from-surface-soft to-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover">
+            <CardContent className="flex flex-col items-center gap-3 py-6 text-center sm:flex-row sm:text-left">
+              <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary shadow-sm">
+                <Award className="size-7" />
+              </div>
+              <div className="flex flex-1 flex-col gap-0.5">
+                <p className="font-display font-semibold">
+                  Passe ton certificat de fin de formation
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Valide tes compétences et décroche ton certificat officiel, à
+                  partager sur tes réseaux.
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-1 text-sm font-medium text-primary">
+                Commencer
+                <Play className="size-4" />
+              </span>
+            </CardContent>
+          </Card>
+        </Link>
+      )}
 
       {/* Section parcours : cartes facon "jeu de cartes" */}
       <section className="flex flex-col gap-3">
