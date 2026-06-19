@@ -1,4 +1,4 @@
-# Jour 7 : Adapter son quiz, suivre les résultats, que faire ensuite
+# Jour 7 : Regarde tes chiffres et améliore (piloter, puis la suite)
 
 > Contenu de tournage, format hybride. Hook et CTA mot à mot, coeur en trame. "À L'ÉCRAN" = quoi montrer. La mission = questions du quiz du jour. Tutoiement, zéro tiret long.
 >
