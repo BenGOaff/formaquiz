@@ -4,7 +4,7 @@
 >
 > Durée cible : ~25 min. Le gros morceau pratique. À la fin, le quiz de l'élève est publié et branché. Tu peux la découper en deux parties si besoin (création / connexion).
 >
-> Growth hacks intégrés : prompt à 3 couches, capture au pic de curiosité, première question gratuite, image de résultat partageable, OG image, tag par réponse (voir swipe file).
+> Growth hacks intégrés : prompt à 3 couches, capture au pic de curiosité, première question gratuite, page de fin qui vend, image de résultat partageable, OG image, tag par réponse (voir swipe file).
 
 ---
 
@@ -26,6 +26,12 @@
 - Réordonne du léger au profond, active la personnalisation ({name}).
 - À L'ÉCRAN : l'édition inline, le placement de la capture, la personnalisation.
 
+**2 bis. La page de fin qui vend (growth hack).**
+- Ne dis pas juste le résultat : propose la bonne solution. Le quiz a déjà trouvé le problème, donc ta proposition tombe pile et la personne dit oui sans se sentir forcée.
+- La trame en 4 temps : le souci (où elle en est), la cause (pourquoi ça bloque, ce n'est pas sa faute), la solution (ce qu'un [profil] doit faire), puis le pont vers ton offre.
+- La preuve que les détails comptent : BedGear a fait +490% de ventes en ajoutant un conseil personnalisé à la fin de son quiz.
+- À L'ÉCRAN : une page de résultat écrite en 4 temps, la preuve BedGear.
+
 **3. Habiller (branding et mobile).**
 - Couleur, police, logo. Reste simple.
 - L'image de résultat partageable (un visuel par profil pour la story). L'OG image qui vole le scroll au partage.
@@ -43,6 +49,7 @@
 ## La mission = le quiz du Jour 4 (questions)
 - Question (action) : "As-tu généré ton quiz avec le prompt à 3 couches ?"
 - Question (action) : "Ta capture email est-elle placée juste avant le résultat ?"
+- Question (action) : "As-tu écrit ta page de fin en 4 temps (souci, cause, solution, offre) ?"
 - Question (action) : "Ton quiz est-il connecté à Systeme.io avec au moins le tag de capture ?"
 - Question (action) : "Colle ici le lien de ton quiz publié." (preuve + matière communauté)
 
