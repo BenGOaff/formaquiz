@@ -16,6 +16,7 @@ import {
   detectProduct,
   extractAmountCents,
   extractEmail,
+  extractOfferId,
   extractOrderId,
   extractProductName,
   extractSaFromPayload,
@@ -52,12 +53,17 @@ export async function POST(req: NextRequest) {
   const email = extractEmail(body);
   const orderId = extractOrderId(body);
   const productName = extractProductName(body);
+  const offerId = extractOfferId(body);
   const saHint = extractSaFromPayload(body);
   const amountCents = extractAmountCents(body);
-  const product = detectProduct(productName, saHint, (body as Record<string, unknown>)?.page_url);
+  const product = detectProduct(
+    offerId,
+    productName,
+    (body as Record<string, unknown>)?.page_url,
+  );
 
   console.log(
-    `[affiliate/sio-sale] email=${email ?? "(none)"} order=${orderId ?? "(none)"} amount=${amountCents} product=${product?.source_app ?? "(none)"}`,
+    `[affiliate/sio-sale] email=${email ?? "(none)"} order=${orderId ?? "(none)"} amount=${amountCents} offer=${offerId ?? "(none)"} product=${product?.source_app ?? "(none)"}`,
   );
 
   if (!email || !orderId) {
