@@ -21,7 +21,7 @@ const PUBLIC_PREFIXES = [
 
 // Routes réservées à l'élève connecté (enrollment vérifié plus loin
 // dans les pages elles-mêmes / la RLS).
-const PROTECTED_PREFIXES = ["/dashboard", "/jour", "/carnet", "/profil", "/diagnostic", "/funnel", "/api/me", "/api/days", "/api/integrations"];
+const PROTECTED_PREFIXES = ["/dashboard", "/jour", "/carnet", "/profil", "/diagnostic", "/funnel", "/affiliation", "/api/me", "/api/days", "/api/integrations"];
 
 // Routes réservées à l'admin.
 const ADMIN_PREFIXES = ["/admin", "/api/admin"];
