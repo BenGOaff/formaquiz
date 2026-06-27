@@ -13,22 +13,66 @@ export const SA_RE = /^sa[a-f0-9]{20,80}$/i;
 
 type ProductMatch = { source_app: "quizing" | "tiquiz"; rate: number };
 
+/** Normalise un offer/price id Systeme.io vers son coeur (ex.
+ *  "offerprice-b3fe4b38" / "offer-price-b3fe4b38" / "b3fe4b38" -> "b3fe4b38"). */
+function normalizeOfferId(raw: unknown): string {
+  return String(raw ?? "")
+    .toLowerCase()
+    .replace(/offer[-_\s]?price[-_\s]?/g, "")
+    .replace(/price[-_\s]?plan[-_\s]?/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+// Offer price id de l'Atelier du Quiz (fourni par Béné depuis le bon de
+// commande Systeme.io). Source de détection FIABLE (le nom de produit ou
+// l'URL peuvent manquer dans le payload de vente).
+const QUIZING_OFFER_IDS = new Set(["b3fe4b38"].map(normalizeOfferId));
+
+/** Extrait l'offer/price id depuis les chemins Systeme.io courants. */
+export function extractOfferId(body: unknown): string | null {
+  const paths = [
+    "pricePlan.id",
+    "data.pricePlan.id",
+    "order.pricePlan.id",
+    "offer_price_plan.id",
+    "data.offer_price_plan.id",
+    "offer_price.id",
+    "data.offer_price.id",
+    "offerPrice.id",
+    "order.offer_price.id",
+    "offer.id",
+    "data.offer.id",
+    "price_plan_id",
+    "offer_price_id",
+  ];
+  for (const p of paths) {
+    const v = pick(body, p);
+    if (v != null && String(v).trim()) return String(v).trim();
+  }
+  return null;
+}
+
 /**
- * Détecte le produit (et donc le taux) depuis un blob texte (nom de produit,
- * URL source, page). Retourne null si ça ne concerne ni Quizing ni Tiquiz.
+ * Détecte le produit (et le taux). On privilégie l'offer id (fiable), puis on
+ * retombe sur un match texte (nom produit / URL). Null si hors périmètre.
  */
-export function detectProduct(...texts: Array<unknown>): ProductMatch | null {
+export function detectProduct(offerId: string | null, ...texts: Array<unknown>): ProductMatch | null {
+  // 1. Match fiable par offer id (Atelier du Quiz).
+  if (offerId && QUIZING_OFFER_IDS.has(normalizeOfferId(offerId))) {
+    return { source_app: "quizing", rate: 1 };
+  }
+  // 2. Fallback texte.
   const hay = texts
     .filter((t) => typeof t === "string")
     .join(" ")
     .toLowerCase();
-  if (!hay) return null;
-  // Atelier du Quiz : la page de vente est tipote.fr/atelier-du-quiz.
-  if (hay.includes("atelier-du-quiz") || hay.includes("atelier du quiz") || hay.includes("quizing")) {
-    return { source_app: "quizing", rate: 1 };
-  }
-  if (hay.includes("tiquiz")) {
-    return { source_app: "tiquiz", rate: 0.4 };
+  if (hay) {
+    if (hay.includes("atelier-du-quiz") || hay.includes("atelier du quiz") || hay.includes("quizing")) {
+      return { source_app: "quizing", rate: 1 };
+    }
+    if (hay.includes("tiquiz")) {
+      return { source_app: "tiquiz", rate: 0.4 };
+    }
   }
   return null;
 }
