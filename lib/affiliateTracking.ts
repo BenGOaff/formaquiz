@@ -23,10 +23,13 @@ function normalizeOfferId(raw: unknown): string {
     .replace(/[^a-z0-9]/g, "");
 }
 
-// Offer price id de l'Atelier du Quiz (fourni par Béné depuis le bon de
-// commande Systeme.io). Source de détection FIABLE (le nom de produit ou
-// l'URL peuvent manquer dans le payload de vente).
+// Offer price ids fournis par Béné depuis les bons de commande Systeme.io.
+// Source de détection FIABLE (le nom de produit ou l'URL peuvent manquer dans
+// le payload de vente). Tous les plans Tiquiz partagent le MÊME offer id
+// (le tunnel utilise un id unique) : pas besoin de les distinguer ici, ils
+// sont tous à 40%.
 const QUIZING_OFFER_IDS = new Set(["b3fe4b38"].map(normalizeOfferId));
+const TIQUIZ_OFFER_IDS = new Set(["dc9c3e75"].map(normalizeOfferId));
 
 /** Extrait l'offer/price id depuis les chemins Systeme.io courants. */
 export function extractOfferId(body: unknown): string | null {
@@ -57,11 +60,13 @@ export function extractOfferId(body: unknown): string | null {
  * retombe sur un match texte (nom produit / URL). Null si hors périmètre.
  */
 export function detectProduct(offerId: string | null, ...texts: Array<unknown>): ProductMatch | null {
-  // 1. Match fiable par offer id (Atelier du Quiz).
-  if (offerId && QUIZING_OFFER_IDS.has(normalizeOfferId(offerId))) {
-    return { source_app: "quizing", rate: 1 };
+  // 1. Match fiable par offer id (Atelier du Quiz / Tiquiz).
+  if (offerId) {
+    const norm = normalizeOfferId(offerId);
+    if (QUIZING_OFFER_IDS.has(norm)) return { source_app: "quizing", rate: 1 };
+    if (TIQUIZ_OFFER_IDS.has(norm)) return { source_app: "tiquiz", rate: 0.4 };
   }
-  // 2. Fallback texte.
+  // 2. Fallback texte (les URLs affiliées part-tiquiz-* contiennent "tiquiz").
   const hay = texts
     .filter((t) => typeof t === "string")
     .join(" ")
