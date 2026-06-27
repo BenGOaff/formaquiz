@@ -116,4 +116,7 @@ export interface Profile {
   diagnostic_completed_at: string | null;
   avatar_url: string | null;
   tiquiz_autolink_optout: boolean;
+  // Espace Affiliation : identifiant affilié Systeme.io + 1re activation.
+  sio_affiliate_id: string | null;
+  affiliate_opted_in_at: string | null;
 }

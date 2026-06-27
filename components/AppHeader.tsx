@@ -9,6 +9,7 @@ import {
   GraduationCap,
   Trophy,
   Megaphone,
+  Share2,
   ShieldCheck,
   UserCircle,
   Settings,
@@ -26,6 +27,7 @@ const NAV = [
   { href: "/avancees", label: "Avancées", icon: Trophy },
   { href: "/carnet", label: "Carnet", icon: BookOpen },
   { href: "/funnel", label: "Campagne", icon: Megaphone },
+  { href: "/affiliation", label: "Affiliation", icon: Share2 },
 ];
 
 export function AppHeader({
