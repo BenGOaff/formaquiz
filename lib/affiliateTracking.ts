@@ -55,27 +55,89 @@ export function extractOfferId(body: unknown): string | null {
   return null;
 }
 
+// Chemins où trouver l'URL du bon de commande / tunnel (mirror Tiquiz).
+const FUNNEL_URL_PATHS = [
+  "funnel.url",
+  "data.funnel.url",
+  "funnel_step.url",
+  "data.funnel_step.url",
+  "order.source_url",
+  "data.order.source_url",
+  "source_url",
+  "data.source_url",
+  "checkout_url",
+  "data.checkout_url",
+  "data.order.checkout_url",
+  "page_url",
+  "data.page_url",
+  "contact.source_url",
+  "referrer",
+];
+
+export function extractFunnelUrl(body: unknown): string | null {
+  for (const p of FUNNEL_URL_PATHS) {
+    const v = pick(body, p);
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return null;
+}
+
+function normUrl(u: string | null): string {
+  return String(u ?? "")
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/[?#].*$/, "")
+    .replace(/\/+$/, "");
+}
+
 /**
- * Détecte le produit (et le taux). On privilégie l'offer id (fiable), puis on
- * retombe sur un match texte (nom produit / URL). Null si hors périmètre.
+ * Détecte le produit ET l'éligibilité à commission, à partir de l'URL du
+ * tunnel (source de vérité). RÈGLE BÉNÉ (27 juin 2026) : seuls les tunnels
+ * AFFILIÉS donnent une commission, jamais les tunnels perso.
+ *   Quizing : /atelier-du-quiz = affilié ; /atelier-du-quiz-bene = perso.
+ *   Tiquiz  : tout BDC contenant "part" = affilié ; sans "part" = perso.
+ * L'offer id (partagé entre les deux tunnels) ne sert que de filet si l'URL
+ * manque (l'éligibilité repose alors sur la présence d'un sa : un achat perso
+ * de Béné n'a pas de sa affilié).
  */
-export function detectProduct(offerId: string | null, ...texts: Array<unknown>): ProductMatch | null {
-  // 1. Match fiable par offer id (Atelier du Quiz / Tiquiz).
+export function detectProduct(
+  funnelUrl: string | null,
+  offerId: string | null,
+  ...texts: Array<unknown>
+): ProductMatch | null {
+  const url = normUrl(funnelUrl);
+
+  // 1. Décision par URL de tunnel.
+  if (url) {
+    if (url.includes("atelier-du-quiz")) {
+      // Tunnel perso de Béné -> AUCUNE commission.
+      if (url.includes("atelier-du-quiz-bene")) return null;
+      return { source_app: "quizing", rate: 1 };
+    }
+    if (url.includes("tiquiz")) {
+      // Affilié uniquement si le BDC contient "part".
+      return url.includes("part") ? { source_app: "tiquiz", rate: 0.4 } : null;
+    }
+  }
+
+  // 2. Filet offer id (URL absente). Éligibilité garantie par le gate sa.
   if (offerId) {
     const norm = normalizeOfferId(offerId);
     if (QUIZING_OFFER_IDS.has(norm)) return { source_app: "quizing", rate: 1 };
     if (TIQUIZ_OFFER_IDS.has(norm)) return { source_app: "tiquiz", rate: 0.4 };
   }
-  // 2. Fallback texte (les URLs affiliées part-tiquiz-* contiennent "tiquiz").
+
+  // 3. Filet texte (mêmes exclusions perso).
   const hay = texts
     .filter((t) => typeof t === "string")
     .join(" ")
     .toLowerCase();
   if (hay) {
-    if (hay.includes("atelier-du-quiz") || hay.includes("atelier du quiz") || hay.includes("quizing")) {
+    if (hay.includes("atelier-du-quiz") && !hay.includes("atelier-du-quiz-bene")) {
       return { source_app: "quizing", rate: 1 };
     }
-    if (hay.includes("tiquiz")) {
+    if (hay.includes("tiquiz") && hay.includes("part")) {
       return { source_app: "tiquiz", rate: 0.4 };
     }
   }
