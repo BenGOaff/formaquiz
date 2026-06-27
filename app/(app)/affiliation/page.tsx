@@ -4,6 +4,7 @@
 // affiche un kit de promo personnalisé selon le business de l'élève.
 import { redirect } from "next/navigation";
 import { getViewer } from "@/lib/parcours";
+import { getAffiliateGains, type AffiliateGains } from "@/lib/affiliateTracking";
 import { AffiliationClient } from "./AffiliationClient";
 
 export const metadata = {
@@ -15,12 +16,17 @@ export default async function AffiliationPage() {
   if (!viewer) redirect("/login");
 
   const p = viewer.profile;
+  const sa = p?.sio_affiliate_id ?? "";
+  // Vrais gains depuis les commissions attribuées par les webhooks Systeme.io.
+  const gains: AffiliateGains | null = sa ? await getAffiliateGains(sa) : null;
+
   return (
     <AffiliationClient
       firstName={p?.full_name ?? null}
       niche={p?.niche ?? null}
       activityType={p?.activity_type ?? null}
-      initialAffiliateId={p?.sio_affiliate_id ?? ""}
+      initialAffiliateId={sa}
+      gains={gains}
     />
   );
 }
