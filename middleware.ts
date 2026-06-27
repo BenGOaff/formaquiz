@@ -17,6 +17,8 @@ const PUBLIC_PREFIXES = [
   "/api/systeme-io",
   "/api/auth",
   "/api/cron",
+  // Tracking affilié : webhooks Systeme.io + tracker JS, appelés sans session.
+  "/api/affiliate",
 ];
 
 // Routes réservées à l'élève connecté (enrollment vérifié plus loin

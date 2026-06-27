@@ -50,16 +50,50 @@ const eur = (n: number) =>
     maximumFractionDigits: 0,
   }).format(Math.max(0, Math.round(n)));
 
+const eurCents = (c: number) =>
+  new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(Math.max(0, c) / 100);
+
+// Type local (on n'importe pas lib/affiliateTracking qui est server-only).
+type CommissionRow = {
+  id: string;
+  source_app: "quizing" | "tiquiz";
+  product_name: string | null;
+  sale_amount_cents: number;
+  commission_cents: number;
+  status: string;
+  sale_at: string;
+};
+type Gains = {
+  totalCents: number;
+  pendingCents: number;
+  approvedCents: number;
+  paidCents: number;
+  quizingCents: number;
+  tiquizCents: number;
+  salesCount: number;
+  recent: CommissionRow[];
+} | null;
+
+const STATUS_LABEL: Record<string, string> = {
+  pending: "En attente",
+  approved: "Validé",
+  paid: "Payé",
+  cancelled: "Annulé",
+  rejected: "Rejeté",
+};
+
 export function AffiliationClient({
   firstName,
   niche,
   activityType,
   initialAffiliateId,
+  gains,
 }: {
   firstName: string | null;
   niche: string | null;
   activityType: string | null;
   initialAffiliateId: string;
+  gains: Gains;
 }) {
   const router = useRouter();
   const [input, setInput] = useState(initialAffiliateId);
@@ -286,26 +320,100 @@ export function AffiliationClient({
         </CardContent>
       </Card>
 
-      {/* 4. Suivi des gains */}
+      {/* 4. Suivi des gains (vrais chiffres) */}
       <Card>
         <CardContent className="flex flex-col gap-4 py-5">
           <span className="flex items-center gap-2 text-sm font-semibold">
             <TrendingUp className="size-4 text-primary" />
-            Suis tes gains
+            Tes gains
           </span>
-          <p className="text-sm text-muted-foreground">
-            Le détail de tes clics, ventes et commissions (Quizing <em>et</em> Tiquiz) est suivi en
-            temps réel par Systeme.io, ta source de vérité. Tout est dans ton tableau de bord
-            affilié.
-          </p>
-          <div>
-            <Button asChild size="sm">
-              <a href={SIO_AFFILIATE_DASHBOARD_URL} target="_blank" rel="noopener noreferrer">
-                Voir mes commissions sur Systeme.io
-                <ExternalLink className="size-4" />
-              </a>
-            </Button>
-          </div>
+
+          {!savedId ? (
+            <p className="text-sm text-muted-foreground">
+              Ajoute ton identifiant affilié ci-dessus pour activer le suivi de tes commissions.
+            </p>
+          ) : (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <GainStat label="Total gagné" cents={gains?.totalCents ?? 0} highlight />
+                <GainStat label="En attente" cents={gains?.pendingCents ?? 0} />
+                <GainStat label="Validé" cents={gains?.approvedCents ?? 0} />
+                <GainStat label="Payé" cents={gains?.paidCents ?? 0} />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border border-border p-3 text-sm">
+                  <div className="text-xs text-muted-foreground">Sur l’Atelier du Quiz (100%)</div>
+                  <div className="font-display text-xl font-bold text-primary">
+                    {eurCents(gains?.quizingCents ?? 0)}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-border p-3 text-sm">
+                  <div className="text-xs text-muted-foreground">Sur Tiquiz (40% récurrent)</div>
+                  <div className="font-display text-xl font-bold text-success">
+                    {eurCents(gains?.tiquizCents ?? 0)}
+                  </div>
+                </div>
+              </div>
+
+              {gains && gains.recent.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-left text-xs text-muted-foreground">
+                        <th className="py-2 pr-3 font-medium">Date</th>
+                        <th className="py-2 pr-3 font-medium">Produit</th>
+                        <th className="py-2 pr-3 font-medium">Vente</th>
+                        <th className="py-2 pr-3 font-medium">Commission</th>
+                        <th className="py-2 font-medium">Statut</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {gains.recent.map((r) => (
+                        <tr key={r.id} className="border-b last:border-0">
+                          <td className="py-2 pr-3 whitespace-nowrap text-muted-foreground">
+                            {new Date(r.sale_at).toLocaleDateString("fr-FR")}
+                          </td>
+                          <td className="py-2 pr-3">
+                            {r.source_app === "quizing" ? "Atelier du Quiz" : "Tiquiz"}
+                            {r.product_name ? (
+                              <span className="block text-xs text-muted-foreground">{r.product_name}</span>
+                            ) : null}
+                          </td>
+                          <td className="py-2 pr-3 whitespace-nowrap text-muted-foreground">
+                            {eurCents(r.sale_amount_cents)}
+                          </td>
+                          <td className="py-2 pr-3 whitespace-nowrap font-medium">
+                            {eurCents(r.commission_cents)}
+                          </td>
+                          <td className="py-2 whitespace-nowrap text-xs">
+                            {STATUS_LABEL[r.status] ?? r.status}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Pas encore de commission. Dès qu’une vente passe par ton lien, elle apparaît ici.
+                </p>
+              )}
+
+              <p className="flex items-start gap-2 text-xs text-muted-foreground">
+                <Info className="mt-0.5 size-3.5 shrink-0" />
+                Le détail officiel et les paiements restent sur Systeme.io.
+              </p>
+              <div>
+                <Button asChild variant="outline" size="sm">
+                  <a href={SIO_AFFILIATE_DASHBOARD_URL} target="_blank" rel="noopener noreferrer">
+                    Voir le détail sur Systeme.io
+                    <ExternalLink className="size-4" />
+                  </a>
+                </Button>
+              </div>
+            </>
+          )}
+
           <Estimator />
         </CardContent>
       </Card>
@@ -363,11 +471,22 @@ export function AffiliationClient({
 
 // Estimateur de gains. Valeurs indicatives, ajustables par l'affilié (on
 // n'invente aucun chiffre officiel : ce sont des hypothèses qu'il modifie).
+function GainStat({ label, cents, highlight }: { label: string; cents: number; highlight?: boolean }) {
+  return (
+    <div className={`rounded-lg p-3 ${highlight ? "bg-primary/10" : "bg-muted/40"}`}>
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className={`font-display text-2xl font-bold ${highlight ? "text-primary" : ""}`}>
+        {eurCents(cents)}
+      </div>
+    </div>
+  );
+}
+
 function Estimator() {
   const [quizSales, setQuizSales] = useState(5);
-  const [quizPrice, setQuizPrice] = useState(97);
+  const [quizPrice, setQuizPrice] = useState(47);
   const [tiquizSubs, setTiquizSubs] = useState(5);
-  const [tiquizPrice, setTiquizPrice] = useState(19);
+  const [tiquizPrice, setTiquizPrice] = useState(9);
 
   const quizingEarn = quizSales * quizPrice * (QUIZING_COMMISSION_PCT / 100);
   const tiquizMonthly = tiquizSubs * tiquizPrice * (TIQUIZ_RECURRING_PCT / 100);
