@@ -26,8 +26,10 @@ function b64url(buf: Buffer): string {
  * Renvoie null si l'hébergement vidéo n'est pas configuré.
  */
 export function signVideoUrl(storagePath: string, ttlSec = PLAYBACK_TTL_SECONDS): string | null {
-  const base = process.env.QUIZING_VIDEO_PLAYBACK_BASE;
-  const secret = process.env.QUIZING_VIDEO_SECRET;
+  // QUIZING_* avec fallback FORMAQUIZ_* (ancien nom d'avant le renommage,
+  // encore présent dans le .env prod, cf. lib/video/uploadToken.ts).
+  const base = process.env.QUIZING_VIDEO_PLAYBACK_BASE ?? process.env.FORMAQUIZ_VIDEO_PLAYBACK_BASE;
+  const secret = process.env.QUIZING_VIDEO_SECRET ?? process.env.FORMAQUIZ_VIDEO_SECRET;
   if (!base || !secret || !storagePath) return null;
 
   const pathname = "/" + storagePath.replace(/^\/+/, "");

@@ -32,7 +32,10 @@ const MAX_SIZE = Number(process.env.MAX_SIZE_BYTES || 20 * 1024 ** 3);
 const SECRETS = {
   tipote: process.env.TIPOTE_JWT_SECRET || "",
   tiquiz: process.env.TIQUIZ_JWT_SECRET || "",
-  quizing: process.env.QUIZING_JWT_SECRET || "",
+  // FORMAQUIZ_* = ancien nom d'avant le renommage en Quizing. Le .env du
+  // VPS a été provisionné avec ces noms : on les accepte en fallback pour
+  // ne pas exiger un renommage serveur.
+  quizing: process.env.QUIZING_JWT_SECRET || process.env.FORMAQUIZ_JWT_SECRET || "",
 };
 
 // Per-app secret for signed video playback URLs. Must match the value
@@ -42,7 +45,7 @@ const SECRETS = {
 const VIDEO_SECRETS = {
   tipote: process.env.TIPOTE_VIDEO_SECRET || "",
   tiquiz: process.env.TIQUIZ_VIDEO_SECRET || "",
-  quizing: process.env.QUIZING_VIDEO_SECRET || "",
+  quizing: process.env.QUIZING_VIDEO_SECRET || process.env.FORMAQUIZ_VIDEO_SECRET || "",
 };
 
 if (!SECRETS.tipote && !SECRETS.tiquiz) {

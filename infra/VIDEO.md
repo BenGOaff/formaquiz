@@ -8,6 +8,16 @@ directement via une URL signée (suffisant pour des vidéos de cours).
 Le code app est déjà prêt. Il reste 3 choses à faire côté serveur. C'est
 additif : ça ne change rien au comportement de Tiquiz/Tipote.
 
+> ⚠️ **Préfixe des variables (drame 8 juillet 2026)** : le `.env` prod a
+> été provisionné AVANT le renommage Formaquiz -> Quizing, avec les noms
+> `FORMAQUIZ_JWT_SECRET`, `FORMAQUIZ_VIDEO_SECRET`,
+> `FORMAQUIZ_TUS_ENDPOINT`, `FORMAQUIZ_VIDEO_PLAYBACK_BASE`. Résultat :
+> la route upload-token répondait 503 "pipeline non branché" alors que
+> tout existait. Depuis, le code (app ET infra/tus-server/server.mjs)
+> accepte LES DEUX préfixes, `QUIZING_*` prioritaire. Pas besoin de
+> renommer quoi que ce soit sur le serveur : garde un seul jeu de
+> variables, peu importe le préfixe.
+
 ---
 
 ## 1. Génère 2 secrets (une fois)
@@ -75,7 +85,11 @@ cp /opt/popquiz-tus/server.mjs.bak /opt/popquiz-tus/server.mjs && pm2 restart po
 3. "Prévisualiser" : la vidéo se lit (URL signée, valable 6 h).
 
 Si l'upload renvoie "pipeline non branché", c'est que `QUIZING_JWT_SECRET`
-ou `QUIZING_TUS_ENDPOINT` manque côté app (étape 2).
+ou `QUIZING_TUS_ENDPOINT` manque côté app (étape 2), sous l'un OU l'autre
+des deux préfixes acceptés (`QUIZING_*` / `FORMAQUIZ_*`). Si le token part
+mais que l'upload échoue en 401 côté tus, c'est que /opt/popquiz-tus a un
+`server.mjs` antérieur (qui ne connait pas l'app "quizing") ou que son
+`.env` n'a pas le même secret que l'app : refais l'étape 3.
 
 ## Comment ça marche (résumé)
 

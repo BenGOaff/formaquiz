@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/adminGuard";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { signUploadToken, normalizeExt, QUIZING_APP } from "@/lib/video/uploadToken";
+import { signUploadToken, normalizeExt, readVideoEnv, QUIZING_APP } from "@/lib/video/uploadToken";
 
 const schema = z.object({ filename: z.string().min(1).max(300) });
 
@@ -15,8 +15,10 @@ export async function POST(req: NextRequest) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ ok: false, reason: "forbidden" }, { status: 403 });
 
-  const endpoint = process.env.QUIZING_TUS_ENDPOINT;
-  if (!endpoint || !process.env.QUIZING_JWT_SECRET) {
+  // readVideoEnv accepte QUIZING_* et l'ancien préfixe FORMAQUIZ_* (le
+  // .env prod date d'avant le renommage de l'app).
+  const endpoint = readVideoEnv("TUS_ENDPOINT");
+  if (!endpoint || !readVideoEnv("JWT_SECRET")) {
     // Pipeline pas encore branché : l'admin utilise le champ URL vidéo.
     return NextResponse.json({ ok: false, reason: "pipeline_not_configured" }, { status: 503 });
   }
