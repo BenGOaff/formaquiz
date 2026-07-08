@@ -34,6 +34,7 @@ export async function POST(
       subtitle: src.subtitle,
       intro_html: src.intro_html,
       video_url: src.video_url,
+      video2_url: src.video2_url,
       resources: src.resources,
       result_html: src.result_html,
       status: "draft",

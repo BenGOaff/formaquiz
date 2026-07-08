@@ -21,6 +21,8 @@ export function DayEditor({ day }: { day: Day }) {
     subtitle: day.subtitle ?? "",
     video_url: day.video_url ?? "",
     video_id: day.video_id ?? (null as string | null),
+    video2_url: day.video2_url ?? "",
+    video2_id: day.video2_id ?? (null as string | null),
     intro_html: day.intro_html ?? "",
     pepite_html: day.pepite_html ?? "",
     result_html: day.result_html ?? "",
@@ -44,6 +46,8 @@ export function DayEditor({ day }: { day: Day }) {
         // Une vidéo uploadée (video_id) prend le pas sur l'URL externe.
         video_id: form.video_id,
         video_url: form.video_id ? null : form.video_url || null,
+        video2_id: form.video2_id,
+        video2_url: form.video2_id ? null : form.video2_url || null,
         intro_html: form.intro_html || null,
         pepite_html: form.pepite_html || null,
         result_html: form.result_html || null,
@@ -112,6 +116,15 @@ export function DayEditor({ day }: { day: Day }) {
           onUrlChange={(v) => set("video_url", v)}
           onUploaded={(id) => setForm((f) => ({ ...f, video_id: id, video_url: "" }))}
           onClearUpload={() => set("video_id", null)}
+        />
+
+        <VideoField
+          label="Vidéo 2 (optionnelle)"
+          videoUrl={form.video2_url}
+          videoId={form.video2_id}
+          onUrlChange={(v) => set("video2_url", v)}
+          onUploaded={(id) => setForm((f) => ({ ...f, video2_id: id, video2_url: "" }))}
+          onClearUpload={() => set("video2_id", null)}
         />
 
         <div className="flex flex-col gap-1.5">

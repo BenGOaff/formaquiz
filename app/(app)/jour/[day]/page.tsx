@@ -52,6 +52,12 @@ export default async function DayPage({
 
   const resources = d.resources ?? [];
   const { src: videoSrc } = await resolveDayVideoSrc(d);
+  // Deuxième vidéo optionnelle : mêmes règles de résolution (upload signé
+  // prioritaire, sinon URL externe). Affichée seulement si elle existe.
+  const { src: video2Src } = await resolveDayVideoSrc({
+    video_url: d.video2_url,
+    video_id: d.video2_id,
+  });
   // Personnalisation : {prenom} + vocabulaire du persona ({offre}, {client}
   // ...), plus un encart d'exemples concrets dans le metier de l'eleve.
   const firstName = viewer.profile?.full_name?.split(" ")[0] ?? null;
@@ -84,6 +90,7 @@ export default async function DayPage({
       </header>
 
       <VideoPlayer src={videoSrc} />
+      {video2Src && <VideoPlayer src={video2Src} />}
 
       {introHtml && (
         <Card>

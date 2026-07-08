@@ -14,12 +14,14 @@ import { Button } from "@/components/ui/button";
  *  2. Une URL externe (YouTube, lien direct), pratique pour démarrer.
  */
 export function VideoField({
+  label = "Vidéo du jour",
   videoUrl,
   videoId,
   onUrlChange,
   onUploaded,
   onClearUpload,
 }: {
+  label?: string;
   videoUrl: string;
   videoId: string | null;
   onUrlChange: (v: string) => void;
@@ -70,7 +72,7 @@ export function VideoField({
 
   return (
     <div className="flex flex-col gap-2">
-      <Label>Vidéo du jour</Label>
+      <Label>{label}</Label>
 
       {videoId ? (
         <div className="flex items-center justify-between rounded-lg border border-success/40 bg-success/10 px-3 py-2.5">
