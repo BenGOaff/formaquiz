@@ -1,5 +1,5 @@
 // app/(app)/affiliation/page.tsx
-// Espace Affiliation de l'Atelier du Quiz. Présente l'offre (100% sur la
+// Espace Affiliation de l'Atelier du Quiz. Présente l'offre (70% sur la
 // vente + 40% récurrent Tiquiz), construit le lien affilié Systeme.io, et
 // affiche un kit de promo personnalisé selon le business de l'élève.
 import { redirect } from "next/navigation";

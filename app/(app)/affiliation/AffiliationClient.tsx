@@ -295,7 +295,7 @@ export function AffiliationClient({
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-lg border border-border p-3 text-sm">
-                    <div className="text-xs text-muted-foreground">Atelier du Quiz (100%)</div>
+                    <div className="text-xs text-muted-foreground">Atelier du Quiz ({QUIZING_COMMISSION_PCT}%)</div>
                     <div className="font-display text-xl font-bold text-primary">
                       {eurCents(gains?.quizingCents ?? 0)}
                     </div>
@@ -550,14 +550,22 @@ function Estimator() {
         <NumberField label="Abonnés Tiquiz actifs" value={tiquizSubs} onChange={setTiquizSubs} />
         <NumberField label="Prix abonnement Tiquiz / mois (€)" value={tiquizPrice} onChange={setTiquizPrice} />
       </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
         <div className="rounded-lg bg-background p-3">
-          <div className="text-xs text-muted-foreground">Ce mois-ci (ventes + récurrent)</div>
-          <div className="font-display text-2xl font-bold text-primary">{eur(thisMonth)}</div>
+          <div className="text-xs text-muted-foreground">
+            Ventes Atelier ({QUIZING_COMMISSION_PCT}% de commission)
+          </div>
+          <div className="font-display text-2xl font-bold">{eur(quizingEarn)}</div>
         </div>
         <div className="rounded-lg bg-background p-3">
-          <div className="text-xs text-muted-foreground">Récurrent Tiquiz (chaque mois)</div>
+          <div className="text-xs text-muted-foreground">
+            Récurrent Tiquiz ({TIQUIZ_RECURRING_PCT}%, chaque mois)
+          </div>
           <div className="font-display text-2xl font-bold text-success">{eur(tiquizMonthly)}</div>
+        </div>
+        <div className="rounded-lg bg-background p-3">
+          <div className="text-xs text-muted-foreground">Total ce mois-ci</div>
+          <div className="font-display text-2xl font-bold text-primary">{eur(thisMonth)}</div>
         </div>
       </div>
       <p className="mt-3 text-[11px] text-muted-foreground">
