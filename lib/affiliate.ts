@@ -5,14 +5,15 @@
 // le paiement sont gérés par Systeme.io (source de vérité).
 //
 // Modèle de commission (configuré côté Systeme.io) :
-//   - 100% de commission sur chaque vente de l'Atelier du Quiz (Quizing)
+//   - 70% de commission sur chaque vente de l'Atelier du Quiz (Quizing)
+//     (100% au lancement, passé à 70% en juillet 2026)
 //   - 40% par mois, en récurrent, sur chaque abonnement Tiquiz parrainé
 
 import { resolvePersona, type Persona } from "@/lib/personas";
 
 // --- Constantes -----------------------------------------------------------
 
-export const QUIZING_COMMISSION_PCT = 100;
+export const QUIZING_COMMISSION_PCT = 70;
 export const TIQUIZ_RECURRING_PCT = 40;
 
 /** Page de vente de l'Atelier du Quiz (le lien affilié pointe ici). */
@@ -137,9 +138,9 @@ const PLAYBOOKS: Record<Persona, AffiliatePlaybook> = {
   },
   affilie: {
     angle:
-      "Tu connais déjà l'affiliation : ici c'est 100% sur la vente + 40% récurrent sur Tiquiz. Un des meilleurs deals que tu puisses promouvoir.",
+      "Tu connais déjà l'affiliation : ici c'est 70% sur la vente + 40% récurrent sur Tiquiz. Un des meilleurs deals que tu puisses promouvoir.",
     quizIdeas: [
-      "« Quel produit d'affiliation te correspond ? » qui segmente, puis l'Atelier du Quiz comme produit phare à 100%.",
+      "« Quel produit d'affiliation te correspond ? » qui segmente, puis l'Atelier du Quiz comme produit phare à 70%.",
       "« Es-tu un affilié rentable ? » : un quiz-audit qui finit sur ta reco.",
       "« Quelle source de revenus passive lancer ? » suivi de ton lien.",
     ],
@@ -186,8 +187,8 @@ export function getAffiliatePlaybook(activityType: string | null | undefined): A
 /** Arguments de vente communs (les "supers avantages" à mettre en avant). */
 export const AFFILIATE_ARGUMENTS: { title: string; body: string }[] = [
   {
-    title: "100% sur la vente",
-    body: "Tu touches l'intégralité du prix de chaque Atelier du Quiz vendu via ton lien. Pas 30%, pas 50% : tout.",
+    title: "70% sur la vente",
+    body: "Tu touches 70% du prix de chaque Atelier du Quiz vendu via ton lien, soit 32,90 € par vente à 47 €. Une des commissions les plus généreuses du marché.",
   },
   {
     title: "40% récurrent sur Tiquiz",
@@ -215,7 +216,7 @@ export function affiliateIntro(opts: {
   const hello = name ? `${name}, ` : "";
   const niche = (opts.niche ?? "").trim();
   if (niche) {
-    return `${hello}ton audience (${niche}) a tout intérêt à créer des quiz pour capturer des leads. En la recommandant l'Atelier du Quiz, tu l'aides ET tu touches 100% de commission.`;
+    return `${hello}ton audience (${niche}) a tout intérêt à créer des quiz pour capturer des leads. En la recommandant l'Atelier du Quiz, tu l'aides ET tu touches 70% de commission.`;
   }
-  return `${hello}recommande l'Atelier du Quiz à ton audience : tu l'aides à capturer des leads avec des quiz, et tu touches 100% de commission sur chaque vente.`;
+  return `${hello}recommande l'Atelier du Quiz à ton audience : tu l'aides à capturer des leads avec des quiz, et tu touches 70% de commission sur chaque vente.`;
 }

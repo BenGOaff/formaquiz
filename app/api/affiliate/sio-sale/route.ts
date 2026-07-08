@@ -7,7 +7,7 @@
 //   -> Webhook POST vers https://quizing.tipote.com/api/affiliate/sio-sale
 //
 // On extrait email + order id + montant + produit + sa, on détecte le produit
-// (Quizing 100% / Tiquiz 40%) et on attribue à l'affilié. Idempotent
+// (Quizing 70% / Tiquiz 40%) et on attribue à l'affilié. Idempotent
 // (unique source_app + sio_order_id). Toujours 200 pour éviter les retries SIO
 // sur les cas non applicables (vente sans affilié, produit hors périmètre).
 import { NextRequest, NextResponse } from "next/server";

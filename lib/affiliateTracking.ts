@@ -1,12 +1,21 @@
 // lib/affiliateTracking.ts
 // Coeur serveur du suivi affilié de l'Atelier du Quiz. Calqué sur
 // lib/affiliate/attribution.ts de Tipote, adapté : taux PAR PRODUIT
-// (Quizing 100% / Tiquiz 40%) au lieu de paliers, et registre des affiliés
+// (Quizing 70% / Tiquiz 40%) au lieu de paliers, et registre des affiliés
 // = profiles.sio_affiliate_id (pas de table affiliates séparée ici).
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 const ATTRIBUTION_WINDOW_DAYS = 90;
+
+// Taux par produit. Miroir de la config Systeme.io (source de vérité du
+// PAIEMENT) : si Béné change le % côté SIO, changer ici aussi, sinon les
+// gains affichés dans l'app divergent des paiements réels. Les commissions
+// déjà en base gardent leur taux d'origine (commission_rate stocké par
+// ligne), seules les ventes futures utilisent le nouveau taux.
+// Historique Quizing : 100% au lancement, 70% depuis juillet 2026.
+const QUIZING_RATE = 0.7;
+const TIQUIZ_RATE = 0.4;
 
 // Format Systeme.io : "sa" + 20-80 caractères hex.
 export const SA_RE = /^sa[a-f0-9]{20,80}$/i;
@@ -113,19 +122,19 @@ export function detectProduct(
     if (url.includes("atelier-du-quiz")) {
       // Tunnel perso de Béné -> AUCUNE commission.
       if (url.includes("atelier-du-quiz-bene")) return null;
-      return { source_app: "quizing", rate: 1 };
+      return { source_app: "quizing", rate: QUIZING_RATE };
     }
     if (url.includes("tiquiz")) {
       // Affilié uniquement si le BDC contient "part".
-      return url.includes("part") ? { source_app: "tiquiz", rate: 0.4 } : null;
+      return url.includes("part") ? { source_app: "tiquiz", rate: TIQUIZ_RATE } : null;
     }
   }
 
   // 2. Filet offer id (URL absente). Éligibilité garantie par le gate sa.
   if (offerId) {
     const norm = normalizeOfferId(offerId);
-    if (QUIZING_OFFER_IDS.has(norm)) return { source_app: "quizing", rate: 1 };
-    if (TIQUIZ_OFFER_IDS.has(norm)) return { source_app: "tiquiz", rate: 0.4 };
+    if (QUIZING_OFFER_IDS.has(norm)) return { source_app: "quizing", rate: QUIZING_RATE };
+    if (TIQUIZ_OFFER_IDS.has(norm)) return { source_app: "tiquiz", rate: TIQUIZ_RATE };
   }
 
   // 3. Filet texte (mêmes exclusions perso).
@@ -135,10 +144,10 @@ export function detectProduct(
     .toLowerCase();
   if (hay) {
     if (hay.includes("atelier-du-quiz") && !hay.includes("atelier-du-quiz-bene")) {
-      return { source_app: "quizing", rate: 1 };
+      return { source_app: "quizing", rate: QUIZING_RATE };
     }
     if (hay.includes("tiquiz") && hay.includes("part")) {
-      return { source_app: "tiquiz", rate: 0.4 };
+      return { source_app: "tiquiz", rate: TIQUIZ_RATE };
     }
   }
   return null;
