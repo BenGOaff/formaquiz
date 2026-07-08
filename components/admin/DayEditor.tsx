@@ -21,8 +21,10 @@ export function DayEditor({ day }: { day: Day }) {
     subtitle: day.subtitle ?? "",
     video_url: day.video_url ?? "",
     video_id: day.video_id ?? (null as string | null),
+    video_title: day.video_title ?? "",
     video2_url: day.video2_url ?? "",
     video2_id: day.video2_id ?? (null as string | null),
+    video2_title: day.video2_title ?? "",
     intro_html: day.intro_html ?? "",
     pepite_html: day.pepite_html ?? "",
     result_html: day.result_html ?? "",
@@ -46,8 +48,10 @@ export function DayEditor({ day }: { day: Day }) {
         // Une vidéo uploadée (video_id) prend le pas sur l'URL externe.
         video_id: form.video_id,
         video_url: form.video_id ? null : form.video_url || null,
+        video_title: form.video_title.trim() || null,
         video2_id: form.video2_id,
         video2_url: form.video2_id ? null : form.video2_url || null,
+        video2_title: form.video2_title.trim() || null,
         intro_html: form.intro_html || null,
         pepite_html: form.pepite_html || null,
         result_html: form.result_html || null,
@@ -113,30 +117,37 @@ export function DayEditor({ day }: { day: Day }) {
         <VideoField
           videoUrl={form.video_url}
           videoId={form.video_id}
+          title={form.video_title}
           onUrlChange={(v) => set("video_url", v)}
           onUploaded={(id) => setForm((f) => ({ ...f, video_id: id, video_url: "" }))}
           onClearUpload={() => set("video_id", null)}
+          onTitleChange={(v) => set("video_title", v)}
         />
 
         <VideoField
           label="Vidéo 2 (optionnelle)"
           videoUrl={form.video2_url}
           videoId={form.video2_id}
+          title={form.video2_title}
           onUrlChange={(v) => set("video2_url", v)}
           onUploaded={(id) => setForm((f) => ({ ...f, video2_id: id, video2_url: "" }))}
           onClearUpload={() => set("video2_id", null)}
+          onTitleChange={(v) => set("video2_title", v)}
         />
 
         <div className="flex flex-col gap-1.5">
           <Label>Contenu du jour</Label>
           <p className="text-xs text-muted-foreground">
-            Le texte affiché sous la vidéo. Mets en forme avec la barre d'outils, et insère un
-            schéma si ça aide à comprendre.
+            Mets en forme avec la barre d'outils, insère un schéma si ça aide à comprendre.
+            Les boutons Vidéo 1 / Vidéo 2 placent tes vidéos à l'endroit du texte où se
+            trouve ton curseur : tu peux écrire avant et après. Une vidéo non placée dans
+            le texte reste affichée en haut de page, comme avant.
           </p>
           <RichTextEditor
             value={form.intro_html}
             onChange={(v) => set("intro_html", v)}
             placeholder="Écris le contenu du jour..."
+            allowVideos
           />
         </div>
 

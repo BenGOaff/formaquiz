@@ -8,7 +8,7 @@ import { personalizeContent } from "@/lib/personalize";
 import { resolvePersona, personaLabel } from "@/lib/personas";
 import { getPersonaVocab, getDayPersonaExample } from "@/lib/personaContent";
 import { Sparkles, Gem } from "lucide-react";
-import { VideoPlayer } from "@/components/VideoPlayer";
+import { VideoBlock } from "@/components/VideoBlock";
 import { RichContent } from "@/components/RichContent";
 import { NoAccess } from "@/components/NoAccess";
 import { BlockerButton } from "@/components/BlockerButton";
@@ -16,6 +16,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { QuizRunner } from "./QuizRunner";
 
 export const dynamic = "force-dynamic";
+
+// Shortcodes [[video:1]] / [[video:2]] insérés depuis l'éditeur admin :
+// ils placent les vidéos du jour DANS le contenu riche (texte avant et
+// après). Même mécanique que [[figure:...]] dans RichContent : on
+// dédouble le HTML autour des tokens et on intercale les lecteurs.
+// L'éditeur enveloppe le shortcode dans un <p> (parfois avec un <br>),
+// qu'on retire avant le split.
+const VIDEO_UNWRAP = /<(p|div)>\s*(\[\[video:[12]\]\])\s*(?:<br\s*\/?>\s*)?<\/\1>/gi;
+const VIDEO_SPLIT = /(\[\[video:[12]\]\])/i;
+const VIDEO_ONE = /^\[\[video:([12])\]\]$/i;
 
 export default async function DayPage({
   params,
@@ -66,6 +76,29 @@ export default async function DayPage({
   const introHtml = personalizeContent(d.intro_html, { firstName, vocab });
   const resultHtml = personalizeContent(d.result_html, { firstName, vocab });
   const pepiteHtml = personalizeContent(d.pepite_html, { firstName, vocab });
+
+  // Vidéos du jour : configuration + titre (personnalisé comme le reste).
+  // "Configurée" = un upload ou une URL existe ; src peut rester null le
+  // temps qu'un upload soit prêt (le lecteur affiche alors un placeholder).
+  const video1 = {
+    configured: Boolean(d.video_id || d.video_url),
+    src: videoSrc,
+    title: personalizeContent(d.video_title, { firstName, vocab }),
+  };
+  const video2 = {
+    configured: Boolean(d.video2_id || d.video2_url),
+    src: video2Src,
+    title: personalizeContent(d.video2_title, { firstName, vocab }),
+  };
+  const videoBySlot = { "1": video1, "2": video2 } as const;
+
+  // Découpe le contenu autour des shortcodes vidéo. Une vidéo PLACÉE dans
+  // le texte n'apparaît plus en haut de page ; une vidéo non placée garde
+  // sa position historique au-dessus du contenu.
+  const introParts = (introHtml ?? "").replace(VIDEO_UNWRAP, "$2").split(VIDEO_SPLIT);
+  const placedSlots = new Set(
+    introParts.map((p) => p.match(VIDEO_ONE)?.[1]).filter(Boolean) as string[],
+  );
   const personaExample = personalizeContent(await getDayPersonaExample(d.id, persona), {
     firstName,
     vocab,
@@ -89,16 +122,39 @@ export default async function DayPage({
         {d.subtitle && <p className="text-muted-foreground">{d.subtitle}</p>}
       </header>
 
-      <VideoPlayer src={videoSrc} />
-      {video2Src && <VideoPlayer src={video2Src} />}
-
-      {introHtml && (
-        <Card>
-          <CardContent className="py-5">
-            <RichContent html={introHtml} />
-          </CardContent>
-        </Card>
+      {!placedSlots.has("1") && <VideoBlock src={video1.src} title={video1.title} />}
+      {!placedSlots.has("2") && video2.configured && (
+        <VideoBlock src={video2.src} title={video2.title} />
       )}
+
+      {introParts.map((part, i) => {
+        if (!part || !part.trim()) return null;
+        const token = part.match(VIDEO_ONE);
+        // Chunk sans contenu réel (ex. <p><br></p> résiduel autour d'une
+        // vidéo) : pas de Card vide. Les [[figure:...]] comptent comme du
+        // contenu (pas de texte mais un schéma à rendre).
+        if (
+          !token &&
+          !/\[\[figure:/i.test(part) &&
+          part.replace(/<[^>]*>|&nbsp;|\s/g, "") === ""
+        ) {
+          return null;
+        }
+        if (token) {
+          const v = videoBySlot[token[1] as "1" | "2"];
+          // Shortcode qui pointe une vidéo non configurée : on l'ignore
+          // silencieusement (pas de cadre vide chez l'élève).
+          if (!v.configured) return null;
+          return <VideoBlock key={i} src={v.src} title={v.title} />;
+        }
+        return (
+          <Card key={i}>
+            <CardContent className="py-5">
+              <RichContent html={part} />
+            </CardContent>
+          </Card>
+        );
+      })}
 
       {/* La pepite : nugget avance et actionnable (persuasion, growth). */}
       {pepiteHtml && (

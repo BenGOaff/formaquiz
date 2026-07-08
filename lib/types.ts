@@ -37,6 +37,10 @@ export interface Day {
   // Deuxième vidéo optionnelle (certains jours ont cours + démo).
   video2_url: string | null;
   video2_id: string | null;
+  // Titres optionnels, affichés dans le bandeau brandé au-dessus du
+  // lecteur. Placement dans le texte via [[video:1]] / [[video:2]].
+  video_title: string | null;
+  video2_title: string | null;
   resources: DayResource[];
   result_html: string | null;
   pepite_html: string | null;

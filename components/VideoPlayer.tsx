@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { Film } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const YT_RE =
   /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|v\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
@@ -19,7 +20,16 @@ function youtubeId(url: string): string | null {
  * Quand le pipeline auto-hébergé sera branché, on passera ici l'URL de
  * lecture signée (HLS) renvoyée par le serveur.
  */
-export function VideoPlayer({ src, poster }: { src: string | null; poster?: string | null }) {
+export function VideoPlayer({
+  src,
+  poster,
+  className,
+}: {
+  src: string | null;
+  poster?: string | null;
+  /** Classes ajoutées au cadre (ex. rounded-t-none sous un bandeau titré). */
+  className?: string;
+}) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const isHls = !!src && src.includes(".m3u8");
 
@@ -50,7 +60,10 @@ export function VideoPlayer({ src, poster }: { src: string | null; poster?: stri
     };
   }, [isHls, src]);
 
-  const frame = "aspect-video w-full overflow-hidden rounded-xl bg-foreground/5 ring-1 ring-foreground/10";
+  const frame = cn(
+    "aspect-video w-full overflow-hidden rounded-xl bg-foreground/5 ring-1 ring-foreground/10",
+    className,
+  );
 
   if (!src) {
     return (

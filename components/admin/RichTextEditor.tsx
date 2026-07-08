@@ -12,6 +12,7 @@ import {
   Link2,
   Eraser,
   ImagePlus,
+  Film,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FIGURE_OPTIONS } from "@/components/figures/registry";
@@ -30,10 +31,15 @@ export function RichTextEditor({
   value,
   onChange,
   placeholder,
+  allowVideos = false,
 }: {
   value: string;
   onChange: (html: string) => void;
   placeholder?: string;
+  /** Affiche les boutons d'insertion [[video:1]] / [[video:2]]. À activer
+   *  uniquement sur les champs dont le rendu résout ces shortcodes
+   *  (aujourd'hui : le contenu du jour). */
+  allowVideos?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -63,6 +69,15 @@ export function RichTextEditor({
     if (!key) return;
     ref.current?.focus();
     document.execCommand("insertHTML", false, `<p>[[figure:${key}]]</p>`);
+    emit();
+  }
+
+  function insertVideo(slot: 1 | 2) {
+    ref.current?.focus();
+    // Même mécanique que les figures : un shortcode dans son propre
+    // paragraphe, résolu au rendu par la page du jour (lecteur + bandeau
+    // titré). L'admin peut le déplacer/supprimer comme du texte.
+    document.execCommand("insertHTML", false, `<p>[[video:${slot}]]</p>`);
     emit();
   }
 
@@ -121,6 +136,32 @@ export function RichTextEditor({
         <Btn title="Effacer la mise en forme" onClick={() => exec("removeFormat")}>
           <Eraser />
         </Btn>
+        {allowVideos && (
+          <>
+            <span className="mx-1 h-5 w-px bg-border" />
+            <div className="flex items-center gap-1">
+              <Film className="size-4 text-muted-foreground" />
+              <button
+                type="button"
+                title="Insérer la vidéo 1 à cet endroit du texte"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => insertVideo(1)}
+                className="h-7 rounded-md border border-input bg-background px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                Vidéo 1
+              </button>
+              <button
+                type="button"
+                title="Insérer la vidéo 2 à cet endroit du texte"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => insertVideo(2)}
+                className="h-7 rounded-md border border-input bg-background px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                Vidéo 2
+              </button>
+            </div>
+          </>
+        )}
         <span className="mx-1 h-5 w-px bg-border" />
         <div className="flex items-center gap-1">
           <ImagePlus className="size-4 text-muted-foreground" />
