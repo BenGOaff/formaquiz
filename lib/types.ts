@@ -34,6 +34,9 @@ export interface Day {
   intro_html: string | null;
   video_url: string | null;
   video_id: string | null;
+  // Deuxième vidéo optionnelle (certains jours ont cours + démo).
+  video2_url: string | null;
+  video2_id: string | null;
   resources: DayResource[];
   result_html: string | null;
   pepite_html: string | null;

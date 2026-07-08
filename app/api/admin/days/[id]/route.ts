@@ -19,6 +19,8 @@ const patchSchema = z.object({
   pepite_html: z.string().max(20000).nullable().optional(),
   video_url: z.string().max(2000).nullable().optional(),
   video_id: z.string().uuid().nullable().optional(),
+  video2_url: z.string().max(2000).nullable().optional(),
+  video2_id: z.string().uuid().nullable().optional(),
   resources: z.array(resourceSchema).optional(),
   result_html: z.string().max(50000).nullable().optional(),
   status: z.enum(["draft", "published"]).optional(),
