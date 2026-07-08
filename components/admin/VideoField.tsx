@@ -17,16 +17,21 @@ export function VideoField({
   label = "Vidéo du jour",
   videoUrl,
   videoId,
+  title,
   onUrlChange,
   onUploaded,
   onClearUpload,
+  onTitleChange,
 }: {
   label?: string;
   videoUrl: string;
   videoId: string | null;
+  /** Titre affiché dans le bandeau brandé au-dessus du lecteur (optionnel). */
+  title: string;
   onUrlChange: (v: string) => void;
   onUploaded: (videoId: string) => void;
   onClearUpload: () => void;
+  onTitleChange: (v: string) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState<number | null>(null);
@@ -121,6 +126,19 @@ export function VideoField({
       <p className="text-xs text-muted-foreground">
         Uploade un fichier (hébergé sur ton serveur, lecture protégée) ou colle une URL YouTube.
       </p>
+
+      {(videoId || videoUrl.trim()) && (
+        <div className="flex flex-col gap-1">
+          <Input
+            value={title}
+            onChange={(e) => onTitleChange(e.target.value)}
+            placeholder="Titre de la vidéo (optionnel)"
+          />
+          <p className="text-xs text-muted-foreground">
+            Affiché dans un bandeau aux couleurs de l&apos;Atelier du Quiz au-dessus du lecteur.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
