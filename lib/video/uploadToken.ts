@@ -11,8 +11,13 @@ import crypto from "node:crypto";
 export const QUIZING_APP = "quizing" as const;
 
 // Secret JWT partagé avec le serveur tus du VPS. Même nom des deux côtés
-// (QUIZING_JWT_SECRET) pour qu'il soit évident qu'ils doivent être égaux.
-const JWT_SECRET_ENV = "QUIZING_JWT_SECRET";
+// pour qu'il soit évident qu'ils doivent être égaux. FORMAQUIZ_* = ancien
+// nom d'avant le renommage en Quizing, accepté en fallback : le .env prod
+// a été provisionné avec ces noms (drame vidéo 8 juillet 2026, la route
+// upload-token répondait 503 alors que les secrets existaient).
+export function readVideoEnv(name: string): string | undefined {
+  return process.env[`QUIZING_${name}`] ?? process.env[`FORMAQUIZ_${name}`];
+}
 
 const UPLOAD_TOKEN_TTL_SECONDS = 60 * 60; // 1 h, large pour un gros upload
 
@@ -21,9 +26,9 @@ function b64url(input: Buffer | string): string {
   return buf.toString("base64").replace(/=+$/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 
-function requireEnv(name: string): string {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing env var ${name}`);
+function requireVideoEnv(name: string): string {
+  const v = readVideoEnv(name);
+  if (!v) throw new Error(`Missing env var QUIZING_${name} (or FORMAQUIZ_${name})`);
   return v;
 }
 
@@ -52,7 +57,7 @@ export function signUploadToken(
   claims: UploadClaims,
   ttlSec = UPLOAD_TOKEN_TTL_SECONDS,
 ): { token: string; expiresAt: number } {
-  const secret = requireEnv(JWT_SECRET_ENV);
+  const secret = requireVideoEnv("JWT_SECRET");
   const now = Math.floor(Date.now() / 1000);
   const exp = now + ttlSec;
   const header = b64url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
