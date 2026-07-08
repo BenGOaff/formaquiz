@@ -8,15 +8,19 @@ directement via une URL signée (suffisant pour des vidéos de cours).
 Le code app est déjà prêt. Il reste 3 choses à faire côté serveur. C'est
 additif : ça ne change rien au comportement de Tiquiz/Tipote.
 
-> ⚠️ **Préfixe des variables (drame 8 juillet 2026)** : le `.env` prod a
-> été provisionné AVANT le renommage Formaquiz -> Quizing, avec les noms
-> `FORMAQUIZ_JWT_SECRET`, `FORMAQUIZ_VIDEO_SECRET`,
-> `FORMAQUIZ_TUS_ENDPOINT`, `FORMAQUIZ_VIDEO_PLAYBACK_BASE`. Résultat :
-> la route upload-token répondait 503 "pipeline non branché" alors que
-> tout existait. Depuis, le code (app ET infra/tus-server/server.mjs)
-> accepte LES DEUX préfixes, `QUIZING_*` prioritaire. Pas besoin de
-> renommer quoi que ce soit sur le serveur : garde un seul jeu de
-> variables, peu importe le préfixe.
+> ⚠️ **Le namespace serveur est "formaquiz", PAS "quizing" (drame 8
+> juillet 2026)**. Tout le pipeline VPS a été provisionné AVANT le
+> renommage de l'app : envs `FORMAQUIZ_*` des deux côtés, server.mjs de
+> /opt/popquiz-tus qui connait l'app "formaquiz", stockage
+> `/srv/popquiz-videos/formaquiz/`. Le renommage du code en "quizing"
+> (18 juin) a cassé la chaîne en deux temps : 503 "pipeline non branché"
+> (envs QUIZING_* introuvables) puis 401 "Unknown app" (claim JWT
+> "quizing" inconnu du serveur). Décision Béné : on garde "formaquiz"
+> partout côté serveur. Le code émet donc `app: "formaquiz"` (cf.
+> lib/video/uploadToken.ts) et accepte les deux préfixes d'env. Le
+> serveur en place n'a PAS besoin d'être touché ; le server.mjs de ce
+> repo (qui accepte formaquiz ET quizing) ne sert que si tu dois
+> re-provisionner un jour.
 
 ---
 

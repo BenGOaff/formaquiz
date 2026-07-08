@@ -8,7 +8,15 @@
 import "server-only";
 import crypto from "node:crypto";
 
-export const QUIZING_APP = "quizing" as const;
+// Namespace applicatif annoncé au serveur tus (claim `app` du JWT) et
+// préfixe des chemins de stockage (/srv/popquiz-videos/<app>/raw/...).
+// C'est "formaquiz", le nom HISTORIQUE : le server.mjs déployé sur le VPS
+// et les secrets FORMAQUIZ_* ont été provisionnés avant le renommage en
+// Quizing, et on les garde tels quels (décision Béné 8 juillet 2026,
+// après le drame du 401 "Unknown app" : le code renommé annonçait
+// "quizing", inconnu du serveur en place). Ne PAS "moderniser" ce nom
+// sans re-provisionner le serveur tus ET migrer les chemins de stockage.
+export const QUIZING_APP = "formaquiz" as const;
 
 // Secret JWT partagé avec le serveur tus du VPS. Même nom des deux côtés
 // pour qu'il soit évident qu'ils doivent être égaux. FORMAQUIZ_* = ancien
