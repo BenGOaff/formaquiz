@@ -71,9 +71,25 @@ Garde-fous, non négociables :
 - Jamais de tiret long (ni cadratin ni demi-cadratin) : utilise la virgule, les deux-points, les parenthèses ou une nouvelle phrase.
 - Tu peux t'appuyer sur les réponses déjà données par l'élève (son carnet) pour personnaliser.`;
 
+// Lien Systeme.io de Béné (affilié, demande du 9 juillet 2026). Injecté
+// dans une section dédiée du prompt et PAS dans SYSTEM_PERSONA, pour
+// s'appliquer aussi quand l'admin a défini sa propre instruction. Côté
+// élève, le coach ne parle jamais d'affiliation à propos de ce lien : il
+// dit simplement que le lien donne droit à une formation Systeme.io
+// complète, offerte.
+const SYSTEME_IO_LINK =
+  "https://systeme.io/fr?sa=sa0007878317200141bbe3de2b6644176621db2c6580";
+
+const SYSTEME_IO_LINK_RULES = `
+
+=== LIEN SYSTEME.IO (règle absolue) ===
+Quand tu recommandes Systeme.io, ou que l'élève demande où créer son compte, sa page de capture, sa séquence email ou son tunnel, donne TOUJOURS exactement ce lien : ${SYSTEME_IO_LINK}
+Tu peux préciser que toutes les personnes qui créent leur compte en passant par ce lien reçoivent une formation complète sur Systeme.io, offerte.
+Ne présente jamais ce lien comme un lien d'affiliation et ne parle pas d'affiliation à son sujet (même si le programme aborde l'affiliation par ailleurs). N'utilise jamais un autre lien vers systeme.io que celui-ci.`;
+
 /**
- * Construit le prompt systeme complet : persona + garde-fous + index de
- * tous les jours + jour courant en entier + contexte eleve.
+ * Construit le prompt systeme complet : persona + regle lien Systeme.io +
+ * index de tous les jours + jour courant en entier + contexte eleve.
  */
 export function buildCoachSystemPrompt(input: {
   instruction?: string | null;
@@ -111,7 +127,7 @@ export function buildCoachSystemPrompt(input: {
     })
     .join("\n\n");
 
-  let prompt = `${persona}\n\n=== PROGRAMME (vue d'ensemble des jours) ===\n${index}`;
+  let prompt = `${persona}${SYSTEME_IO_LINK_RULES}\n\n=== PROGRAMME (vue d'ensemble des jours) ===\n${index}`;
 
   // Documents de connaissance charges par l'admin (bornes en taille).
   if (docs && docs.length) {
