@@ -105,7 +105,10 @@ export default async function DayPage({
   });
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6">
+    // max-w-5xl (au lieu de 3xl) : l'élève doit voir les détails des
+    // vidéos. Presque la largeur du dashboard (qui occupe tout le
+    // container), sans y coller pour garder le texte lisible.
+    <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <Link
         href="/dashboard"
         className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
