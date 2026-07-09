@@ -23,6 +23,16 @@ const patchSchema = z.object({
   video2_url: z.string().max(2000).nullable().optional(),
   video2_id: z.string().uuid().nullable().optional(),
   video2_title: z.string().max(200).nullable().optional(),
+  videos: z
+    .array(
+      z.object({
+        title: z.string().max(200),
+        url: z.string().max(2000).nullable(),
+        video_id: z.string().uuid().nullable(),
+      }),
+    )
+    .max(30)
+    .optional(),
   resources: z.array(resourceSchema).optional(),
   result_html: z.string().max(50000).nullable().optional(),
   status: z.enum(["draft", "published"]).optional(),

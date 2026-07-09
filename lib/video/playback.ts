@@ -12,7 +12,7 @@
 import "server-only";
 import crypto from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import type { Day } from "@/lib/types";
+import type { Day, DayVideo } from "@/lib/types";
 
 const PLAYBACK_TTL_SECONDS = 60 * 60 * 6; // 6 h, large pour une session de cours
 
@@ -49,11 +49,20 @@ export function signVideoUrl(storagePath: string, ttlSec = PLAYBACK_TTL_SECONDS)
 export async function resolveDayVideoSrc(
   day: Pick<Day, "video_url" | "video_id">,
 ): Promise<{ src: string | null; pending: boolean }> {
-  if (day.video_id) {
+  return resolveVideoSrc({ url: day.video_url, video_id: day.video_id });
+}
+
+/** Résout une source vidéo générique (upload signé prioritaire, sinon
+ *  URL). Base commune de resolveDayVideoSrc et resolveDayVideos. */
+export async function resolveVideoSrc(v: {
+  url: string | null;
+  video_id: string | null;
+}): Promise<{ src: string | null; pending: boolean }> {
+  if (v.video_id) {
     const { data: video } = await supabaseAdmin
       .from("quizing_videos")
       .select("storage_path, status")
-      .eq("id", day.video_id)
+      .eq("id", v.video_id)
       .maybeSingle();
     if (video?.status === "ready" && video.storage_path) {
       return { src: signVideoUrl(video.storage_path as string), pending: false };
@@ -61,5 +70,37 @@ export async function resolveDayVideoSrc(
     // Vidéo liée mais pas encore prête (upload en cours / échoué).
     if (video) return { src: null, pending: video.status !== "failed" };
   }
-  return { src: day.video_url ?? null, pending: false };
+  return { src: v.url ?? null, pending: false };
+}
+
+/**
+ * Résout la liste ORDONNÉE des vidéos d'un jour, source unique pour le
+ * rendu et les shortcodes [[video:N]] (N = position 1-indexée) :
+ *  - si `days.videos` est non vide, c'est lui (module multi-vidéos) ;
+ *  - sinon on retombe sur le couple historique video/video2, indexé 1 et
+ *    2 (jours J0 à J7 : aucun changement de rendu).
+ * Chaque entrée porte son titre (bandeau brandé) et sa src résolue.
+ */
+export async function resolveDayVideos(
+  day: Pick<
+    Day,
+    "video_url" | "video_id" | "video_title" | "video2_url" | "video2_id" | "video2_title" | "videos"
+  >,
+): Promise<Array<{ title: string | null; src: string | null; configured: boolean }>> {
+  const list: DayVideo[] =
+    Array.isArray(day.videos) && day.videos.length > 0
+      ? day.videos
+      : [
+          { title: day.video_title, url: day.video_url, video_id: day.video_id },
+          { title: day.video2_title, url: day.video2_url, video_id: day.video2_id },
+        ].map((v) => ({ title: v.title ?? "", url: v.url, video_id: v.video_id }));
+
+  return Promise.all(
+    list.map(async (v) => {
+      const configured = Boolean(v.video_id || (v.url && v.url.trim()));
+      if (!configured) return { title: v.title || null, src: null, configured: false };
+      const { src } = await resolveVideoSrc({ url: v.url, video_id: v.video_id });
+      return { title: v.title || null, src, configured: true };
+    }),
+  );
 }

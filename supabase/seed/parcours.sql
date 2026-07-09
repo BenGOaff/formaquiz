@@ -1,5 +1,7 @@
 -- ════════════════════════════════════════════════════════════════
--- QUIZING — seed du parcours condensé (7 jours : J0 à J7) + 4 bonus
+-- QUIZING : seed du parcours condensé (7 jours, J0 à J7) + 5 bonus
+--   (101 trafic payant, 102 vendre, 103 sondages, 104 popquiz,
+--    105 promouvoir par réseau : module multi-vidéos, une par réseau)
 -- ════════════════════════════════════════════════════════════════
 --
 -- Source : contenu/support-jours/*.md (contenu de page vu par l'élève) et
@@ -402,48 +404,55 @@ values
 ),
 (
   105, $s$bonus-promo-reseaux$s$, $t$Bonus : Promouvoir par réseau$t$, $st$Les bases qui marchent partout, puis le guide de chaque réseau$st$,
-  $html$<p>Les réseaux peuvent t'amener un flux constant de visiteurs vers ton quiz, gratuitement, mais pas en postant au hasard. Avant les astuces propres à chaque réseau, il y a des bases qui marchent partout. On les pose une bonne fois, puis chaque réseau a son guide.</p>
+  $html$<p>Les réseaux peuvent t'amener un flux constant de visiteurs vers ton quiz, gratuitement, mais pas en postant au hasard. Avant les astuces propres à chaque réseau, il y a des bases qui marchent partout. On les pose une bonne fois (vidéo ci-dessous), puis chaque réseau a sa vidéo et son guide.</p>
+[[video:1]]
 <h2>Les bases (valables partout)</h2>
 <ul>
-<li>Ton profil = ta vitrine en 3 secondes : photo nette (un vrai visage), bio orientée bénéfice (ce que tu fais POUR les gens), et un lien, toujours. En pro, zéro polémique.</li>
-<li>Ton lien en bio = la porte vers ton quiz : il mène à une mini-page (Systeme.io) avec un gros bouton vers ton quiz. Tu importes les templates fournis.</li>
-<li>Quoi poster : 5 types de contenu, en alternance (valeur, preuve sociale, curiosité, vente, gratitude). La plupart du temps tu donnes, de temps en temps tu vends.</li>
-<li>Rythme : 3 posts par semaine tenables toute l'année battent 2 par jour pendant 15 jours puis plus rien. La régularité bat l'intensité.</li>
-<li>Va plus vite : programme tes posts (outils natifs gratuits) et fais écrire un mois d'idées à l'IA à partir de ton quiz (ses questions, profils et résultats sont une mine).</li>
+<li>Ton profil = ta vitrine en 3 secondes : photo nette (un vrai visage, pas un logo flou), bio orientée bénéfice (ce que tu fais POUR les gens, pas ton CV), et un lien, toujours. En pro, zéro polémique politique : tu fermes des portes pour rien.</li>
+<li>Ton lien en bio = la porte vers ton quiz : tu n'as souvent qu'UN lien, ne le gâche pas. Il mène à une mini-page (Systeme.io) avec ta photo, une phrase claire et un gros bouton vers ton quiz. Tu importes les templates fournis, tu mets tes mots, c'est prêt.</li>
+<li>Quoi poster : 5 types de contenu, en alternance (valeur, preuve sociale, curiosité, vente, gratitude). La plupart du temps tu donnes, de temps en temps tu vends. On suit ceux qui donnent.</li>
+<li>Rythme : 3 posts par semaine tenables toute l'année battent 2 par jour pendant 15 jours puis plus rien. La régularité bat l'intensité. Bloque 1h par semaine pour préparer et programmer (outils natifs gratuits : Meta Business Suite, programmation LinkedIn...).</li>
+<li>Va 10 fois plus vite avec l'IA : ton quiz (ses questions, profils et résultats) est une mine d'idées de posts. "Voici mon quiz et ses profils, donne-moi 10 idées de posts qui créent la curiosité et mènent à ce quiz, pour [réseau]." Tu gardes la main, l'IA fait le brouillon.</li>
 </ul>
-<p>La règle des 7 contacts : on doit te voir environ 7 fois avant de te faire confiance et d'agir. D'où l'importance de poster régulièrement.</p>
+<p>La règle des 7 contacts : on doit te voir environ 7 fois avant de te faire confiance et d'agir. D'où l'importance de poster régulièrement. Et le réflexe qui vaut sur tous les réseaux : interagis à la main 15 min AVANT ton post (tu commentes d'autres posts) et 30 min APRÈS (tu réponds à chaque commentaire). L'algo regarde les premières minutes : tu amorces la pompe toi-même.</p>
 <h2>Le guide réseau par réseau</h2>
-<p>Choisis-EN UN pour commencer, celui où ta cible est déjà. Applique son guide, puis tu en ajouteras un autre. Inutile d'être partout en même temps.</p>
+<p>Choisis-EN UN pour commencer, celui où ta cible est déjà. Regarde sa vidéo, applique son guide, puis tu en ajouteras un autre. Inutile d'être partout en même temps.</p>
 <h3>Facebook : le réseau des groupes</h3>
-<p>Facebook n'est pas mort, les conversations ont juste migré dans les groupes, où ta cible se réunit par centaines de milliers et pose des questions tous les jours.</p>
+[[video:2]]
+<p>Facebook n'est pas mort, les conversations ont juste migré dans les groupes, où ta cible se réunit par centaines de milliers (1,8 milliard de personnes utilisent les groupes chaque mois) et pose des questions tous les jours.</p>
 <ul>
-<li>Rejoins 3 à 5 groupes actifs (regarde les posts par jour, pas seulement le nombre de membres) et deviens la référence qui répond le mieux, sans jamais coller ton lien.</li>
-<li>Écris pour faire commenter (questions, mini-débats, vécu) : l'algo pousse ce qui crée de la conversation et freine les liens sortants. Ton lien va en commentaire épinglé.</li>
-<li>Le hack : la réponse-référence. Repère LA question qui revient et écris LA meilleure réponse du groupe. On te tague à chaque fois qu'elle revient.</li>
-<li>À terme, crée ton propre groupe : une audience que Facebook ne peut pas t'enlever.</li>
+<li>Rejoins 3 à 5 groupes actifs (regarde les posts par jour, pas seulement le nombre de membres) et deviens la référence qui répond le mieux, sans JAMAIS coller ton lien dans le groupe. Les curieux cliquent sur ton nom, voient ta bio, entrent dans ton quiz.</li>
+<li>Écris pour faire commenter (questions, mini-débats, vécu) : l'algo pousse ce qui crée de la conversation et freine les liens sortants. Ton lien va en commentaire épinglé de TON post, jamais dans le texte.</li>
+<li>Le hack, la réponse-référence : repère LA question qui revient sans arrêt et écris LA réponse la plus complète du groupe (en 8 étapes s'il le faut). On te tague à chaque fois qu'elle revient, ton profil explose en visites.</li>
+<li>Le hack bonus, le post-débat : une question binaire sans effort à commenter ("quiz ou PDF gratuit ?"). L'avalanche de commentaires fait pousser ton post, et ton quiz attend en commentaire épinglé.</li>
+<li>À terme, crée ton propre groupe : filtre l'entrée avec ton quiz, et tu obtiens une audience que Facebook ne peut pas t'enlever.</li>
 </ul>
 <h3>Instagram : le réseau de l'image et des Reels</h3>
+[[video:3]]
 <p>On y scrolle très vite. Les Reels sont ta plus grosse chance d'être vue par des inconnus, et le lien en bio est ta seule porte de sortie vers ton quiz.</p>
 <ul>
-<li>Mise sur les Reels (3 à 5 par semaine) : accroche dans la 1ère seconde, sous-titre toujours, finis par "le quiz est en bio".</li>
-<li>Stories quasi quotidiennes avec le sticker lien : c'est le moyen n°1 de faire cliquer vers ton quiz.</li>
-<li>Le hack : crée des Reels et carrousels qu'on a envie d'enregistrer et d'envoyer à un ami. Instagram pousse à fond le partage et la sauvegarde, plus que les likes.</li>
+<li>Mise sur les Reels (3 à 5 par semaine) : accroche dans la 1ère seconde, sous-titre toujours (beaucoup regardent sans le son), finis par "le quiz est en bio".</li>
+<li>Stories quasi quotidiennes avec le sticker lien : c'est le moyen n°1 de faire cliquer vers ton quiz au quotidien.</li>
+<li>Le hack, le contenu qu'on sauvegarde et qu'on envoie : Instagram pousse à fond le partage et la sauvegarde, bien plus que les likes. Crée des Reels et carrousels si utiles qu'on a envie de les garder et de les envoyer à un ami.</li>
 </ul>
 <h3>LinkedIn : le réseau pro où l'autorité se construit</h3>
+[[video:4]]
 <p>Moins de volume, mais des gens qui achètent. On y vient pour apprendre : un contenu qui enseigne t'amène des leads bien plus qualifiés qu'ailleurs.</p>
 <ul>
-<li>Soigne ta 1ère ligne (elle décide si on lit), écris aéré, une idée par post : retour d'expérience, conseil actionnable, opinion de métier (jamais politique).</li>
+<li>Soigne ta 1ère ligne (elle décide si on déplie le post), écris aéré, une idée par post : retour d'expérience, conseil actionnable, opinion de métier (jamais politique).</li>
 <li>Lien en premier commentaire, et termine par une question ouverte pour lancer la discussion.</li>
-<li>Le hack : sois LE meilleur commentaire sous les gros comptes de ton secteur, et publie des carrousels PDF qui démontrent ton expertise.</li>
+<li>Le hack : sois LE meilleur commentaire sous les gros comptes de ton secteur (leur audience découvre ton profil), et publie des carrousels PDF qui démontrent ton expertise, un format que LinkedIn adore.</li>
 </ul>
 <h3>Reddit : le royaume des communautés de passionnés</h3>
+[[video:5]]
 <p>La communauté la plus exigeante du web : un lien balancé sans contexte se fait bannir en quelques minutes. Mais bien joué, le trafic est ultra qualifié.</p>
 <ul>
 <li>Lis les règles de chaque subreddit AVANT de poster, et observe-le quelques jours pour repérer le ton.</li>
 <li>Donne énormément, sans lien, pour gagner du karma et de la confiance. Sois vraie et transparente : Reddit déteste le marketing lisse.</li>
-<li>Le hack : le post-étude de cas sans filtre ("j'ai testé X, voici mes vrais chiffres et mes ratés"). Tu partages ton quiz seulement quand c'est utile et autorisé.</li>
+<li>Le hack, le post-étude de cas sans filtre : "j'ai testé X, voici mes vrais chiffres et mes ratés". Tu partages ton quiz seulement quand c'est utile et autorisé, jamais en premier réflexe.</li>
 </ul>
 <h3>Threads : la conversation légère qui monte vite</h3>
+[[video:6]]
 <p>Le réseau texte de Meta, relié à ton Instagram. Jeune, donc la portée gratuite y est encore généreuse : profites-en maintenant.</p>
 <ul>
 <li>Parle léger et humain, comme à des potes. Poste souvent et réponds beaucoup : c'est un réseau de conversation, pas de diffusion.</li>
@@ -451,19 +460,21 @@ values
 <li>Rebondis sous les gros comptes : sur un jeune réseau, c'est le moyen le plus rapide de te faire connaître.</li>
 </ul>
 <h3>X : le temps réel et les fils viraux</h3>
+[[video:7]]
 <p>Tout va vite, mais un bon contenu peut exploser en quelques heures. Texte court et percutant, fils qui enseignent.</p>
 <ul>
 <li>Une idée forte par tweet ; mise sur les fils (threads) pour enseigner et durer. Poste souvent, un tweet a une vie très courte.</li>
-<li>Le hack : le self-reply. Ton contenu de valeur sans lien, puis ton lien de quiz en réponse à ton propre tweet : portée intacte ET clic offert.</li>
+<li>Le hack, le self-reply : ton contenu de valeur sans lien, puis ton lien de quiz en réponse à ton propre tweet. Portée intacte ET clic offert.</li>
 <li>Épingle un tweet qui mène à ton quiz : un fil viral ramène des milliers de visites sur ton profil.</li>
 </ul>
 <h2>L'erreur à éviter</h2>
-<p>Sauter les bases (profil, lien, régularité) pour foncer sur les astuces d'un réseau. Si les fondations sont bâclées, le reste ne sert à rien.</p>
+<p>Deux pièges. Sauter les bases (profil, lien, régularité) pour foncer sur les astuces d'un réseau : si les fondations sont bâclées, le reste ne sert à rien. Et poster ton lien partout en boucle façon panneau publicitaire : les gens fuient et l'algo te punit. Donne la plupart du temps, place ton lien intelligemment (bio, commentaire épinglé), laisse la curiosité travailler.</p>
 <h2>Ta mission</h2>
 <ul>
-<li>Soigne ton profil (photo, bio bénéfice, lien) et crée ta mini-page de bio vers ton quiz.</li>
-<li>Choisis UN réseau prioritaire, celui où ta cible est déjà.</li>
+<li>Soigne ton profil (photo, bio bénéfice, un seul lien) et crée ta mini-page de bio vers ton quiz avec les templates.</li>
+<li>Choisis UN réseau prioritaire, celui où ta cible est déjà, et regarde sa vidéo.</li>
 <li>Prépare et programme 3 posts (valeur, preuve, curiosité) qui mènent à ton quiz.</li>
+<li>Repère 5 gros comptes et 3 groupes de ta niche à animer cette semaine.</li>
 </ul>$html$,
   $html$<p>Tes réseaux peuvent maintenant alimenter ton quiz en continu, gratuitement. Choisis un réseau, tiens le rythme, et le trafic suit.</p>$html$,
   $st2$published$st2$, 1050, $r$[]$r$::jsonb, true
@@ -478,6 +489,24 @@ on conflict (day_number) do update set
   sort_order = excluded.sort_order,
   is_bonus = excluded.is_bonus,
   updated_at = now();
+
+-- Module réseaux (105) : les 7 slots vidéo ordonnés (Les bases + 6
+-- réseaux), référencés par [[video:1..7]] dans l'intro. URLs vides :
+-- Béné uploade/colle chaque vidéo depuis l'admin. GARDE anti-écrasement :
+-- on ne (re)pose les slots QUE si la liste est encore vide, pour ne
+-- jamais effacer une vidéo déjà uploadée lors d'un re-seed.
+update days
+set videos = $j$[
+  {"title":"Les bases (valable partout)","url":null,"video_id":null},
+  {"title":"Facebook","url":null,"video_id":null},
+  {"title":"Instagram","url":null,"video_id":null},
+  {"title":"LinkedIn","url":null,"video_id":null},
+  {"title":"Reddit","url":null,"video_id":null},
+  {"title":"Threads","url":null,"video_id":null},
+  {"title":"X","url":null,"video_id":null}
+]$j$::jsonb
+where day_number = 105
+  and (videos is null or videos = '[]'::jsonb);
 
 -- ───────────────────────────────────────────────────────────────
 -- 2. Les questions (la mission devient le quiz). Déblocage à la

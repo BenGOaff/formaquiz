@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, Download, LinkIcon } from "lucide-react";
 import { getViewer, getDayDetail, getDaysWithProgress } from "@/lib/parcours";
 import { isAdminEmail } from "@/lib/adminEmails";
-import { resolveDayVideoSrc } from "@/lib/video/playback";
+import { resolveDayVideos } from "@/lib/video/playback";
 import { personalizeContent } from "@/lib/personalize";
 import { resolvePersona, personaLabel } from "@/lib/personas";
 import { getPersonaVocab, getDayPersonaExample } from "@/lib/personaContent";
@@ -23,9 +23,9 @@ export const dynamic = "force-dynamic";
 // dédouble le HTML autour des tokens et on intercale les lecteurs.
 // L'éditeur enveloppe le shortcode dans un <p> (parfois avec un <br>),
 // qu'on retire avant le split.
-const VIDEO_UNWRAP = /<(p|div)>\s*(\[\[video:[12]\]\])\s*(?:<br\s*\/?>\s*)?<\/\1>/gi;
-const VIDEO_SPLIT = /(\[\[video:[12]\]\])/i;
-const VIDEO_ONE = /^\[\[video:([12])\]\]$/i;
+const VIDEO_UNWRAP = /<(p|div)>\s*(\[\[video:\d+\]\])\s*(?:<br\s*\/?>\s*)?<\/\1>/gi;
+const VIDEO_SPLIT = /(\[\[video:\d+\]\])/i;
+const VIDEO_ONE = /^\[\[video:(\d+)\]\]$/i;
 
 export default async function DayPage({
   params,
@@ -61,13 +61,6 @@ export default async function DayPage({
   }
 
   const resources = d.resources ?? [];
-  const { src: videoSrc } = await resolveDayVideoSrc(d);
-  // Deuxième vidéo optionnelle : mêmes règles de résolution (upload signé
-  // prioritaire, sinon URL externe). Affichée seulement si elle existe.
-  const { src: video2Src } = await resolveDayVideoSrc({
-    video_url: d.video2_url,
-    video_id: d.video2_id,
-  });
   // Personnalisation : {prenom} + vocabulaire du persona ({offre}, {client}
   // ...), plus un encart d'exemples concrets dans le metier de l'eleve.
   const firstName = viewer.profile?.full_name?.split(" ")[0] ?? null;
@@ -77,20 +70,14 @@ export default async function DayPage({
   const resultHtml = personalizeContent(d.result_html, { firstName, vocab });
   const pepiteHtml = personalizeContent(d.pepite_html, { firstName, vocab });
 
-  // Vidéos du jour : configuration + titre (personnalisé comme le reste).
-  // "Configurée" = un upload ou une URL existe ; src peut rester null le
-  // temps qu'un upload soit prêt (le lecteur affiche alors un placeholder).
-  const video1 = {
-    configured: Boolean(d.video_id || d.video_url),
-    src: videoSrc,
-    title: personalizeContent(d.video_title, { firstName, vocab }),
-  };
-  const video2 = {
-    configured: Boolean(d.video2_id || d.video2_url),
-    src: video2Src,
-    title: personalizeContent(d.video2_title, { firstName, vocab }),
-  };
-  const videoBySlot = { "1": video1, "2": video2 } as const;
+  // Vidéos du jour : liste ordonnée unique (module multi-vidéos si
+  // days.videos non vide, sinon le couple video/video2). Le titre de
+  // chacune est personnalisé comme le reste du contenu. L'index dans
+  // cette liste = le N des shortcodes [[video:N]] (1-indexé).
+  const dayVideos = (await resolveDayVideos(d)).map((v) => ({
+    ...v,
+    title: personalizeContent(v.title, { firstName, vocab }),
+  }));
 
   // Découpe le contenu autour des shortcodes vidéo. Une vidéo PLACÉE dans
   // le texte n'apparaît plus en haut de page ; une vidéo non placée garde
@@ -125,10 +112,16 @@ export default async function DayPage({
         {d.subtitle && <p className="text-muted-foreground">{d.subtitle}</p>}
       </header>
 
-      {!placedSlots.has("1") && <VideoBlock src={video1.src} title={video1.title} />}
-      {!placedSlots.has("2") && video2.configured && (
-        <VideoBlock src={video2.src} title={video2.title} />
-      )}
+      {/* Vidéos non placées dans le texte : rendues en haut de page, dans
+          l'ordre. La 1re s'affiche même vide (placeholder), les suivantes
+          seulement si configurées. Une vidéo placée via [[video:N]] quitte
+          le haut de page. */}
+      {dayVideos.map((v, idx) => {
+        const slot = String(idx + 1);
+        if (placedSlots.has(slot)) return null;
+        if (idx > 0 && !v.configured) return null;
+        return <VideoBlock key={slot} src={v.src} title={v.title} />;
+      })}
 
       {introParts.map((part, i) => {
         if (!part || !part.trim()) return null;
@@ -144,10 +137,10 @@ export default async function DayPage({
           return null;
         }
         if (token) {
-          const v = videoBySlot[token[1] as "1" | "2"];
-          // Shortcode qui pointe une vidéo non configurée : on l'ignore
-          // silencieusement (pas de cadre vide chez l'élève).
-          if (!v.configured) return null;
+          const v = dayVideos[Number(token[1]) - 1];
+          // Shortcode qui pointe une vidéo inexistante ou non configurée :
+          // on l'ignore silencieusement (pas de cadre vide chez l'élève).
+          if (!v || !v.configured) return null;
           return <VideoBlock key={i} src={v.src} title={v.title} />;
         }
         return (

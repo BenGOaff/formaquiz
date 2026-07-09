@@ -18,6 +18,8 @@ export function VideoField({
   videoUrl,
   videoId,
   title,
+  titlePlaceholder = "Titre de la vidéo (optionnel)",
+  titleAlwaysVisible = false,
   onUrlChange,
   onUploaded,
   onClearUpload,
@@ -28,6 +30,10 @@ export function VideoField({
   videoId: string | null;
   /** Titre affiché dans le bandeau brandé au-dessus du lecteur (optionnel). */
   title: string;
+  titlePlaceholder?: string;
+  /** Affiche le champ titre même sans vidéo (utile pour nommer un slot
+   *  avant d'y mettre la vidéo, ex. un réseau social). */
+  titleAlwaysVisible?: boolean;
   onUrlChange: (v: string) => void;
   onUploaded: (videoId: string) => void;
   onClearUpload: () => void;
@@ -127,12 +133,12 @@ export function VideoField({
         Uploade un fichier (hébergé sur ton serveur, lecture protégée) ou colle une URL YouTube.
       </p>
 
-      {(videoId || videoUrl.trim()) && (
+      {(titleAlwaysVisible || videoId || videoUrl.trim()) && (
         <div className="flex flex-col gap-1">
           <Input
             value={title}
             onChange={(e) => onTitleChange(e.target.value)}
-            placeholder="Titre de la vidéo (optionnel)"
+            placeholder={titlePlaceholder}
           />
           <p className="text-xs text-muted-foreground">
             Affiché dans un bandeau aux couleurs de l&apos;Atelier du Quiz au-dessus du lecteur.

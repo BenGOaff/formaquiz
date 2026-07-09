@@ -31,15 +31,15 @@ export function RichTextEditor({
   value,
   onChange,
   placeholder,
-  allowVideos = false,
+  videoSlots = 0,
 }: {
   value: string;
   onChange: (html: string) => void;
   placeholder?: string;
-  /** Affiche les boutons d'insertion [[video:1]] / [[video:2]]. À activer
-   *  uniquement sur les champs dont le rendu résout ces shortcodes
+  /** Nombre de boutons d'insertion [[video:N]] à afficher (0 = aucun).
+   *  Ne l'active que sur les champs dont le rendu résout ces shortcodes
    *  (aujourd'hui : le contenu du jour). */
-  allowVideos?: boolean;
+  videoSlots?: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -72,7 +72,7 @@ export function RichTextEditor({
     emit();
   }
 
-  function insertVideo(slot: 1 | 2) {
+  function insertVideo(slot: number) {
     ref.current?.focus();
     // Même mécanique que les figures : un shortcode dans son propre
     // paragraphe, résolu au rendu par la page du jour (lecteur + bandeau
@@ -136,29 +136,23 @@ export function RichTextEditor({
         <Btn title="Effacer la mise en forme" onClick={() => exec("removeFormat")}>
           <Eraser />
         </Btn>
-        {allowVideos && (
+        {videoSlots > 0 && (
           <>
             <span className="mx-1 h-5 w-px bg-border" />
-            <div className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center gap-1">
               <Film className="size-4 text-muted-foreground" />
-              <button
-                type="button"
-                title="Insérer la vidéo 1 à cet endroit du texte"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => insertVideo(1)}
-                className="h-7 rounded-md border border-input bg-background px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              >
-                Vidéo 1
-              </button>
-              <button
-                type="button"
-                title="Insérer la vidéo 2 à cet endroit du texte"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => insertVideo(2)}
-                className="h-7 rounded-md border border-input bg-background px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              >
-                Vidéo 2
-              </button>
+              {Array.from({ length: videoSlots }, (_, i) => i + 1).map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  title={`Insérer la vidéo ${n} à cet endroit du texte`}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => insertVideo(n)}
+                  className="h-7 rounded-md border border-input bg-background px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  Vidéo {n}
+                </button>
+              ))}
             </div>
           </>
         )}
