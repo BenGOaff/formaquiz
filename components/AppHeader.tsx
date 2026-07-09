@@ -15,6 +15,8 @@ import {
   Settings,
   Link2,
   ChevronDown,
+  Send,
+  Rocket,
 } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { Logo } from "@/components/Logo";
@@ -28,6 +30,24 @@ const NAV = [
   { href: "/carnet", label: "Carnet", icon: BookOpen },
   { href: "/funnel", label: "Campagne", icon: Megaphone },
   { href: "/affiliation", label: "Affiliation", icon: Share2 },
+];
+
+// Raccourcis externes toujours accessibles (ouverts dans un nouvel
+// onglet) : le groupe Telegram de l'Atelier et l'app Tiquiz. Rendus à
+// part de la nav interne, avec un style d'accent pour ressortir.
+const EXTERNAL_LINKS = [
+  {
+    href: "https://t.me/+QQoBxQL3l7U3NTE8",
+    label: "Le groupe",
+    title: "Rejoindre le groupe Telegram de l'Atelier",
+    icon: Send,
+  },
+  {
+    href: "https://quiz.tipote.com/dashboard",
+    label: "Tiquiz",
+    title: "Ouvrir mon tableau de bord Tiquiz",
+    icon: Rocket,
+  },
 ];
 
 export function AppHeader({
@@ -97,6 +117,24 @@ export function AppHeader({
             </Button>
           )}
 
+          {/* Raccourcis externes (Telegram + Tiquiz), toujours visibles.
+              Séparés visuellement de la nav interne, style accent. */}
+          <span className="mx-0.5 hidden h-6 w-px bg-border sm:block" />
+          {EXTERNAL_LINKS.map((item) => (
+            <Button
+              key={item.href}
+              asChild
+              variant="outline"
+              size="sm"
+              className="border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
+            >
+              <a href={item.href} target="_blank" rel="noopener noreferrer" title={item.title}>
+                <item.icon />
+                <span className="hidden md:inline">{item.label}</span>
+              </a>
+            </Button>
+          ))}
+
           {/* Avatar + menu deroulant */}
           <div className="relative ml-1" ref={menuRef}>
             <button
@@ -119,6 +157,20 @@ export function AppHeader({
                   </div>
                 </div>
                 <div className="flex flex-col py-1">
+                  {/* Rappel des raccourcis externes, surtout utile sur
+                      mobile où seules les icônes sont visibles en haut. */}
+                  {EXTERNAL_LINKS.map((item) => (
+                    <a
+                      key={item.href}
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-muted md:hidden"
+                    >
+                      <item.icon className="size-4 text-primary" />
+                      {item.label}
+                    </a>
+                  ))}
                   <MenuLink href="/profil" icon={UserCircle}>
                     Mon profil
                   </MenuLink>
