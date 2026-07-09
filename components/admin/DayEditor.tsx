@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { VideoField } from "@/components/admin/VideoField";
+import { MultiVideoField } from "@/components/admin/MultiVideoField";
 import { RichTextEditor } from "@/components/admin/RichTextEditor";
-import type { Day, DayResource } from "@/lib/types";
+import type { Day, DayResource, DayVideo } from "@/lib/types";
 
 export function DayEditor({ day }: { day: Day }) {
   const router = useRouter();
@@ -31,6 +32,15 @@ export function DayEditor({ day }: { day: Day }) {
     is_bonus: day.is_bonus ?? false,
   });
   const [resources, setResources] = useState<DayResource[]>(day.resources ?? []);
+  // Multi-vidéos : liste ordonnée (une par réseau, etc.). Non vide =>
+  // remplace le couple video/video2 ci-dessus. Vide => mode classique.
+  const [videos, setVideos] = useState<DayVideo[]>(
+    Array.isArray(day.videos) ? day.videos : [],
+  );
+  const multiMode = videos.length > 0;
+  // Nombre de slots [[video:N]] disponibles pour l'insertion dans le
+  // contenu : la liste multi si active, sinon les 2 vidéos classiques.
+  const videoSlotCount = multiMode ? videos.length : 2;
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -52,6 +62,12 @@ export function DayEditor({ day }: { day: Day }) {
         video2_id: form.video2_id,
         video2_url: form.video2_id ? null : form.video2_url || null,
         video2_title: form.video2_title.trim() || null,
+        // Liste multi-vidéos (nettoyée : titre trimé, url vidée si upload).
+        videos: videos.map((v) => ({
+          title: v.title.trim(),
+          url: v.video_id ? null : (v.url ?? "").trim() || null,
+          video_id: v.video_id,
+        })),
         intro_html: form.intro_html || null,
         pepite_html: form.pepite_html || null,
         result_html: form.result_html || null,
@@ -114,40 +130,87 @@ export function DayEditor({ day }: { day: Day }) {
           </span>
         </label>
 
-        <VideoField
-          videoUrl={form.video_url}
-          videoId={form.video_id}
-          title={form.video_title}
-          onUrlChange={(v) => set("video_url", v)}
-          onUploaded={(id) => setForm((f) => ({ ...f, video_id: id, video_url: "" }))}
-          onClearUpload={() => set("video_id", null)}
-          onTitleChange={(v) => set("video_title", v)}
-        />
+        {/* Deux modes exclusifs. Par défaut : jusqu'à 2 vidéos (video +
+            video 2). Pour un module qui en a plus (une par réseau...), on
+            bascule sur la liste multi-vidéos, illimitée et ordonnée. */}
+        {!multiMode ? (
+          <>
+            <VideoField
+              videoUrl={form.video_url}
+              videoId={form.video_id}
+              title={form.video_title}
+              onUrlChange={(v) => set("video_url", v)}
+              onUploaded={(id) => setForm((f) => ({ ...f, video_id: id, video_url: "" }))}
+              onClearUpload={() => set("video_id", null)}
+              onTitleChange={(v) => set("video_title", v)}
+            />
 
-        <VideoField
-          label="Vidéo 2 (optionnelle)"
-          videoUrl={form.video2_url}
-          videoId={form.video2_id}
-          title={form.video2_title}
-          onUrlChange={(v) => set("video2_url", v)}
-          onUploaded={(id) => setForm((f) => ({ ...f, video2_id: id, video2_url: "" }))}
-          onClearUpload={() => set("video2_id", null)}
-          onTitleChange={(v) => set("video2_title", v)}
-        />
+            <VideoField
+              label="Vidéo 2 (optionnelle)"
+              videoUrl={form.video2_url}
+              videoId={form.video2_id}
+              title={form.video2_title}
+              onUrlChange={(v) => set("video2_url", v)}
+              onUploaded={(id) => setForm((f) => ({ ...f, video2_id: id, video2_url: "" }))}
+              onClearUpload={() => set("video2_id", null)}
+              onTitleChange={(v) => set("video2_title", v)}
+            />
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-fit"
+              onClick={() => {
+                // Bascule vers le mode liste : reprend la vidéo 1 et 2 déjà
+                // saisies comme deux premières entrées, puis en ajoute une.
+                const seed: DayVideo[] = [];
+                if (form.video_id || form.video_url.trim())
+                  seed.push({ title: form.video_title, url: form.video_url || null, video_id: form.video_id });
+                if (form.video2_id || form.video2_url.trim())
+                  seed.push({ title: form.video2_title, url: form.video2_url || null, video_id: form.video2_id });
+                seed.push({ title: "", url: "", video_id: null });
+                setVideos(seed);
+              }}
+            >
+              <Plus />
+              Passer en plusieurs vidéos (une par réseau, etc.)
+            </Button>
+          </>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <Label>Vidéos du module (une par réseau, etc.)</Label>
+            <p className="text-xs text-muted-foreground">
+              Ajoute autant de vidéos que nécessaire, chacune avec son titre (le nom du réseau).
+              Place-les dans le texte avec les boutons Vidéo N de l'éditeur ci-dessous. Vide la
+              liste pour revenir au mode simple (1 à 2 vidéos).
+            </p>
+            <MultiVideoField videos={videos} onChange={setVideos} />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="w-fit text-muted-foreground"
+              onClick={() => setVideos([])}
+            >
+              Revenir au mode simple (1 à 2 vidéos)
+            </Button>
+          </div>
+        )}
 
         <div className="flex flex-col gap-1.5">
           <Label>Contenu du jour</Label>
           <p className="text-xs text-muted-foreground">
             Mets en forme avec la barre d'outils, insère un schéma si ça aide à comprendre.
-            Les boutons Vidéo 1 / Vidéo 2 placent tes vidéos à l'endroit du texte où se
-            trouve ton curseur : tu peux écrire avant et après. Une vidéo non placée dans
-            le texte reste affichée en haut de page, comme avant.
+            Les boutons Vidéo N placent tes vidéos à l'endroit du texte où se trouve ton
+            curseur : tu peux écrire avant et après. Une vidéo non placée dans le texte
+            reste affichée en haut de page.
           </p>
           <RichTextEditor
             value={form.intro_html}
             onChange={(v) => set("intro_html", v)}
             placeholder="Écris le contenu du jour..."
-            allowVideos
+            videoSlots={videoSlotCount}
           />
         </div>
 

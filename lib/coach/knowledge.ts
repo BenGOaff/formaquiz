@@ -45,6 +45,7 @@ export function htmlToText(html: string | null): string {
     .replace(/&quot;/gi, '"')
     .replace(/&#39;|&apos;/gi, "'")
     .replace(/\[\[figure:[a-z0-9-]+\]\]/gi, "")
+    .replace(/\[\[video:\d+\]\]/gi, "")
     .replace(/[ \t]+/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .trim();

@@ -25,6 +25,14 @@ export interface DayResource {
   type?: string;
 }
 
+/** Une vidéo d'un jour multi-vidéos (ex. un réseau social). url XOR
+ *  video_id : URL externe OU upload auto-hébergé (video_id prioritaire). */
+export interface DayVideo {
+  title: string;
+  url: string | null;
+  video_id: string | null;
+}
+
 export interface Day {
   id: string;
   day_number: number;
@@ -41,6 +49,10 @@ export interface Day {
   // lecteur. Placement dans le texte via [[video:1]] / [[video:2]].
   video_title: string | null;
   video2_title: string | null;
+  // Multi-vidéos : liste ordonnée quand un module en a plus de deux
+  // (ex. une vidéo par réseau social). Non vide => source des vidéos du
+  // jour (video/video2 ignorés). Placement via [[video:N]].
+  videos: DayVideo[];
   resources: DayResource[];
   result_html: string | null;
   pepite_html: string | null;

@@ -37,6 +37,15 @@ export async function POST(
       video_title: src.video_title,
       video2_url: src.video2_url,
       video2_title: src.video2_title,
+      // Copie les vidéos par URL (pas les uploads : video_id est propre à
+      // l'original). Un upload à re-lier manuellement sur la copie.
+      videos: Array.isArray(src.videos)
+        ? (src.videos as Array<{ title?: string; url?: string | null; video_id?: string | null }>).map((v) => ({
+            title: v.title ?? "",
+            url: v.url ?? null,
+            video_id: null,
+          }))
+        : [],
       resources: src.resources,
       result_html: src.result_html,
       status: "draft",
