@@ -49,6 +49,7 @@
 | Vendre avec un quiz | `bonus/bonus-vendre-avec-un-quiz.md` | Page résultat = vente, aiguilleur, coupons et promos |
 | Exploiter les sondages | `bonus/bonus-exploiter-sondages.md` | Sondage pré-quiz, analyse IA, data vers contenu |
 | Exploiter les popquiz | `bonus/bonus-exploiter-popquiz.md` | Cliffhanger, popquiz webinaire |
+| Les emails qui transforment | `bonus/bonus-les-emails.md` | Campagnes par profil (Know/Like/Trust/Challenge), promo sur ta liste, email post-partage du bonus viral |
 
 ### Bonus "Promouvoir par plateforme" (un parcours dédié par réseau)
 
