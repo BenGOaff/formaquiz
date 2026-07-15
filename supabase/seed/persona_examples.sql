@@ -6,7 +6,9 @@
 -- Prerequis : migration 0008 (table day_persona_examples) + parcours.sql
 -- (les jours doivent exister). A relancer apres modif de contenu.
 --
--- Personas : freelance, infopreneur, coach, auteur, createur, affilie, mlm.
+-- Personas : freelance, infopreneur, coach, auteur, createur, affilie, mlm,
+-- autre (catch-all : e-commerce, artisan, commerce local, etc. Tout
+-- activity_type inconnu, et l'alias "ecommerce", se rabattent sur "autre").
 -- Contenu user-visible : accents respectes, aucun tiret long.
 
 with e(day_number, persona, html) as (
@@ -72,7 +74,16 @@ with e(day_number, persona, html) as (
   (7, $$auteur$$,      $$<p>Mesure les inscriptions et les ventes de livres déclenchées par le quiz, et relance-le à chaque nouvelle sortie.</p>$$),
   (7, $$createur$$,    $$<p>Compare les emails captés à tes vues : ton quiz transforme-t-il assez ton audience en liste ?</p>$$),
   (7, $$affilie$$,     $$<p>Ton indicateur clé : les clics et les ventes affiliées générés depuis les pages de résultat. Double ce qui marche.</p>$$),
-  (7, $$mlm$$,         $$<p>Suis combien de clients et combien de partenaires ton quiz a triés : ajuste le message du résultat selon ce que tu veux plus.</p>$$)
+  (7, $$mlm$$,         $$<p>Suis combien de clients et combien de partenaires ton quiz a triés : ajuste le message du résultat selon ce que tu veux plus.</p>$$),
+
+  -- ── Persona "Autre" (catch-all : e-commerce, artisan, commerce local, SaaS...) ──
+  (1, $$autre$$, $$<p>Quel que soit ton domaine, tes 3 ou 4 profils de résultats correspondent à des situations clients : "Celui qui débute et hésite", "Celui qui a déjà essayé sans succès", "Celui qui est prêt et cherche le bon choix". Chaque profil appelle une offre ou un conseil différent.</p>$$),
+  (2, $$autre$$, $$<p>Crée un tag par grande famille de besoin détectée dans ton quiz (par gamme de produit, par objectif ou par budget) : tu enverras le bon message au bon inscrit, au lieu d'un email unique pour tous.</p>$$),
+  (3, $$autre$$, $$<p>Le quiz "diagnostic" te va très bien : il fait prendre conscience d'un besoin et présente ton offre comme la réponse logique. Le sondage, lui, t'aide à savoir ce que ton audience veut avant de le créer.</p>$$),
+  (4, $$autre$$, $$<p>Dans ton prompt, décris précisément ton activité et ta clientèle (par exemple "je vends des produits zéro déchet aux familles") : l'IA sortira des questions et des profils qui parlent vraiment à TES clients.</p>$$),
+  (5, $$autre$$, $$<p>Mets le lien de ton quiz là où on te découvre déjà : bio, signature email, page de remerciement d'un achat ou d'un téléchargement. Chaque visiteur se qualifie tout seul et entre dans ta liste.</p>$$),
+  (6, $$autre$$, $$<p>Un espace à toi (groupe, newsletter, club) garde tes clients et prospects au chaud entre deux offres : la relation directe vaut plus que des abonnés sur une plateforme que tu ne contrôles pas.</p>$$),
+  (7, $$autre$$, $$<p>Ton vrai indicateur : combien d'emails qualifiés et de ventes ton quiz t'amène chaque mois. Regarde quel profil de résultat convertit le mieux, et double ce qui marche.</p>$$)
 )
 insert into day_persona_examples (day_id, persona, examples_html)
 select d.id, e.persona, e.html

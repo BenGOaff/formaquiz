@@ -4,6 +4,13 @@
 // quiz (compteurs + reglages, via l'endpoint partenaire Tiquiz) et on sort
 // une checklist de corrections concretes, chacune reliee a un jour.
 
+/** Un profil de resultat LIVE du quiz (titre + description). Sert au
+ *  generateur d'emails par profil (source de verite = le vrai quiz). */
+export interface QuizResultProfile {
+  title: string;
+  description: string;
+}
+
 export interface QuizStruct {
   title: string;
   status: string;
@@ -16,6 +23,10 @@ export interface QuizStruct {
   hasBonus: boolean;
   hasOgImage: boolean;
   views: number;
+  // Champs enrichis (optionnels : l'audit pur n'en depend pas).
+  id?: string;
+  mode?: string;
+  resultProfiles?: QuizResultProfile[];
 }
 
 export interface QuizIssue {

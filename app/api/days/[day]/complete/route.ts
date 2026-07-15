@@ -25,18 +25,22 @@ export async function POST(
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ ok: false, reason: "unauth" }, { status: 401 });
 
-  const { data: dayRow } = await supabase
-    .from("days")
-    .select("id")
-    .eq("day_number", dayNumber)
-    .maybeSingle();
-  if (!dayRow) return NextResponse.json({ ok: false, reason: "no_day" }, { status: 404 });
+  // Integrite : on resout le jour via la progression pour verifier qu'il est
+  // publie ET debloque pour cet eleve. Empeche de valider un jour hors
+  // sequence (ou non publie) par appel API direct.
+  const daysProgress = await getDaysWithProgress(user.id);
+  const target = daysProgress.find((d) => d.day_number === dayNumber);
+  if (!target) return NextResponse.json({ ok: false, reason: "no_day" }, { status: 404 });
+  if (!target.unlocked) {
+    return NextResponse.json({ ok: false, reason: "locked" }, { status: 403 });
+  }
+  const dayId = target.id;
 
   // Questions obligatoires de ce jour.
   const { data: requiredQuestions } = await supabase
     .from("questions")
     .select("id")
-    .eq("day_id", dayRow.id)
+    .eq("day_id", dayId)
     .eq("required", true);
 
   const requiredIds = (requiredQuestions ?? []).map((q) => q.id as string);
@@ -46,7 +50,7 @@ export async function POST(
       .from("answers")
       .select("question_id, value_text, value_choice")
       .eq("user_id", user.id)
-      .eq("day_id", dayRow.id)
+      .eq("day_id", dayId)
       .in("question_id", requiredIds);
 
     const answeredOk = new Set(
@@ -68,7 +72,7 @@ export async function POST(
   const { error } = await supabase.from("progress").upsert(
     {
       user_id: user.id,
-      day_id: dayRow.id,
+      day_id: dayId,
       status: "completed",
       completed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

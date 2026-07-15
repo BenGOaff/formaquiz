@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { getDaysWithProgress } from "@/lib/parcours";
 
 const bodySchema = z.object({
   questionId: z.string().uuid(),
@@ -33,20 +34,23 @@ export async function POST(
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ ok: false, reason: "unauth" }, { status: 401 });
 
-  // Résout le jour et vérifie que la question lui appartient (la RLS
-  // n'autorise déjà que les jours publiés d'un élève enrollé).
-  const { data: dayRow } = await supabase
-    .from("days")
-    .select("id")
-    .eq("day_number", dayNumber)
-    .maybeSingle();
-  if (!dayRow) return NextResponse.json({ ok: false, reason: "no_day" }, { status: 404 });
+  // Integrite : on resout le jour via la progression pour verifier qu'il est
+  // publie ET debloque pour cet eleve. Empeche d'ecrire une reponse sur un
+  // jour hors sequence (ou non publie) par appel API direct.
+  const daysProgress = await getDaysWithProgress(user.id);
+  const target = daysProgress.find((d) => d.day_number === dayNumber);
+  if (!target) return NextResponse.json({ ok: false, reason: "no_day" }, { status: 404 });
+  if (!target.unlocked) {
+    return NextResponse.json({ ok: false, reason: "locked" }, { status: 403 });
+  }
+  const dayId = target.id;
 
+  // Vérifie que la question appartient bien à ce jour.
   const { data: question } = await supabase
     .from("questions")
     .select("id, day_id")
     .eq("id", questionId)
-    .eq("day_id", dayRow.id)
+    .eq("day_id", dayId)
     .maybeSingle();
   if (!question) {
     return NextResponse.json({ ok: false, reason: "no_question" }, { status: 404 });
@@ -55,7 +59,7 @@ export async function POST(
   const { error } = await supabase.from("answers").upsert(
     {
       user_id: user.id,
-      day_id: dayRow.id,
+      day_id: dayId,
       question_id: questionId,
       value_text: value_text ?? null,
       value_choice: value_choice ?? null,

@@ -24,6 +24,23 @@ export interface CoachAnswer {
   value: string;
 }
 
+/** Un jour du carnet de bord (reponses de l'eleve), pour le coach. */
+export interface CoachCarnetDay {
+  dayNumber: number;
+  title: string;
+  isBonus: boolean;
+  entries: { prompt: string; answer: string }[];
+}
+
+/** Avancement de l'eleve dans le parcours, pour le coach. */
+export interface CoachProgress {
+  completedParcoursDays: number[];
+  totalParcoursDays: number;
+  /** Prochain jour du parcours a faire (debloque, non complete), ou null si fini. */
+  activeDayNumber: number | null;
+  completedBonusCount: number;
+}
+
 export interface CoachDoc {
   title: string;
   content: string;
@@ -31,6 +48,8 @@ export interface CoachDoc {
 
 /** Budget de caracteres pour les documents de connaissance injectes. */
 const DOCS_CHAR_BUDGET = 14000;
+/** Budget de caracteres pour le carnet de bord injecte (borne le cout). */
+const CARNET_CHAR_BUDGET = 4500;
 
 /** Retire les balises HTML et normalise les espaces. */
 export function htmlToText(html: string | null): string {
@@ -104,6 +123,8 @@ export function buildCoachSystemPrompt(input: {
   monetization: string | null;
   adsBudget: string | null;
   currentAnswers: CoachAnswer[];
+  progress?: CoachProgress | null;
+  carnet?: CoachCarnetDay[];
 }): string {
   const {
     instruction,
@@ -117,6 +138,8 @@ export function buildCoachSystemPrompt(input: {
     monetization,
     adsBudget,
     currentAnswers,
+    progress,
+    carnet,
   } = input;
 
   const persona = instruction && instruction.trim() ? instruction.trim() : SYSTEM_PERSONA;
@@ -167,11 +190,56 @@ export function buildCoachSystemPrompt(input: {
     }
   }
 
+  // Avancement dans le parcours : le coach sait OU en est l'eleve pour
+  // adapter ses conseils a son niveau (ne pas renvoyer a un jour non atteint,
+  // capitaliser sur ce qui est deja fait).
+  if (progress && progress.totalParcoursDays > 0) {
+    const done = progress.completedParcoursDays.length;
+    const where =
+      progress.activeDayNumber != null
+        ? `Il en est actuellement au Jour ${progress.activeDayNumber} (prochain jour à faire).`
+        : done >= progress.totalParcoursDays
+          ? `Il a terminé tout le parcours.`
+          : `Il n'a pas encore commencé.`;
+    const bonusLine =
+      progress.completedBonusCount > 0
+        ? ` Bonus complétés : ${progress.completedBonusCount}.`
+        : "";
+    prompt +=
+      `\n\n=== OÙ EN EST L'ÉLÈVE (adapte tes conseils à son avancement) ===\n` +
+      `Jours du parcours terminés : ${done} sur ${progress.totalParcoursDays}` +
+      (done > 0 ? ` (jours ${progress.completedParcoursDays.join(", ")}).` : ".") +
+      `\n${where}${bonusLine}` +
+      `\nNe le renvoie pas à un jour qu'il n'a pas encore atteint, sauf pour l'y préparer. Appuie-toi sur ce qu'il a déjà fait.`;
+  }
+
+  // Carnet de bord complet (borne) : les reponses de l'eleve sur TOUT le
+  // parcours, source de verite de son projet. Disponible meme hors des
+  // pages jour (ou currentAnswers est vide).
+  if (carnet && carnet.length) {
+    let budget = CARNET_CHAR_BUDGET;
+    const blocks: string[] = [];
+    for (const d of carnet) {
+      if (budget <= 0) break;
+      const lines = d.entries
+        .map((e) => `Q: ${e.prompt}\nR: ${clip(e.answer, 200)}`)
+        .join("\n");
+      const block = `Jour ${d.dayNumber} - ${d.title}\n${lines}`;
+      const clipped = clip(block, budget);
+      budget -= clipped.length;
+      blocks.push(clipped);
+    }
+    if (blocks.length) {
+      prompt += `\n\n=== CARNET DE BORD DE L'ÉLÈVE (ses réponses sur le parcours, source de vérité) ===\n${blocks.join("\n\n")}`;
+    }
+  }
+
+  // Focus sur le jour en cours (si l'eleve est sur une page jour).
   if (currentAnswers.length) {
-    const carnet = currentAnswers
+    const currentCarnet = currentAnswers
       .map((a) => `Q: ${a.prompt}\nR: ${clip(a.value, 300)}`)
       .join("\n");
-    prompt += `\n\n=== RÉPONSES DE L'ÉLÈVE (jour en cours) ===\n${carnet}`;
+    prompt += `\n\n=== RÉPONSES DE L'ÉLÈVE (jour en cours, à prioriser) ===\n${currentCarnet}`;
   }
 
   return prompt;

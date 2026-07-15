@@ -84,6 +84,35 @@ export async function fetchQuizAudit(
   }
 }
 
+/**
+ * Recupere les profils de resultat REELS du quiz de l'eleve (source de
+ * verite pour les emails par profil). On choisit le quiz le plus pertinent :
+ * priorite au quiz actif/publie qui a des profils, sinon celui qui en a le
+ * plus, en departageant par le nombre de vues. Renvoie [] si non connecte,
+ * aucun quiz, ou aucun profil.
+ */
+export async function fetchQuizProfiles(
+  userId: string,
+): Promise<import("@/lib/quizDoctor").QuizResultProfile[]> {
+  const quizzes = await fetchQuizAudit(userId);
+  if (!quizzes || quizzes.length === 0) return [];
+
+  const withProfiles = quizzes.filter((q) => (q.resultProfiles?.length ?? 0) > 0);
+  if (withProfiles.length === 0) return [];
+
+  const best = withProfiles.sort((a, b) => {
+    const aActive = a.status === "active" ? 1 : 0;
+    const bActive = b.status === "active" ? 1 : 0;
+    if (aActive !== bActive) return bActive - aActive;
+    const aCount = a.resultProfiles?.length ?? 0;
+    const bCount = b.resultProfiles?.length ?? 0;
+    if (aCount !== bCount) return bCount - aCount;
+    return (b.views ?? 0) - (a.views ?? 0);
+  })[0];
+
+  return (best.resultProfiles ?? []).filter((p) => p.title.trim().length > 0);
+}
+
 async function fetchMetrics(token: string): Promise<TiquizMetrics | null> {
   try {
     const res = await fetch(`${TIQUIZ_BASE}/api/partner/metrics`, {

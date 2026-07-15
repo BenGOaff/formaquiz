@@ -8,6 +8,7 @@ import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { buildClaudeMessageBody } from "@/lib/claudeRequest";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { resolvePersona, personaLabel, PERSONA_VOCAB } from "@/lib/personas";
+import { fetchQuizProfiles } from "@/lib/integrations/tiquiz";
 import { labelOf, MATURITY_OPTIONS, MONETIZATION_OPTIONS } from "@/lib/businessProfile";
 import type { FunnelAssets, FunnelEmail, FunnelResultEmail } from "@/lib/types";
 
@@ -32,7 +33,7 @@ Tu réponds UNIQUEMENT avec un objet JSON valide, sans texte autour, au format e
   "sales": [{"subject": "...", "body": "..."}],
   "launch": {"posts": ["...", "..."], "dm": "...", "partnerEmail": "..."}
 }
-Quantités : welcome = 3 emails, byResult = un email par profil de résultat (max 4), sales = 3 emails, launch.posts = 4 posts, launch.dm = 1 script, launch.partnerEmail = 1 email.`;
+Quantités : welcome = 3 emails, byResult = un email pour CHACUN des profils de résultat fournis (n'en oublie aucun, n'en invente aucun), sales = 3 emails, launch.posts = 4 posts, launch.dm = 1 script, launch.partnerEmail = 1 email.`;
 
 interface ProfileRow {
   full_name: string | null;
@@ -42,10 +43,28 @@ interface ProfileRow {
   monetization: string | null;
 }
 
-function buildUserPrompt(profile: ProfileRow, carnetText: string): string {
+function buildUserPrompt(
+  profile: ProfileRow,
+  carnetText: string,
+  quizProfiles: import("@/lib/quizDoctor").QuizResultProfile[],
+): string {
   const persona = resolvePersona(profile.activity_type);
   const vocab = PERSONA_VOCAB[persona];
   const firstName = profile.full_name?.split(" ")[0] ?? "";
+
+  // Source de verite pour byResult : les profils REELS du quiz Tiquiz s'ils
+  // sont disponibles ; sinon repli sur le carnet (inference).
+  const hasReal = quizProfiles.length > 0;
+  const profilesBlock = hasReal
+    ? [
+        `Profils de résultat RÉELS de son quiz (source de vérité, à utiliser TELS QUELS pour byResult, un email pour chacun) :`,
+        ...quizProfiles.map(
+          (p, i) =>
+            `${i + 1}. ${p.title}${p.description ? ` : ${p.description.replace(/\s+/g, " ").trim().slice(0, 300)}` : ""}`,
+        ),
+      ].join("\n")
+    : `Profils de résultat : non récupérés depuis son quiz. Déduis 3 ou 4 profils plausibles à partir de son carnet et de sa niche, et écris un email pour chacun.`;
+
   return [
     `Contexte de l'élève :`,
     firstName ? `- Prénom : ${firstName}` : null,
@@ -57,10 +76,12 @@ function buildUserPrompt(profile: ProfileRow, carnetText: string): string {
       : null,
     `- Vocabulaire à employer : offre = "${vocab.offre}", client = "${vocab.client}", audience = "${vocab.audience}", expertise = "${vocab.expertise}".`,
     ``,
-    `Son carnet de bord (ses réponses au parcours, source de vérité pour ses profils de résultats, son objectif, ses mots) :`,
-    carnetText || "(carnet encore vide, déduis des profils de résultats plausibles pour sa niche)",
+    profilesBlock,
     ``,
-    `Écris-lui sa campagne complète au format JSON demandé. Sers-toi de SES profils de résultats pour la section byResult.`,
+    `Son carnet de bord (ses réponses au parcours, pour ses mots, son objectif, son contexte) :`,
+    carnetText || "(carnet encore vide)",
+    ``,
+    `Écris-lui sa campagne complète au format JSON demandé.`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -141,7 +162,13 @@ export async function generateFunnel(userId: string): Promise<FunnelAssets | nul
     .maybeSingle();
 
   const carnet = await getCarnet(userId);
-  const userPrompt = buildUserPrompt((profile ?? {}) as ProfileRow, carnetToText(carnet));
+  // Profils REELS du quiz de l'eleve (best-effort : [] si non connecte).
+  const quizProfiles = await fetchQuizProfiles(userId);
+  const userPrompt = buildUserPrompt(
+    (profile ?? {}) as ProfileRow,
+    carnetToText(carnet),
+    quizProfiles,
+  );
 
   const model = resolveAnthropicModel(process.env.ANTHROPIC_MODEL, "sonnet");
   const body = buildClaudeMessageBody({
