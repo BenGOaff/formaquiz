@@ -5,7 +5,7 @@ import { getViewer, getDayDetail, getDaysWithProgress } from "@/lib/parcours";
 import { isAdminEmail } from "@/lib/adminEmails";
 import { resolveDayVideos } from "@/lib/video/playback";
 import { personalizeContent } from "@/lib/personalize";
-import { resolvePersona, personaLabel } from "@/lib/personas";
+import { resolvePersona, personaTailoredHeading } from "@/lib/personas";
 import { getPersonaVocab, getDayPersonaExample } from "@/lib/personaContent";
 import { Sparkles, Gem } from "lucide-react";
 import { VideoBlock } from "@/components/VideoBlock";
@@ -171,7 +171,7 @@ export default async function DayPage({
           <CardContent className="flex flex-col gap-2 py-5">
             <span className="flex items-center gap-2 text-sm font-semibold text-primary">
               <Sparkles className="size-4" />
-              Pour toi, {personaLabel(persona).toLowerCase()}
+              {personaTailoredHeading(persona)}
             </span>
             <RichContent html={personaExample} />
           </CardContent>

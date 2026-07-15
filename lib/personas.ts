@@ -110,6 +110,25 @@ export function personaLabel(p: Persona): string {
   return PERSONAS.find((x) => x.value === p)?.label ?? "Autre";
 }
 
+// Libelle court pour l'entete de l'encart "Pour toi, X". null = pas de
+// metier nomme (persona "autre"), on affiche juste "Pour toi".
+const PERSONA_SHORT: Record<Persona, string | null> = {
+  freelance: "freelance",
+  infopreneur: "infopreneur",
+  coach: "coach",
+  auteur: "auteur",
+  createur: "créateur de contenu",
+  affilie: "affilié",
+  mlm: "marketing de réseau",
+  autre: null,
+};
+
+/** Entete personnalisee de l'encart : "Pour toi, coach" ou juste "Pour toi". */
+export function personaTailoredHeading(p: Persona): string {
+  const short = PERSONA_SHORT[p];
+  return short ? `Pour toi, ${short}` : "Pour toi";
+}
+
 /** Vocab effectif : defauts neutres + surcharge eventuelle (DB ou seed). */
 export function mergeVocab(override?: Partial<Vocab> | null): Vocab {
   return { ...DEFAULT_VOCAB, ...(override ?? {}) };
