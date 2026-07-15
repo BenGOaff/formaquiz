@@ -4,11 +4,14 @@
 // quiz (compteurs + reglages, via l'endpoint partenaire Tiquiz) et on sort
 // une checklist de corrections concretes, chacune reliee a un jour.
 
-/** Un profil de resultat LIVE du quiz (titre + description). Sert au
+/** Un profil de resultat LIVE du quiz (titre + description + CTA). Sert au
  *  generateur d'emails par profil (source de verite = le vrai quiz). */
 export interface QuizResultProfile {
   title: string;
   description: string;
+  /** CTA du resultat : destination reelle de l'user (promo, formation, rdv...). */
+  ctaText?: string;
+  ctaUrl?: string;
 }
 
 export interface QuizStruct {

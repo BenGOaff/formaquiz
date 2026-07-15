@@ -9,6 +9,12 @@ import { buildClaudeMessageBody } from "@/lib/claudeRequest";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { resolvePersona, personaLabel, PERSONA_VOCAB } from "@/lib/personas";
 import { fetchQuizProfiles } from "@/lib/integrations/tiquiz";
+import {
+  sanitizeIntentionMap,
+  intentionGuidance,
+  type IntentionMap,
+} from "@/lib/funnelIntentions";
+import type { QuizResultProfile } from "@/lib/quizDoctor";
 import { labelOf, MATURITY_OPTIONS, MONETIZATION_OPTIONS } from "@/lib/businessProfile";
 import type { FunnelAssets, FunnelEmail, FunnelResultEmail } from "@/lib/types";
 
@@ -25,6 +31,7 @@ Règles d'écriture STRICTES :
 - Jamais de promesse chiffrée de résultat. On promet un système, pas un million.
 - Emails courts, concrets, une seule idée et un seul appel à l'action par email.
 - Tu utilises le contexte réel de l'élève (sa niche, ses profils de résultats, ses mots). Tu ne mets PAS de [crochets] à remplir sauf si une info manque vraiment.
+- Pour chaque email par profil : respecte l'intention indiquée pour ce profil. Si un CTA est fourni (texte + URL), c'est le SEUL appel à l'action de l'email, reprends son texte et son URL tels quels : tu n'inventes jamais d'URL et tu n'en ajoutes pas d'autre.
 
 Tu réponds UNIQUEMENT avec un objet JSON valide, sans texte autour, au format exact :
 {
@@ -46,24 +53,40 @@ interface ProfileRow {
 function buildUserPrompt(
   profile: ProfileRow,
   carnetText: string,
-  quizProfiles: import("@/lib/quizDoctor").QuizResultProfile[],
+  quizProfiles: QuizResultProfile[],
+  intentions: IntentionMap,
 ): string {
   const persona = resolvePersona(profile.activity_type);
   const vocab = PERSONA_VOCAB[persona];
   const firstName = profile.full_name?.split(" ")[0] ?? "";
 
   // Source de verite pour byResult : les profils REELS du quiz Tiquiz s'ils
-  // sont disponibles ; sinon repli sur le carnet (inference).
+  // sont disponibles ; sinon repli sur le carnet (inference). Pour chaque
+  // profil : intention choisie par l'eleve (prioritaire) + CTA reel du
+  // resultat (destination : promo, formation, rdv, lead magnet...).
   const hasReal = quizProfiles.length > 0;
   const profilesBlock = hasReal
     ? [
-        `Profils de résultat RÉELS de son quiz (source de vérité, à utiliser TELS QUELS pour byResult, un email pour chacun) :`,
-        ...quizProfiles.map(
-          (p, i) =>
-            `${i + 1}. ${p.title}${p.description ? ` : ${p.description.replace(/\s+/g, " ").trim().slice(0, 300)}` : ""}`,
-        ),
+        `Profils de résultat RÉELS de son quiz (source de vérité, un email pour CHACUN). Respecte l'intention et intègre le CTA fourni comme unique appel à l'action :`,
+        ...quizProfiles.map((p, i) => {
+          const desc = p.description
+            ? ` : ${p.description.replace(/\s+/g, " ").trim().slice(0, 300)}`
+            : "";
+          const chosen = intentions[p.title.trim()];
+          const cta =
+            p.ctaText || p.ctaUrl
+              ? `\n   CTA à intégrer (unique appel à l'action) : "${(p.ctaText || "Découvrir").trim()}"${p.ctaUrl ? ` -> ${p.ctaUrl.trim()}` : ""}`
+              : "";
+          const intentionLine =
+            chosen && chosen !== "auto"
+              ? `\n   Intention imposée : ${intentionGuidance(chosen)}`
+              : p.ctaUrl
+                ? `\n   Intention : orienter naturellement vers ce CTA.`
+                : `\n   Intention : apporter de la valeur et inviter à répondre (pas de CTA défini).`;
+          return `${i + 1}. ${p.title}${desc}${intentionLine}${cta}`;
+        }),
       ].join("\n")
-    : `Profils de résultat : non récupérés depuis son quiz. Déduis 3 ou 4 profils plausibles à partir de son carnet et de sa niche, et écris un email pour chacun.`;
+    : `Profils de résultat : non récupérés depuis son quiz. Déduis 3 ou 4 profils plausibles à partir de son carnet et de sa niche, et écris un email pour chacun (objectif : apporter de la valeur puis inviter à répondre).`;
 
   return [
     `Contexte de l'élève :`,
@@ -161,13 +184,17 @@ export async function generateFunnel(userId: string): Promise<FunnelAssets | nul
     .eq("id", userId)
     .maybeSingle();
 
-  const carnet = await getCarnet(userId);
-  // Profils REELS du quiz de l'eleve (best-effort : [] si non connecte).
-  const quizProfiles = await fetchQuizProfiles(userId);
+  const [carnet, quizProfiles, intentions] = await Promise.all([
+    getCarnet(userId),
+    // Profils REELS du quiz de l'eleve (best-effort : [] si non connecte).
+    fetchQuizProfiles(userId),
+    getFunnelIntentions(userId),
+  ]);
   const userPrompt = buildUserPrompt(
     (profile ?? {}) as ProfileRow,
     carnetToText(carnet),
     quizProfiles,
+    intentions,
   );
 
   const model = resolveAnthropicModel(process.env.ANTHROPIC_MODEL, "sonnet");
@@ -209,6 +236,16 @@ export async function generateFunnel(userId: string): Promise<FunnelAssets | nul
   );
 
   return assets;
+}
+
+/** Lit la map d'intentions par profil de l'eleve (server-internal, admin). */
+export async function getFunnelIntentions(userId: string): Promise<IntentionMap> {
+  const { data } = await supabaseAdmin
+    .from("funnel_intentions")
+    .select("intentions")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return sanitizeIntentionMap(data?.intentions);
 }
 
 export async function getFunnelAssets(userId: string): Promise<{

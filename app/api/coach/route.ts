@@ -11,9 +11,14 @@ import { getCarnet } from "@/lib/carnet";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { buildClaudeMessageBody } from "@/lib/claudeRequest";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
-import { buildCoachSystemPrompt, type CoachAnswer } from "@/lib/coach/knowledge";
-import { getTiquizConnection } from "@/lib/integrations/tiquiz";
+import {
+  buildCoachSystemPrompt,
+  type CoachAnswer,
+  type CoachQuizContext,
+} from "@/lib/coach/knowledge";
+import { getTiquizConnection, fetchQuizAudit } from "@/lib/integrations/tiquiz";
 import { computeTiquizInsights } from "@/lib/insights/tiquizInsights";
+import { auditQuiz } from "@/lib/quizDoctor";
 
 const DAILY_LIMIT = 40; // messages eleve par jour
 const HISTORY_LIMIT = 12; // messages passes envoyes en contexte
@@ -97,6 +102,9 @@ export async function GET() {
 const bodySchema = z.object({
   message: z.string().min(1).max(2000),
   dayNumber: z.number().int().optional(),
+  // true quand le message vient du bouton "Un blocage ?" : on le logue en
+  // feedback (pour le dashboard admin d'amelioration), en plus d'y repondre.
+  blocage: z.boolean().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -114,7 +122,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ ok: false, reason: "bad_body" }, { status: 400 });
   }
-  const { message, dayNumber } = parsed.data;
+  const { message, dayNumber, blocage } = parsed.data;
 
   const supabase = await getSupabaseServerClient();
 
@@ -194,6 +202,34 @@ export async function POST(req: NextRequest) {
     entries: d.entries.map((e) => ({ prompt: e.prompt, answer: e.answer })),
   }));
 
+  // Le quiz Tiquiz de l'eleve : structure + audit + profils, pour que le
+  // coach l'aide a l'ameliorer (best-effort : null si non connecte).
+  let quizContext: CoachQuizContext | null = null;
+  try {
+    const quizzes = (await fetchQuizAudit(viewer.userId)) ?? [];
+    if (quizzes.length > 0) {
+      // Quiz le plus pertinent : publie d'abord, puis le plus de profils.
+      const best = quizzes
+        .slice()
+        .sort((a, b) => {
+          const act = (a.status === "active" ? 1 : 0) - (b.status === "active" ? 1 : 0);
+          if (act !== 0) return -act;
+          return (b.resultProfiles?.length ?? b.results) - (a.resultProfiles?.length ?? a.results);
+        })[0];
+      quizContext = {
+        title: best.title,
+        status: best.status,
+        issues: auditQuiz(best).map((i) => ({ title: i.title, fix: i.fix })),
+        profiles: (best.resultProfiles ?? []).map((p) => ({
+          title: p.title,
+          hasCta: Boolean((p.ctaText && p.ctaText.trim()) || (p.ctaUrl && p.ctaUrl.trim())),
+        })),
+      };
+    }
+  } catch {
+    // Non connecte ou endpoint indisponible : le coach fonctionne sans.
+  }
+
   const systemBase = buildCoachSystemPrompt({
     instruction: settings?.instruction ?? null,
     docs: knowledge ?? [],
@@ -208,6 +244,7 @@ export async function POST(req: NextRequest) {
     currentAnswers,
     progress,
     carnet,
+    quizContext,
   });
 
   // Coach proactif : on injecte les signaux REELS du funnel Tiquiz (si
@@ -272,6 +309,23 @@ export async function POST(req: NextRequest) {
     { thread_id: threadId, user_id: viewer.userId, role: "user", content: message, created_at: now.toISOString() },
     { thread_id: threadId, user_id: viewer.userId, role: "assistant", content: reply, created_at: new Date(now.getTime() + 1).toISOString() },
   ]);
+
+  // Blocage : on logue aussi en feedback pour le dashboard admin
+  // d'amelioration (chantier D). Best-effort, ne bloque pas la reponse.
+  if (blocage) {
+    await supabase
+      .from("feedback")
+      .insert({
+        user_id: viewer.userId,
+        day_number: dayNumber ?? null,
+        kind: "blocage",
+        message: message.trim(),
+      })
+      .then(
+        () => undefined,
+        () => undefined,
+      );
+  }
 
   return NextResponse.json({ ok: true, reply });
 }

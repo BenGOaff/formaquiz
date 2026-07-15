@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getViewer } from "@/lib/parcours";
-import { getFunnelAssets } from "@/lib/generate/funnel";
+import { getFunnelAssets, getFunnelIntentions } from "@/lib/generate/funnel";
+import { fetchQuizProfiles } from "@/lib/integrations/tiquiz";
 import { getEnabledSioTemplates } from "@/lib/sioTemplates";
 import { NoAccess } from "@/components/NoAccess";
 import { FunnelClient } from "./FunnelClient";
@@ -12,10 +13,17 @@ export default async function FunnelPage() {
   if (!viewer) redirect("/login");
   if (!viewer.enrolled) return <NoAccess email={viewer.email} />;
 
-  const [{ assets, generatedAt }, templates] = await Promise.all([
+  const [{ assets, generatedAt }, templates, profiles, intentions] = await Promise.all([
     getFunnelAssets(viewer.userId),
     getEnabledSioTemplates(),
+    fetchQuizProfiles(viewer.userId),
+    getFunnelIntentions(viewer.userId),
   ]);
+
+  const profileOptions = profiles.map((p) => ({
+    title: p.title,
+    hasCta: Boolean((p.ctaText && p.ctaText.trim()) || (p.ctaUrl && p.ctaUrl.trim())),
+  }));
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
@@ -26,7 +34,13 @@ export default async function FunnelPage() {
           à partir de ton carnet. Tu copies dans Systeme.io, tu personnalises, c'est parti.
         </p>
       </header>
-      <FunnelClient initialAssets={assets} generatedAt={generatedAt} templates={templates} />
+      <FunnelClient
+        initialAssets={assets}
+        generatedAt={generatedAt}
+        templates={templates}
+        profiles={profileOptions}
+        initialIntentions={intentions}
+      />
     </div>
   );
 }

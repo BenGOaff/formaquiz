@@ -14,23 +14,58 @@ import {
   MessageSquare,
   Boxes,
   ExternalLink,
+  Target,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { FunnelAssets, FunnelEmail, FunnelResultEmail, SioTemplate } from "@/lib/types";
+import {
+  FUNNEL_INTENTIONS,
+  DEFAULT_INTENTION,
+  type IntentionMap,
+  type FunnelIntention,
+} from "@/lib/funnelIntentions";
+
+interface ProfileOption {
+  title: string;
+  hasCta: boolean;
+}
 
 export function FunnelClient({
   initialAssets,
   generatedAt,
   templates = [],
+  profiles = [],
+  initialIntentions = {},
 }: {
   initialAssets: FunnelAssets | null;
   generatedAt: string | null;
   templates?: SioTemplate[];
+  profiles?: ProfileOption[];
+  initialIntentions?: IntentionMap;
 }) {
   const router = useRouter();
   const [assets, setAssets] = useState<FunnelAssets | null>(initialAssets);
   const [busy, setBusy] = useState(false);
+  const [intentions, setIntentions] = useState<IntentionMap>(initialIntentions);
+
+  async function saveIntentions(next: IntentionMap) {
+    setIntentions(next);
+    try {
+      await fetch("/api/me/funnel/intentions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ intentions: next }),
+      });
+    } catch {
+      toast.error("Enregistrement impossible. Réessaie.");
+    }
+  }
+
+  const intentionsBlock =
+    profiles.length > 0 ? (
+      <IntentionsBlock profiles={profiles} intentions={intentions} onChange={saveIntentions} />
+    ) : null;
 
   async function generate() {
     setBusy(true);
@@ -59,6 +94,7 @@ export function FunnelClient({
     return (
       <div className="flex flex-col gap-6">
         {templatesBlock}
+        {intentionsBlock}
         <Card>
         <CardContent className="flex flex-col items-start gap-4 py-8">
           <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -85,6 +121,7 @@ export function FunnelClient({
   return (
     <div className="flex flex-col gap-6">
       {templatesBlock}
+      {intentionsBlock}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-muted-foreground">
           {generatedAt ? `Générée le ${new Date(generatedAt).toLocaleDateString("fr-FR")}.` : ""} Tu
@@ -268,6 +305,62 @@ function toMarkdown(a: FunnelAssets): string {
   if (a.launch.dm) lines.push("### Script de message direct", a.launch.dm, "");
   if (a.launch.partnerEmail) lines.push("### Email d'échange partenaire", a.launch.partnerEmail, "");
   return lines.join("\n");
+}
+
+function IntentionsBlock({
+  profiles,
+  intentions,
+  onChange,
+}: {
+  profiles: ProfileOption[];
+  intentions: IntentionMap;
+  onChange: (next: IntentionMap) => void;
+}) {
+  return (
+    <Card className="border-primary/30 bg-surface-soft">
+      <CardContent className="flex flex-col gap-3 py-5">
+        <div className="flex items-center gap-2">
+          <Target className="size-5 text-primary" />
+          <h2 className="font-display font-semibold">L'objectif de chaque email</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Par défaut, chaque email suit le bouton (CTA) de ton résultat de quiz. Tu peux imposer une
+          intention pour un profil : l'IA écrira l'email dans ce sens.
+        </p>
+        <div className="flex flex-col gap-2">
+          {profiles.map((p) => (
+            <div
+              key={p.title}
+              className="flex flex-col gap-2 rounded-xl border border-border bg-background p-3 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium">{p.title}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {p.hasCta ? "Un CTA est défini sur ce résultat." : "Pas de CTA sur ce résultat."}
+                </p>
+              </div>
+              <select
+                value={intentions[p.title] ?? DEFAULT_INTENTION}
+                onChange={(e) =>
+                  onChange({ ...intentions, [p.title]: e.target.value as FunnelIntention })
+                }
+                className="h-9 shrink-0 rounded-lg border border-input bg-background px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 sm:w-64"
+              >
+                {FUNNEL_INTENTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Régénère ta campagne après avoir changé une intention pour l'appliquer.
+        </p>
+      </CardContent>
+    </Card>
+  );
 }
 
 function SioTemplatesBlock({ templates }: { templates: SioTemplate[] }) {

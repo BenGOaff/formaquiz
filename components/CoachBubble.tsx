@@ -23,7 +23,11 @@ export function CoachBubble() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  // Jour du blocage en cours : arme le prochain message pour le loguer en
+  // feedback (le bouton "Un blocage ?" ouvre le coach dans ce mode).
+  const [blocageDay, setBlocageDay] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open || loaded) return;
@@ -38,6 +42,23 @@ export function CoachBubble() {
       .catch(() => {});
   }, [open, loaded]);
 
+  // Ouverture pilotee (bouton "Un blocage ?") : on ouvre le coach, on arme
+  // le mode blocage sur le jour, et on donne le focus a la saisie.
+  useEffect(() => {
+    function onOpen(e: Event) {
+      const detail = (e as CustomEvent).detail as
+        | { dayNumber?: number; blocage?: boolean }
+        | undefined;
+      setOpen(true);
+      if (detail?.blocage) {
+        setBlocageDay(typeof detail.dayNumber === "number" ? detail.dayNumber : null);
+      }
+      setTimeout(() => inputRef.current?.focus(), 120);
+    }
+    window.addEventListener("coach:open", onOpen as EventListener);
+    return () => window.removeEventListener("coach:open", onOpen as EventListener);
+  }, []);
+
   useEffect(() => {
     if (open) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages, open, sending]);
@@ -49,11 +70,17 @@ export function CoachBubble() {
     setInput("");
     setMessages((m) => [...m, { role: "user", content: text }]);
     setSending(true);
+    const isBlocage = blocageDay != null;
+    if (isBlocage) setBlocageDay(null); // consomme : un seul message logue
     try {
       const res = await fetch("/api/coach", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, dayNumber: currentDayNumber(pathname) }),
+        body: JSON.stringify({
+          message: text,
+          dayNumber: isBlocage ? blocageDay : currentDayNumber(pathname),
+          blocage: isBlocage,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       let reply: string;
@@ -122,9 +149,10 @@ export function CoachBubble() {
 
           <form onSubmit={send} className="flex items-center gap-2 border-t border-border p-3">
             <input
+              ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Écris ta question..."
+              placeholder={blocageDay != null ? "Décris ce qui te bloque..." : "Écris ta question..."}
               className="h-10 flex-1 rounded-full border border-input bg-transparent px-4 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
             />
             <button

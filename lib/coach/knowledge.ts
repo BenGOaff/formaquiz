@@ -46,6 +46,14 @@ export interface CoachDoc {
   content: string;
 }
 
+/** Le quiz Tiquiz de l'eleve, pour que le coach aide a l'ameliorer. */
+export interface CoachQuizContext {
+  title: string;
+  status: string;
+  issues: { title: string; fix: string }[];
+  profiles: { title: string; hasCta: boolean }[];
+}
+
 /** Budget de caracteres pour les documents de connaissance injectes. */
 const DOCS_CHAR_BUDGET = 14000;
 /** Budget de caracteres pour le carnet de bord injecte (borne le cout). */
@@ -125,6 +133,7 @@ export function buildCoachSystemPrompt(input: {
   currentAnswers: CoachAnswer[];
   progress?: CoachProgress | null;
   carnet?: CoachCarnetDay[];
+  quizContext?: CoachQuizContext | null;
 }): string {
   const {
     instruction,
@@ -140,6 +149,7 @@ export function buildCoachSystemPrompt(input: {
     currentAnswers,
     progress,
     carnet,
+    quizContext,
   } = input;
 
   const persona = instruction && instruction.trim() ? instruction.trim() : SYSTEM_PERSONA;
@@ -232,6 +242,31 @@ export function buildCoachSystemPrompt(input: {
     if (blocks.length) {
       prompt += `\n\n=== CARNET DE BORD DE L'ÉLÈVE (ses réponses sur le parcours, source de vérité) ===\n${blocks.join("\n\n")}`;
     }
+  }
+
+  // Le quiz Tiquiz de l'eleve : le coach peut l'aider a l'ameliorer (ses
+  // questions, ses resultats, ses CTA) a partir de sa vraie structure.
+  if (quizContext) {
+    const lines: string[] = [
+      `Quiz : "${quizContext.title}" (${quizContext.status === "active" ? "publié" : "brouillon"}).`,
+    ];
+    if (quizContext.profiles.length) {
+      lines.push(
+        `Profils de résultat : ${quizContext.profiles
+          .map((p) => `${p.title}${p.hasCta ? "" : " (sans CTA)"}`)
+          .join(", ")}.`,
+      );
+    }
+    if (quizContext.issues.length) {
+      lines.push("Points à améliorer détectés :");
+      for (const it of quizContext.issues) lines.push(`- ${it.title} ${it.fix}`);
+    } else {
+      lines.push("Aucun défaut de structure majeur détecté.");
+    }
+    prompt +=
+      `\n\n=== SON QUIZ TIQUIZ (aide-le à l'améliorer si il le demande) ===\n` +
+      lines.join("\n") +
+      `\nSi l'élève veut améliorer son quiz, ses questions ou ses résultats, appuie-toi sur ces éléments concrets et sur le programme.`;
   }
 
   // Focus sur le jour en cours (si l'eleve est sur une page jour).
