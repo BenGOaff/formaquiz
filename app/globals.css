@@ -138,3 +138,75 @@
 .fq-rich h2 { font-size: 1.25rem; font-weight: 700; margin: 1em 0 0.35em; }
 .fq-rich h3 { font-size: 1.05rem; font-weight: 600; margin: 0.85em 0 0.3em; }
 .fq-rich strong { font-weight: 600; }
+
+/* ── Infographies des jours (composant Figure). Cases qui s'adaptent au
+   texte (aucun débordement), responsive, couleurs par tokens. ── */
+.fig { margin: 1.25rem 0; border: 1px solid hsl(var(--border)); border-radius: 0.75rem; background: hsl(var(--card)); padding: 1rem; }
+.fig__cap { margin-top: 0.75rem; text-align: center; font-size: 0.78rem; line-height: 1.45; color: hsl(var(--muted-foreground)); }
+.fig__src { display: block; margin-top: 0.35rem; font-size: 0.7rem; font-style: italic; opacity: 0.85; }
+.fig__body { display: flex; flex-direction: column; gap: 0.6rem; }
+
+.fig-row { display: flex; flex-direction: column; gap: 0.6rem; align-items: stretch; }
+.fig-box { flex: 1; min-width: 0; border: 1px solid hsl(var(--primary) / 0.3); border-radius: 0.6rem; background: hsl(var(--surface-soft)); color: hsl(var(--foreground)); padding: 0.6rem 0.75rem; text-align: center; }
+.fig-box--solid { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); border-color: transparent; }
+.fig-box--muted { border-style: dashed; border-color: hsl(var(--muted-foreground) / 0.45); color: hsl(var(--muted-foreground)); }
+.fig-box__t { font-weight: 600; font-size: 0.85rem; line-height: 1.3; }
+.fig-box__s { font-size: 0.72rem; line-height: 1.3; color: hsl(var(--muted-foreground)); margin-top: 0.15rem; }
+.fig-box--solid .fig-box__s { color: hsl(var(--primary-foreground) / 0.85); }
+
+.fig-arrow { display: flex; align-items: center; justify-content: center; color: hsl(var(--primary)); font-size: 1.15rem; line-height: 1; }
+.fig-arrow .h { display: none; }
+.fig-arrow .v { display: inline; }
+
+.fig-grid2 { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
+.fig-card { border: 1px solid hsl(var(--primary) / 0.3); border-radius: 0.75rem; background: hsl(var(--surface-soft)); padding: 0.85rem; text-align: center; }
+.fig-card__t { font-size: 0.95rem; font-weight: 600; color: hsl(var(--primary)); }
+.fig-card__l { font-size: 0.78rem; line-height: 1.4; color: hsl(var(--foreground)); margin-top: 0.3rem; }
+.fig-card__l--muted { color: hsl(var(--muted-foreground)); }
+
+.fig-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.fig-step { display: flex; align-items: center; gap: 0.65rem; background: hsl(var(--surface-soft)); border-radius: 0.6rem; padding: 0.55rem 0.75rem; }
+.fig-num { flex-shrink: 0; width: 1.6rem; height: 1.6rem; border-radius: 999px; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); font-size: 0.78rem; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+.fig-step__t { font-size: 0.85rem; line-height: 1.35; color: hsl(var(--foreground)); text-align: left; }
+
+.fig-note { text-align: center; font-size: 0.78rem; color: hsl(var(--muted-foreground)); }
+.fig-highlight { border: 1px solid hsl(var(--primary) / 0.5); border-radius: 0.6rem; background: hsl(var(--primary) / 0.1); padding: 0.6rem 0.75rem; text-align: center; font-size: 0.82rem; line-height: 1.4; color: hsl(var(--foreground)); }
+.fig-highlight strong { color: hsl(var(--primary)); }
+
+.fig-bars { display: flex; align-items: flex-end; justify-content: center; gap: 2.5rem; padding-top: 0.5rem; }
+.fig-bar { display: flex; flex-direction: column; align-items: center; gap: 0.35rem; }
+.fig-bar__n { font-size: 0.9rem; font-weight: 700; }
+.fig-bar__v { width: 3.4rem; border-radius: 0.4rem 0.4rem 0 0; }
+.fig-bar__l { font-size: 0.72rem; color: hsl(var(--muted-foreground)); text-align: center; }
+
+.fig-funnel { display: flex; flex-direction: column; align-items: center; gap: 0.35rem; }
+.fig-funnel__row { border: 1px solid hsl(var(--primary) / 0.3); border-radius: 0.4rem; background: hsl(var(--surface-soft)); color: hsl(var(--foreground)); padding: 0.4rem 0.6rem; text-align: center; font-size: 0.82rem; }
+.fig-funnel__row--last { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); border-color: transparent; font-weight: 600; }
+
+.fig-stairs { display: flex; align-items: flex-end; justify-content: center; gap: 0.5rem; }
+.fig-stair { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.3rem; }
+.fig-stair__l { font-size: 0.72rem; text-align: center; line-height: 1.2; color: hsl(var(--foreground)); }
+.fig-stair__v { width: 100%; border-radius: 0.4rem 0.4rem 0 0; background: hsl(var(--surface-soft)); border: 1px solid hsl(var(--primary) / 0.3); }
+.fig-stair__v--last { background: hsl(var(--primary)); border-color: transparent; }
+
+.fig-dots { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.5rem; }
+.fig-dot { width: 1.75rem; height: 1.75rem; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; background: hsl(var(--surface-soft)); border: 1px solid hsl(var(--primary) / 0.6); color: hsl(var(--foreground)); }
+.fig-dot--on { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); border-color: transparent; }
+.fig-dotsep { color: hsl(var(--primary) / 0.5); }
+
+.fig-track { position: relative; height: 0.5rem; border-radius: 999px; background: linear-gradient(to right, hsl(var(--surface-soft)), hsl(var(--primary))); margin-top: 1.9rem; }
+.fig-track__mark { position: absolute; top: 50%; width: 0.85rem; height: 0.85rem; border-radius: 999px; background: hsl(var(--primary)); box-shadow: 0 0 0 3px hsl(var(--background)); transform: translate(-50%, -50%); }
+.fig-track__lab { position: absolute; bottom: 1.15rem; transform: translateX(-50%); font-size: 0.72rem; font-weight: 600; color: hsl(var(--primary)); white-space: nowrap; }
+.fig-track__ends { display: flex; justify-content: space-between; margin-top: 0.4rem; font-size: 0.68rem; color: hsl(var(--muted-foreground)); }
+
+.fig-branch { display: flex; flex-direction: column; gap: 0.6rem; align-items: stretch; }
+.fig-branch__stack { display: flex; flex-direction: column; gap: 0.5rem; flex: 1; }
+
+@media (min-width: 560px) {
+  .fig-row { flex-direction: row; align-items: center; }
+  .fig-grid2 { grid-template-columns: 1fr 1fr; }
+  .fig-arrow .h { display: inline; }
+  .fig-arrow .v { display: none; }
+  .fig-branch { flex-direction: row; align-items: center; justify-content: center; }
+  .fig-branch__solo { flex: 0 0 auto; }
+}
