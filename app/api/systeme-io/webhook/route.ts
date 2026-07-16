@@ -11,6 +11,7 @@ import { timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSignatureMode, verifySioSignature } from "@/lib/sioWebhookSig";
 import { grantAccessByEmail, revokeAccessByEmail } from "@/lib/access/grantAccess";
+import { detectPlusTrialFunnel, maybeGrantPlusTrial } from "@/lib/plusTrial/grant";
 
 const WEBHOOK_SECRET = process.env.SYSTEME_IO_WEBHOOK_SECRET;
 
@@ -130,5 +131,28 @@ export async function POST(req: NextRequest) {
   if (!result.ok) {
     return NextResponse.json({ ok: false, reason: result.reason });
   }
-  return NextResponse.json({ ok: true, action: "granted", created: result.created });
+
+  // ── Opération "20 premiers = 1 mois Tiquiz Plus offert" ──
+  // Best-effort : ne doit JAMAIS faire échouer l'octroi d'accès Atelier.
+  // Le tunnel (le tien / l'affilié) est déduit du payload SIO.
+  const orderId = extractStr(body, [
+    "data.order.id",
+    "order.id",
+    "data.order_id",
+    "order_id",
+    "data.id",
+  ]);
+  const plusTrial = await maybeGrantPlusTrial({
+    sioEmail: email,
+    funnel: detectPlusTrialFunnel(body),
+    orderId,
+    origin: "systeme_io",
+  });
+
+  return NextResponse.json({
+    ok: true,
+    action: "granted",
+    created: result.created,
+    plus_trial: plusTrial.status,
+  });
 }
