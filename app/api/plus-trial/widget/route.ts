@@ -103,10 +103,11 @@ export async function GET(_req: NextRequest) {
     document.head.appendChild(s);
   }
 
-  function render(el, data){
+  // Construit le HTML de la carte (ou null si rien à afficher).
+  function build(data){
     var remaining = (data && typeof data.remaining === "number") ? data.remaining : null;
     var cap = (data && typeof data.cap === "number") ? data.cap : 20;
-    if(remaining === null){ el.style.display = "none"; return; }
+    if(remaining === null){ return null; }
     var soldOut = remaining <= 0;
     var pct = Math.max(0, Math.min(100, Math.round((remaining / (cap || 1)) * 100)));
     var emoji = soldOut ? "\\u23F3" : "\\uD83C\\uDF81"; // sablier / cadeau
@@ -117,9 +118,8 @@ export async function GET(_req: NextRequest) {
       ? ('Merci\\u00A0! Complet')
       : ('Il reste <b>' + remaining + '/' + cap + '</b> places');
 
-    el.style.display = "block";
-    el.innerHTML =
-      '<div class="tqpt-card">'
+    return ''
+      + '<div class="tqpt-card">'
       + '<div class="tqpt-row">'
       +   '<div class="tqpt-badge'+(soldOut?' sold':'')+'" aria-hidden="true">'+emoji+'</div>'
       +   '<div class="tqpt-txt">'
@@ -131,25 +131,83 @@ export async function GET(_req: NextRequest) {
       + '</div>';
   }
 
-  function load(el){
+  // Peint le HTML dans le conteneur et le met en cache (pour auto-guérison).
+  function paint(el, html){
+    el.__tqptHtml = html;
+    el.__tqptPainting = true;      // évite que l'observer se déclenche sur notre propre écriture
+    el.innerHTML = html;
+    el.style.display = "block";
+    el.__tqptPainting = false;
+  }
+
+  function fetchAndRender(el){
     var funnel = el.getAttribute("data-funnel") || "bene";
     var url = STATUS_URL + "?funnel=" + encodeURIComponent(funnel) + "&t=" + Date.now();
     fetch(url, {mode:"cors",cache:"no-store"})
       .then(function(r){return r.json();})
-      .then(function(d){ render(el, d); })
-      .catch(function(){ el.style.display = "none"; });
+      .then(function(d){
+        var html = build(d);
+        if(html){ paint(el, html); }
+        else if(!el.__tqptHtml){ el.style.display = "none"; }
+      })
+      .catch(function(){
+        // Ne casse pas ce qui est déjà affiché ; masque seulement si vide.
+        if(!el.__tqptHtml){ el.style.display = "none"; }
+      });
+  }
+
+  // Prend en charge un conteneur : rendu initial, rafraîchissement, et
+  // auto-guérison si React (SPA Systeme.io) vide le noeud après coup.
+  function manage(el){
+    if(el.__tqptInit) return;
+    el.__tqptInit = true;
+    fetchAndRender(el);
+    setInterval(function(){ fetchAndRender(el); }, REFRESH_MS);
+    try {
+      var mo = new MutationObserver(function(){
+        // Si le contenu a été effacé (re-render React) et qu'on a un cache,
+        // on le réinjecte immédiatement, sans refetch.
+        if(!el.__tqptPainting && el.__tqptHtml && el.childElementCount === 0){
+          paint(el, el.__tqptHtml);
+        }
+      });
+      mo.observe(el, { childList: true });
+    } catch(e){}
+  }
+
+  function scan(){
+    var els = document.querySelectorAll("[data-tiquiz-plus-trial]");
+    for(var i=0;i<els.length;i++){ manage(els[i]); }
+  }
+
+  // Scan débounçé (le SPA peut muter le DOM très souvent).
+  var scanQueued = false;
+  function queueScan(){
+    if(scanQueued) return;
+    scanQueued = true;
+    setTimeout(function(){ scanQueued = false; scan(); }, 60);
   }
 
   function boot(){
     ensureFonts();
     ensureStyle();
-    var els = document.querySelectorAll("[data-tiquiz-plus-trial]");
-    for(var i=0;i<els.length;i++){ (function(el){ load(el); setInterval(function(){load(el);}, REFRESH_MS); })(els[i]); }
+    scan();
+    // Observe l'arbre pour capter les conteneurs injectés APRÈS coup par le
+    // SPA (cause n°1 des "ça ne s'affiche pas toujours").
+    try {
+      var body = document.body || document.documentElement;
+      var bmo = new MutationObserver(function(){ queueScan(); });
+      bmo.observe(body, { childList: true, subtree: true });
+    } catch(e){}
+    // Filet de sécurité : quelques scans différés selon le timing du SPA.
+    var delays = [200, 600, 1500, 3000, 6000];
+    for(var i=0;i<delays.length;i++){ setTimeout(scan, delays[i]); }
   }
 
   if(document.readyState === "loading"){
     document.addEventListener("DOMContentLoaded", boot);
   } else { boot(); }
+  window.addEventListener("load", scan);
 })();`;
 
   return new NextResponse(js, {
