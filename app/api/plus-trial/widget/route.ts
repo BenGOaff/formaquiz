@@ -20,12 +20,34 @@ import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(req: NextRequest) {
-  const origin = req.nextUrl.origin;
+// Base publique de l'app. On NE se sert PAS de req.nextUrl.origin : derrière
+// le proxy Systeme.io il resout en localhost:3002 (drame connu). On prend
+// APP_URL au runtime, fallback sur l'URL canonique prod.
+const PUBLIC_BASE = (
+  process.env.APP_URL ??
+  process.env.NEXT_PUBLIC_APP_URL ??
+  "https://quizing.tipote.com"
+).trim().replace(/\/$/, "");
 
+export async function GET(_req: NextRequest) {
   const js = `(function(){
   "use strict";
-  var STATUS_URL = ${JSON.stringify(`${origin}/api/plus-trial/status`)};
+  // Origine réelle = celle du <script> qui nous a chargés (robuste quel que
+  // soit le proxy). Fallback sur la base injectée côté serveur.
+  var FALLBACK_BASE = ${JSON.stringify(PUBLIC_BASE)};
+  function widgetBase(){
+    try {
+      if (document.currentScript && document.currentScript.src) {
+        return new URL(document.currentScript.src).origin;
+      }
+    } catch(e){}
+    try {
+      var ss = document.querySelectorAll('script[src*="/api/plus-trial/widget"]');
+      if (ss.length) return new URL(ss[ss.length-1].src).origin;
+    } catch(e){}
+    return FALLBACK_BASE;
+  }
+  var STATUS_URL = widgetBase() + "/api/plus-trial/status";
   var REFRESH_MS = 30000;
 
   function esc(s){var d=document.createElement("div");d.textContent=String(s);return d.innerHTML;}
