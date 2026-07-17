@@ -3,6 +3,7 @@
 // passer les clients mail (Gmail, Outlook, Apple Mail). Indigo de marque
 // #5D6CDB. Contenu user-visible : accents respectes, aucun tiret long.
 import "server-only";
+import { ASSET_VERSION } from "@/lib/assetVersion";
 
 // Runtime (APP_URL) plutôt que NEXT_PUBLIC_* (inliné au build) : sinon le
 // logo et les liens des emails pointent sur la valeur gravée au build
@@ -15,7 +16,7 @@ const APP_URL = (
 const BRAND = "#5D6CDB";
 const INK = "#1f2340";
 const MUTED = "#6b7191";
-const LOGO_URL = `${APP_URL}/quizing.png`;
+const LOGO_URL = `${APP_URL}/quizing.png?v=${ASSET_VERSION}`;
 
 /** Enveloppe commune : entete logo, carte centrale, pied de page. */
 function layout(inner: string): string {

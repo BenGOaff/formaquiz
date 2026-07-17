@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
+import { FAVICON_SRC, LOGO_SRC } from "@/lib/assetVersion";
 import "./globals.css";
 
 const inter = Inter({
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
   title: "L'Atelier du Quiz",
   description: "Apprends les quiz en avançant dans un quiz.",
   robots: { index: false, follow: false }, // espace membre privé
-  icons: { icon: "/favicon.ico", apple: "/quizing.png" },
+  icons: { icon: FAVICON_SRC, apple: LOGO_SRC },
 };
 
 export const viewport: Viewport = {

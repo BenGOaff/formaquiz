@@ -1,5 +1,6 @@
 import { Award } from "lucide-react";
 import { CERT_BRAND, CERT_TITLE } from "@/lib/certification";
+import { LOGO_SRC } from "@/lib/assetVersion";
 
 /**
  * Certificat officiel de fin de formation. Rendu cote serveur (pas de
@@ -27,7 +28,7 @@ export function Certificate({
             {/* En-tete */}
             <div className="flex items-center justify-center gap-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/quizing.png" alt={CERT_BRAND} className="h-9 w-auto" />
+              <img src={LOGO_SRC} alt={CERT_BRAND} className="h-9 w-auto" />
             </div>
 
             <p className="mt-6 text-xs font-semibold uppercase tracking-[0.25em] text-[#6b7191]">
