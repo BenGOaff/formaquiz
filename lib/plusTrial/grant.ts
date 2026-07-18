@@ -24,7 +24,8 @@ import { extractFunnelUrl, extractSaFromPayload } from "@/lib/affiliateTracking"
 
 const TIQUIZ_BASE = (process.env.TIQUIZ_BASE_URL ?? "https://quiz.tipote.com").trim().replace(/\/$/, "");
 const SHARED = (process.env.PARTNER_SHARED_SECRET ?? "").trim();
-const TRIAL_DAYS = 30;
+// 2 mois offerts pour les 20 premiers acheteurs de l'Atelier (Béné 18 juil 2026).
+const TRIAL_DAYS = 60;
 
 export type PlusTrialFunnel = string;
 

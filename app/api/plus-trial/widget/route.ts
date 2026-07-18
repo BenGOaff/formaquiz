@@ -9,7 +9,7 @@
 //
 // Le script trouve tous les conteneurs [data-tiquiz-plus-trial], lit le
 // décompte réel via /api/plus-trial/status et affiche :
-//   "Les 20 premiers reçoivent un mois gratuit au meilleur plan de Tiquiz !
+//   "Les 20 premiers reçoivent 2 mois gratuits au meilleur plan de Tiquiz !
 //    Il reste XX/20 places"
 //
 // Style calqué sur les popups de Béné : neo-brutalist (Bricolage Grotesque
@@ -113,7 +113,7 @@ export async function GET(_req: NextRequest) {
     var emoji = soldOut ? "\\u23F3" : "\\uD83C\\uDF81"; // sablier / cadeau
     var headline = soldOut
       ? ('Les ' + cap + ' places offertes sont <span class="tqpt-mark">toutes prises</span>.')
-      : ('Les ' + cap + ' premiers re\\u00E7oivent <span class="tqpt-mark">un mois gratuit</span> au meilleur plan de Tiquiz\\u00A0!');
+      : ('Les ' + cap + ' premiers re\\u00E7oivent <span class="tqpt-mark">2 mois gratuits</span> au meilleur plan de Tiquiz\\u00A0!');
     var count = soldOut
       ? ('Merci\\u00A0! Complet')
       : ('Il reste <b>' + remaining + '/' + cap + '</b> places');
