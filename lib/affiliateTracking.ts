@@ -247,6 +247,47 @@ export function extractAmountCents(body: unknown): number {
   return 0;
 }
 
+/** Montant de taxe (TVA) en centimes, si le payload le porte. 0 sinon. */
+export function extractTaxCents(body: unknown): number {
+  const paths = [
+    "order.tax",
+    "data.order.tax",
+    "order.tax_amount",
+    "data.order.tax_amount",
+    "order.taxAmount",
+    "tax",
+    "tax_amount",
+    "taxAmount",
+    "data.tax",
+    "vat",
+    "data.vat",
+  ];
+  for (const p of paths) {
+    const c = pick(body, p);
+    const n = typeof c === "number" ? c : typeof c === "string" ? Number(c.replace(",", ".")) : NaN;
+    if (Number.isFinite(n) && n >= 0) return Math.round(n * 100);
+  }
+  return 0;
+}
+
+/**
+ * Montant HT en centimes = base de calcul de la commission (règle Béné :
+ * 70% Atelier / 40% Tiquiz TOUJOURS sur le HT). Priorité à un champ HT
+ * explicite ; sinon total - taxe ; sinon total (franchise de TVA -> HT=TTC).
+ */
+export function extractAmountHtCents(body: unknown): number {
+  const htPaths = ["order.total_ht", "data.order.total_ht", "total_ht", "amount_ht", "order.subtotal", "data.order.subtotal"];
+  for (const p of htPaths) {
+    const c = pick(body, p);
+    const n = typeof c === "number" ? c : typeof c === "string" ? Number(c.replace(",", ".")) : NaN;
+    if (Number.isFinite(n) && n > 0) return Math.round(n * 100);
+  }
+  const total = extractAmountCents(body);
+  const tax = extractTaxCents(body);
+  const ht = total - tax;
+  return ht > 0 ? ht : total;
+}
+
 export function extractProductName(body: unknown): string | null {
   const paths = [
     "product_name",
@@ -264,6 +305,14 @@ export function extractProductName(body: unknown): string | null {
   return null;
 }
 
+// Délai avant qu'une commission soit "acquise" : 30 jours = fenêtre de la
+// garantie satisfait-ou-remboursé. Tant qu'on est dedans, la commission peut
+// être annulée par un remboursement, donc Systeme.io la retient. On calque.
+export const GUARANTEE_HOLD_DAYS = 30;
+
+/** Statut d'affichage dérivé (calé sur le cycle Systeme.io). */
+export type CommissionDisplayStatus = "guarantee" | "payable" | "paid" | "refunded";
+
 export interface AffiliateCommissionRow {
   id: string;
   source_app: "quizing" | "tiquiz";
@@ -272,57 +321,165 @@ export interface AffiliateCommissionRow {
   commission_cents: number;
   status: string;
   sale_at: string;
+  refunded_at?: string | null;
+  /** Statut lisible dérivé de la date + du statut brut. */
+  displayStatus: CommissionDisplayStatus;
+}
+
+export interface AffiliateMonth {
+  /** Clé "YYYY-MM". */
+  key: string;
+  /** Libellé FR "juillet 2026". */
+  label: string;
+  salesCount: number;
+  commissionCents: number;
 }
 
 export interface AffiliateGains {
+  /** Visites via le lien (clics enregistrés par le tracker). */
+  visits: number;
+  /** Leads captés attribués au lien (conversions). */
+  leads: number;
+  /** Ventes valides (hors remboursées). */
+  salesCount: number;
+  /** Ventes remboursées pendant la garantie. */
+  refundsCount: number;
+  /** Net gagné (garantie + à verser + versé), hors remboursées. */
   totalCents: number;
-  pendingCents: number;
-  approvedCents: number;
+  /** En attente de la fin de la garantie 30 jours. */
+  guaranteeCents: number;
+  /** Garantie passée, prêt à être versé au prochain paiement. */
+  payableCents: number;
+  /** Déjà versé (si Systeme.io nous l'a signalé). */
   paidCents: number;
+  /** Total remboursé (déduit des gains). */
+  refundedCents: number;
   quizingCents: number;
   tiquizCents: number;
-  salesCount: number;
+  byMonth: AffiliateMonth[];
+  /** Prochain versement estimé (montant déjà acquis + date approx.). */
+  nextPayout: { amountCents: number; label: string } | null;
   recent: AffiliateCommissionRow[];
 }
 
-/**
- * Agrège les commissions réelles d'un affilié (par son sa). Lecture serveur
- * (service role) : le dashboard appelle ça avec le sa stocké sur le profil.
- */
-export async function getAffiliateGains(sa: string): Promise<AffiliateGains> {
-  const empty: AffiliateGains = {
+function emptyGains(): AffiliateGains {
+  return {
+    visits: 0,
+    leads: 0,
+    salesCount: 0,
+    refundsCount: 0,
     totalCents: 0,
-    pendingCents: 0,
-    approvedCents: 0,
+    guaranteeCents: 0,
+    payableCents: 0,
     paidCents: 0,
+    refundedCents: 0,
     quizingCents: 0,
     tiquizCents: 0,
-    salesCount: 0,
+    byMonth: [],
+    nextPayout: null,
     recent: [],
   };
-  if (!sa || !SA_RE.test(sa)) return empty;
+}
 
-  const { data } = await supabaseAdmin
-    .from("affiliate_commissions")
-    .select("id, source_app, product_name, sale_amount_cents, commission_cents, status, sale_at")
-    .eq("sa", sa)
-    .order("sale_at", { ascending: false })
-    .limit(500);
+const MONTH_FMT = new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" });
 
-  const rows = (data as AffiliateCommissionRow[] | null) ?? [];
-  const g = { ...empty, recent: rows.slice(0, 25) };
-  for (const r of rows) {
-    // Les commissions annulées / rejetées ne comptent pas dans les gains.
-    if (r.status === "cancelled" || r.status === "rejected") continue;
-    g.salesCount += 1;
-    g.totalCents += r.commission_cents;
-    if (r.status === "pending") g.pendingCents += r.commission_cents;
-    else if (r.status === "approved") g.approvedCents += r.commission_cents;
-    else if (r.status === "paid") g.paidCents += r.commission_cents;
-    if (r.source_app === "quizing") g.quizingCents += r.commission_cents;
-    else if (r.source_app === "tiquiz") g.tiquizCents += r.commission_cents;
-  }
+/** Prochaine date de versement Systeme.io (autour du 10 de chaque mois). */
+function nextPayoutLabel(now: Date): string {
+  // Systeme.io verse entre le 10 et le 13. Si on est déjà passé le 13, le
+  // prochain versement est le mois suivant.
+  const d = new Date(now);
+  if (d.getDate() > 13) d.setMonth(d.getMonth() + 1);
+  const monthLabel = new Intl.DateTimeFormat("fr-FR", { month: "long" }).format(d);
+  return `autour du 10 ${monthLabel}`;
+}
+
+/**
+ * Agrège les commissions réelles d'un affilié (par son sa) + ses stats de
+ * trafic. Lecture serveur (service role). Le cycle colle à Systeme.io :
+ * garantie 30 jours -> acquis -> versé mensuellement. Les remboursements
+ * sont exclus et comptés à part.
+ */
+export async function getAffiliateGains(sa: string): Promise<AffiliateGains> {
+  const g = emptyGains();
+  if (!sa || !SA_RE.test(sa)) return g;
+
+  const [commissionsRes, clicksRes, conversionsRes] = await Promise.all([
+    supabaseAdmin
+      .from("affiliate_commissions")
+      .select("id, source_app, product_name, sale_amount_cents, commission_cents, status, sale_at, refunded_at")
+      .eq("sa", sa)
+      .order("sale_at", { ascending: false })
+      .limit(1000),
+    supabaseAdmin.from("affiliate_clicks").select("id", { count: "exact", head: true }).eq("sa", sa),
+    supabaseAdmin.from("affiliate_conversions").select("id", { count: "exact", head: true }).eq("sa", sa),
+  ]);
+
+  g.visits = clicksRes.count ?? 0;
+  g.leads = conversionsRes.count ?? 0;
+
+  const raw = (commissionsRes.data as Array<Omit<AffiliateCommissionRow, "displayStatus">> | null) ?? [];
+  const now = new Date();
+  const holdMs = GUARANTEE_HOLD_DAYS * 24 * 3600 * 1000;
+  const months = new Map<string, AffiliateMonth>();
+
+  const rows: AffiliateCommissionRow[] = raw.map((r) => {
+    let displayStatus: CommissionDisplayStatus;
+    if (r.status === "refunded" || r.status === "cancelled" || r.status === "rejected") {
+      displayStatus = "refunded";
+    } else if (r.status === "paid") {
+      displayStatus = "paid";
+    } else {
+      // pending / approved : acquis si la garantie est passée.
+      const matured = now.getTime() - new Date(r.sale_at).getTime() >= holdMs;
+      displayStatus = matured ? "payable" : "guarantee";
+    }
+
+    if (displayStatus === "refunded") {
+      g.refundsCount += 1;
+      g.refundedCents += r.commission_cents;
+    } else {
+      g.salesCount += 1;
+      g.totalCents += r.commission_cents;
+      if (displayStatus === "guarantee") g.guaranteeCents += r.commission_cents;
+      else if (displayStatus === "payable") g.payableCents += r.commission_cents;
+      else if (displayStatus === "paid") g.paidCents += r.commission_cents;
+      if (r.source_app === "quizing") g.quizingCents += r.commission_cents;
+      else if (r.source_app === "tiquiz") g.tiquizCents += r.commission_cents;
+
+      // Agrégat par mois de vente (hors remboursées).
+      const d = new Date(r.sale_at);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const m = months.get(key) ?? { key, label: MONTH_FMT.format(d), salesCount: 0, commissionCents: 0 };
+      m.salesCount += 1;
+      m.commissionCents += r.commission_cents;
+      months.set(key, m);
+    }
+
+    return { ...r, displayStatus };
+  });
+
+  g.byMonth = Array.from(months.values()).sort((a, b) => (a.key < b.key ? 1 : -1)).slice(0, 12);
+  g.recent = rows.slice(0, 25);
+  // Prochain versement = ce qui est déjà acquis (garantie passée, pas encore versé).
+  g.nextPayout = g.payableCents > 0 ? { amountCents: g.payableCents, label: nextPayoutLabel(now) } : null;
   return g;
+}
+
+/**
+ * Marque comme remboursée toute commission liée à une commande Systeme.io
+ * (remboursement pendant la garantie 30 jours). Idempotent. Best-effort.
+ */
+export async function refundCommissionByOrder(orderId: string): Promise<{ refunded: number }> {
+  const id = String(orderId ?? "").trim();
+  if (!id) return { refunded: 0 };
+  const { data, error } = await supabaseAdmin
+    .from("affiliate_commissions")
+    .update({ status: "refunded", refunded_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq("sio_order_id", id)
+    .neq("status", "refunded")
+    .select("id");
+  if (error) return { refunded: 0 };
+  return { refunded: (data as unknown[] | null)?.length ?? 0 };
 }
 
 async function findRecentConversion(email: string): Promise<{ id: string; sa: string } | null> {

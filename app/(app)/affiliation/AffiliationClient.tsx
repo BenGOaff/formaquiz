@@ -67,7 +67,8 @@ const eur = (n: number) =>
 const eurCents = (c: number) =>
   new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(Math.max(0, c) / 100);
 
-// Type local (on n'importe pas lib/affiliateTracking qui est server-only).
+// Types locaux (on n'importe pas lib/affiliateTracking qui est server-only).
+type DisplayStatus = "guarantee" | "payable" | "paid" | "refunded";
 type CommissionRow = {
   id: string;
   source_app: "quizing" | "tiquiz";
@@ -76,24 +77,38 @@ type CommissionRow = {
   commission_cents: number;
   status: string;
   sale_at: string;
+  refunded_at?: string | null;
+  displayStatus: DisplayStatus;
 };
+type MonthRow = { key: string; label: string; salesCount: number; commissionCents: number };
 type Gains = {
+  visits: number;
+  leads: number;
+  salesCount: number;
+  refundsCount: number;
   totalCents: number;
-  pendingCents: number;
-  approvedCents: number;
+  guaranteeCents: number;
+  payableCents: number;
   paidCents: number;
+  refundedCents: number;
   quizingCents: number;
   tiquizCents: number;
-  salesCount: number;
+  byMonth: MonthRow[];
+  nextPayout: { amountCents: number; label: string } | null;
   recent: CommissionRow[];
 } | null;
 
-const STATUS_LABEL: Record<string, string> = {
-  pending: "En attente",
-  approved: "Validé",
-  paid: "Payé",
-  cancelled: "Annulé",
-  rejected: "Rejeté",
+const STATUS_LABEL: Record<DisplayStatus, string> = {
+  guarantee: "Garantie 30j",
+  payable: "À verser",
+  paid: "Versé",
+  refunded: "Remboursé",
+};
+const STATUS_CLASS: Record<DisplayStatus, string> = {
+  guarantee: "bg-amber-100 text-amber-800",
+  payable: "bg-primary/10 text-primary",
+  paid: "bg-success/15 text-success",
+  refunded: "bg-muted text-muted-foreground line-through",
 };
 
 type Tab = "lien" | "gains" | "promo" | "emails" | "contenus" | "paiement";
@@ -299,15 +314,14 @@ export function AffiliationClient({
 
       {/* ───── Onglet Mes gains ───── */}
       {tab === "gains" && (
-        <Card>
-          <CardContent className="flex flex-col gap-4 py-5">
-            <span className="flex items-center gap-2 text-sm font-semibold">
-              <TrendingUp className="size-4 text-primary" />
-              Tes gains réels
-            </span>
-
-            {!savedId ? (
-              <div className="flex flex-col items-start gap-3">
+        <div className="flex flex-col gap-6">
+          {!savedId ? (
+            <Card>
+              <CardContent className="flex flex-col items-start gap-3 py-5">
+                <span className="flex items-center gap-2 text-sm font-semibold">
+                  <TrendingUp className="size-4 text-primary" />
+                  Tes gains réels
+                </span>
                 <p className="text-sm text-muted-foreground">
                   Ajoute ton identifiant affilié pour activer le suivi de tes commissions.
                 </p>
@@ -315,92 +329,208 @@ export function AffiliationClient({
                   Configurer mon lien
                   <ArrowRight className="size-4" />
                 </Button>
-              </div>
-            ) : (
-              <>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  <GainStat label="Total gagné" cents={gains?.totalCents ?? 0} highlight />
-                  <GainStat label="En attente" cents={gains?.pendingCents ?? 0} />
-                  <GainStat label="Validé" cents={gains?.approvedCents ?? 0} />
-                  <GainStat label="Payé" cents={gains?.paidCents ?? 0} />
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-lg border border-border p-3 text-sm">
-                    <div className="text-xs text-muted-foreground">Atelier du Quiz ({QUIZING_COMMISSION_PCT}%)</div>
-                    <div className="font-display text-xl font-bold text-primary">
-                      {eurCents(gains?.quizingCents ?? 0)}
-                    </div>
-                  </div>
-                  <div className="rounded-lg border border-border p-3 text-sm">
-                    <div className="text-xs text-muted-foreground">Tiquiz (40% récurrent)</div>
-                    <div className="font-display text-xl font-bold text-success">
-                      {eurCents(gains?.tiquizCents ?? 0)}
-                    </div>
-                  </div>
-                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              {/* Entonnoir : visites -> leads -> ventes -> remboursements */}
+              <Card>
+                <CardContent className="grid gap-3 py-5 sm:grid-cols-2 lg:grid-cols-4">
+                  <CountStat label="Visites via ton lien" value={gains?.visits ?? 0} />
+                  <CountStat label="Leads captés" value={gains?.leads ?? 0} />
+                  <CountStat label="Ventes" value={gains?.salesCount ?? 0} />
+                  <CountStat label="Remboursements" value={gains?.refundsCount ?? 0} muted />
+                </CardContent>
+              </Card>
 
-                {gains && gains.recent.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b text-left text-xs text-muted-foreground">
-                          <th className="py-2 pr-3 font-medium">Date</th>
-                          <th className="py-2 pr-3 font-medium">Produit</th>
-                          <th className="py-2 pr-3 font-medium">Vente</th>
-                          <th className="py-2 pr-3 font-medium">Commission</th>
-                          <th className="py-2 font-medium">Statut</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {gains.recent.map((r) => (
-                          <tr key={r.id} className="border-b last:border-0">
-                            <td className="py-2 pr-3 whitespace-nowrap text-muted-foreground">
-                              {new Date(r.sale_at).toLocaleDateString("fr-FR")}
-                            </td>
-                            <td className="py-2 pr-3">
-                              {r.source_app === "quizing" ? "Atelier du Quiz" : "Tiquiz"}
-                              {r.product_name ? (
-                                <span className="block text-xs text-muted-foreground">{r.product_name}</span>
-                              ) : null}
-                            </td>
-                            <td className="py-2 pr-3 whitespace-nowrap text-muted-foreground">
-                              {eurCents(r.sale_amount_cents)}
-                            </td>
-                            <td className="py-2 pr-3 whitespace-nowrap font-medium">
-                              {eurCents(r.commission_cents)}
-                            </td>
-                            <td className="py-2 whitespace-nowrap text-xs">
-                              {STATUS_LABEL[r.status] ?? r.status}
-                            </td>
+              {/* Commissions par statut (calé sur le cycle Systeme.io) */}
+              <Card>
+                <CardContent className="flex flex-col gap-4 py-5">
+                  <span className="flex items-center gap-2 text-sm font-semibold">
+                    <TrendingUp className="size-4 text-primary" />
+                    Tes commissions
+                  </span>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <GainStat label="Total gagné (net)" cents={gains?.totalCents ?? 0} highlight />
+                    <GainStat label="Garantie 30j en cours" cents={gains?.guaranteeCents ?? 0} />
+                    <GainStat label="Prêt à verser" cents={gains?.payableCents ?? 0} />
+                    <GainStat label="Remboursé" cents={gains?.refundedCents ?? 0} />
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-lg border border-border p-3 text-sm">
+                      <div className="text-xs text-muted-foreground">
+                        Atelier du Quiz ({QUIZING_COMMISSION_PCT}% du HT)
+                      </div>
+                      <div className="font-display text-xl font-bold text-primary">
+                        {eurCents(gains?.quizingCents ?? 0)}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-border p-3 text-sm">
+                      <div className="text-xs text-muted-foreground">
+                        Tiquiz ({TIQUIZ_RECURRING_PCT}% du HT, récurrent)
+                      </div>
+                      <div className="font-display text-xl font-bold text-success">
+                        {eurCents(gains?.tiquizCents ?? 0)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {gains?.nextPayout && (
+                    <div className="flex items-start gap-2 rounded-lg bg-primary/5 p-3 text-sm">
+                      <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
+                      <span>
+                        <strong>Prochain versement estimé : {eurCents(gains.nextPayout.amountCents)}</strong>,{" "}
+                        {gains.nextPayout.label}. Ce sont tes commissions dont la garantie 30 jours est passée.
+                      </span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Comment tu es payé (transparence, aligné Systeme.io) */}
+              <Card>
+                <CardContent className="flex flex-col gap-2 py-5">
+                  <span className="flex items-center gap-2 text-sm font-semibold">
+                    <Info className="size-4 text-primary" />
+                    Comment tu es payé
+                  </span>
+                  <ul className="flex flex-col gap-1.5 text-sm text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <ArrowRight className="mt-0.5 size-3.5 shrink-0 text-primary" />
+                      <span>
+                        Tu touches <strong>{QUIZING_COMMISSION_PCT}% du montant HT</strong> de chaque
+                        Atelier du Quiz vendu, et <strong>{TIQUIZ_RECURRING_PCT}% du HT</strong> chaque
+                        mois sur chaque abonnement Tiquiz parrainé.
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <ArrowRight className="mt-0.5 size-3.5 shrink-0 text-primary" />
+                      <span>
+                        Chaque vente est retenue <strong>30 jours</strong> : c'est la durée de la
+                        garantie satisfait ou remboursé. Si l'acheteur se fait rembourser pendant ce
+                        délai, la commission est annulée (c'est normal, et rare).
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <ArrowRight className="mt-0.5 size-3.5 shrink-0 text-primary" />
+                      <span>
+                        Passé ces 30 jours, la commission est acquise. Systeme.io te la verse
+                        <strong> une fois par mois, autour du 10</strong>, sur le moyen de paiement de
+                        tes réglages affilié.
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <ArrowRight className="mt-0.5 size-3.5 shrink-0 text-primary" />
+                      <span>
+                        Les montants ici sont calculés comme ceux de Systeme.io. En cas d'écart,
+                        Systeme.io reste la référence pour le paiement.
+                      </span>
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+
+              {/* Par mois */}
+              {gains && gains.byMonth.length > 0 && (
+                <Card>
+                  <CardContent className="flex flex-col gap-3 py-5">
+                    <span className="flex items-center gap-2 text-sm font-semibold">
+                      <TrendingUp className="size-4 text-primary" />
+                      Par mois
+                    </span>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b text-left text-xs text-muted-foreground">
+                            <th className="py-2 pr-3 font-medium">Mois</th>
+                            <th className="py-2 pr-3 font-medium">Ventes</th>
+                            <th className="py-2 font-medium">Commissions</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {gains.byMonth.map((m) => (
+                            <tr key={m.key} className="border-b last:border-0">
+                              <td className="py-2 pr-3 capitalize">{m.label}</td>
+                              <td className="py-2 pr-3 text-muted-foreground">{m.salesCount}</td>
+                              <td className="py-2 font-medium">{eurCents(m.commissionCents)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Détail des ventes */}
+              <Card>
+                <CardContent className="flex flex-col gap-3 py-5">
+                  <span className="flex items-center gap-2 text-sm font-semibold">
+                    <TrendingUp className="size-4 text-primary" />
+                    Détail de tes ventes
+                  </span>
+                  {gains && gains.recent.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b text-left text-xs text-muted-foreground">
+                            <th className="py-2 pr-3 font-medium">Date</th>
+                            <th className="py-2 pr-3 font-medium">Produit</th>
+                            <th className="py-2 pr-3 font-medium">Vente HT</th>
+                            <th className="py-2 pr-3 font-medium">Commission</th>
+                            <th className="py-2 font-medium">Statut</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {gains.recent.map((r) => (
+                            <tr key={r.id} className="border-b last:border-0">
+                              <td className="py-2 pr-3 whitespace-nowrap text-muted-foreground">
+                                {new Date(r.sale_at).toLocaleDateString("fr-FR")}
+                              </td>
+                              <td className="py-2 pr-3">
+                                {r.source_app === "quizing" ? "Atelier du Quiz" : "Tiquiz"}
+                                {r.product_name ? (
+                                  <span className="block text-xs text-muted-foreground">{r.product_name}</span>
+                                ) : null}
+                              </td>
+                              <td className="py-2 pr-3 whitespace-nowrap text-muted-foreground">
+                                {eurCents(r.sale_amount_cents)}
+                              </td>
+                              <td className="py-2 pr-3 whitespace-nowrap font-medium">
+                                {eurCents(r.commission_cents)}
+                              </td>
+                              <td className="py-2 whitespace-nowrap">
+                                <span
+                                  className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CLASS[r.displayStatus]}`}
+                                >
+                                  {STATUS_LABEL[r.displayStatus]}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Pas encore de commission. Dès qu'une vente passe par ton lien, elle apparaît ici.
+                    </p>
+                  )}
+                  <div>
+                    <Button asChild variant="outline" size="sm">
+                      <a href={SIO_AFFILIATE_DASHBOARD_URL} target="_blank" rel="noopener noreferrer">
+                        Voir aussi sur Systeme.io
+                        <ExternalLink className="size-4" />
+                      </a>
+                    </Button>
                   </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Pas encore de commission. Dès qu’une vente passe par ton lien, elle apparaît ici.
-                  </p>
-                )}
+                </CardContent>
+              </Card>
 
-                <p className="flex items-start gap-2 text-xs text-muted-foreground">
-                  <Info className="mt-0.5 size-3.5 shrink-0" />
-                  Le détail officiel et les paiements restent sur Systeme.io.
-                </p>
-                <div>
-                  <Button asChild variant="outline" size="sm">
-                    <a href={SIO_AFFILIATE_DASHBOARD_URL} target="_blank" rel="noopener noreferrer">
-                      Voir le détail sur Systeme.io
-                      <ExternalLink className="size-4" />
-                    </a>
-                  </Button>
-                </div>
-              </>
-            )}
-
-            <Estimator />
-          </CardContent>
-        </Card>
+              <Estimator />
+            </>
+          )}
+        </div>
       )}
 
       {/* ───── Onglet Promouvoir ───── */}
@@ -782,6 +912,15 @@ function SwipeTextBlock({ eyebrow, title, text }: { eyebrow: string; title: stri
         <CopyButton text={text} label="Copier" />
       </div>
       <pre className="mt-2 whitespace-pre-wrap text-sm text-foreground">{text}</pre>
+    </div>
+  );
+}
+
+function CountStat({ label, value, muted }: { label: string; value: number; muted?: boolean }) {
+  return (
+    <div className={`rounded-lg p-3 ${muted ? "bg-muted/40" : "bg-primary/5"}`}>
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="font-display text-2xl font-bold">{value}</div>
     </div>
   );
 }

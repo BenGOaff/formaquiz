@@ -15,6 +15,7 @@ import {
   attributeQuizingSale,
   detectProduct,
   extractAmountCents,
+  extractAmountHtCents,
   extractEmail,
   extractFunnelUrl,
   extractOfferId,
@@ -57,11 +58,13 @@ export async function POST(req: NextRequest) {
   const offerId = extractOfferId(body);
   const funnelUrl = extractFunnelUrl(body);
   const saHint = extractSaFromPayload(body);
-  const amountCents = extractAmountCents(body);
+  // Base de commission = HT (règle Béné : 70% Atelier / 40% Tiquiz sur le HT).
+  const amountCents = extractAmountHtCents(body);
+  const totalCents = extractAmountCents(body);
   const product = detectProduct(funnelUrl, offerId, productName);
 
   console.log(
-    `[affiliate/sio-sale] email=${email ?? "(none)"} order=${orderId ?? "(none)"} amount=${amountCents} url=${funnelUrl ?? "(none)"} offer=${offerId ?? "(none)"} product=${product?.source_app ?? "(none)"}`,
+    `[affiliate/sio-sale] email=${email ?? "(none)"} order=${orderId ?? "(none)"} ht=${amountCents} ttc=${totalCents} url=${funnelUrl ?? "(none)"} offer=${offerId ?? "(none)"} product=${product?.source_app ?? "(none)"}`,
   );
 
   if (!email || !orderId) {

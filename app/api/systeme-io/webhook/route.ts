@@ -12,6 +12,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSignatureMode, verifySioSignature } from "@/lib/sioWebhookSig";
 import { grantAccessByEmail, revokeAccessByEmail } from "@/lib/access/grantAccess";
 import { detectPlusTrialFunnel, maybeGrantPlusTrial } from "@/lib/plusTrial/grant";
+import { refundCommissionByOrder } from "@/lib/affiliateTracking";
 
 const WEBHOOK_SECRET = process.env.SYSTEME_IO_WEBHOOK_SECRET;
 
@@ -119,6 +120,12 @@ export async function POST(req: NextRequest) {
   // ── Révocation (remboursement / annulation) ──
   if (eventType && TERMINAL_EVENT_RE.test(eventType) && !TRANSIENT_FAILURE_RE.test(eventType)) {
     await revokeAccessByEmail(email);
+    // La commission affiliée liée à cette commande ne doit plus compter
+    // (garantie 30 jours). Best-effort : ne bloque jamais la révocation.
+    const refundOrderId = extractStr(body, ["data.order.id", "order.id", "data.order_id", "order_id", "data.id"]);
+    if (refundOrderId) {
+      await refundCommissionByOrder(refundOrderId).catch(() => ({ refunded: 0 }));
+    }
     return NextResponse.json({ ok: true, action: "revoked" });
   }
 
