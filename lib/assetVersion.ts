@@ -14,7 +14,7 @@
 //      standalone (Next ne le fait PAS tout seul), sinon le nouveau fichier
 //      n'arrive jamais sur le serveur.
 
-export const ASSET_VERSION = "2026-07-17b";
+export const ASSET_VERSION = "2026-07-19-newlogo";
 
 export const LOGO_SRC = `/quizing.png?v=${ASSET_VERSION}`;
 export const FAVICON_SRC = `/favicon.ico?v=${ASSET_VERSION}`;
