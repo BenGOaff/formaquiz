@@ -30,6 +30,8 @@ import {
   FileText,
   Video,
   MessageSquare,
+  ImageIcon,
+  Download,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -96,18 +98,29 @@ const STATUS_LABEL: Record<string, string> = {
 
 type Tab = "lien" | "gains" | "promo" | "emails" | "contenus" | "paiement";
 
+export interface AffiliateAsset {
+  id: string;
+  title: string;
+  description: string | null;
+  kind: string;
+  url: string;
+  file_type: string | null;
+}
+
 export function AffiliationClient({
   firstName,
   niche,
   activityType,
   initialAffiliateId,
   gains,
+  assets,
 }: {
   firstName: string | null;
   niche: string | null;
   activityType: string | null;
   initialAffiliateId: string;
   gains: Gains;
+  assets: AffiliateAsset[];
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>(initialAffiliateId ? "gains" : "lien");
@@ -529,11 +542,49 @@ export function AffiliationClient({
                 Ta bibliothèque de contenus
               </span>
               <p className="text-sm text-muted-foreground">
-                Des posts réseaux, des angles d'articles et des idées de vidéos, prêts à réutiliser.
-                Ton lien affilié est déjà inséré dans les posts. Adapte le ton à ta voix.
+                Des visuels à télécharger, des posts réseaux, des angles d'articles et des idées de
+                vidéos, prêts à réutiliser. Ton lien affilié est déjà inséré dans les posts. Adapte
+                le ton à ta voix.
               </p>
             </CardContent>
           </Card>
+
+          {assets.length > 0 && (
+            <Card>
+              <CardContent className="flex flex-col gap-3 py-5">
+                <span className="flex items-center gap-2 text-sm font-semibold">
+                  <ImageIcon className="size-4 text-primary" />
+                  Visuels à télécharger
+                </span>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {assets.map((a) => (
+                    <div key={a.id} className="flex flex-col gap-2 rounded-lg border border-border p-2">
+                      <div className="flex aspect-video items-center justify-center overflow-hidden rounded-md bg-muted/40">
+                        {(a.file_type ?? "").startsWith("image/") ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={a.url} alt={a.title} className="h-full w-full object-contain" />
+                        ) : (
+                          <ImageIcon className="size-7 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{a.title}</p>
+                        {a.description && (
+                          <p className="line-clamp-2 text-xs text-muted-foreground">{a.description}</p>
+                        )}
+                      </div>
+                      <Button asChild variant="outline" size="sm">
+                        <a href={a.url} target="_blank" rel="noopener noreferrer" download>
+                          <Download className="size-4" />
+                          Télécharger
+                        </a>
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardContent className="flex flex-col gap-3 py-5">
