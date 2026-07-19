@@ -92,6 +92,33 @@ export function welcomeEmail({
   isNewAccount: boolean;
 }): BuiltEmail {
   const cta = isNewAccount ? "Activer mon accès" : "Accéder à mon espace";
+  const loginUrl = `${APP_URL}/login`;
+  const forgotUrl = `${APP_URL}/mot-de-passe-oublie`;
+  const dashboardUrl = `${APP_URL}/dashboard`;
+
+  // Encadré aide-mémoire (connexion, mot de passe, lien magique, démarrage).
+  const helpBox = `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 4px;background:#f4f5fb;border:1px solid #e6e8f4;border-radius:12px;">
+      <tr><td style="padding:18px 20px;">
+        <p style="margin:0 0 12px;font-size:14px;font-weight:700;color:${INK};">Comment ça marche, en clair</p>
+        <p style="margin:0 0 10px;font-size:14px;line-height:21px;color:${INK};">
+          <strong>1. Te connecter.</strong> ${isNewAccount
+            ? "Le bouton ci-dessus active ton compte et te fait choisir un mot de passe."
+            : "Le bouton ci-dessus te connecte directement."} Ensuite, ton adresse de connexion est&nbsp;:
+          <a href="${loginUrl}" target="_blank" style="color:${BRAND};">${APP_URL.replace(/^https?:\/\//, "")}/login</a>
+        </p>
+        <p style="margin:0 0 10px;font-size:14px;line-height:21px;color:${INK};">
+          <strong>2. Choisir ou changer ton mot de passe.</strong> Une fois connecté, va dans <strong>Profil</strong> (menu en haut) pour définir ou modifier ton mot de passe quand tu veux.
+        </p>
+        <p style="margin:0 0 10px;font-size:14px;line-height:21px;color:${INK};">
+          <strong>3. Pas de mot de passe sous la main&nbsp;?</strong> Sur la page de connexion, clique sur <a href="${forgotUrl}" target="_blank" style="color:${BRAND};">Mot de passe oublié</a>&nbsp;: tu reçois un lien magique par email qui te connecte en un clic, sans mot de passe.
+        </p>
+        <p style="margin:0;font-size:14px;line-height:21px;color:${INK};">
+          <strong>4. Commencer le parcours.</strong> Va sur ton <a href="${dashboardUrl}" target="_blank" style="color:${BRAND};">tableau de bord</a> et lance le <strong>Jour 1</strong>. Une action par jour, et le coach IA est là dès que tu bloques.
+        </p>
+      </td></tr>
+    </table>`;
+
   const inner = `
     <h1 style="margin:0 0 16px;font-size:22px;line-height:28px;color:${INK};">Bienvenue dans L'Atelier du Quiz.</h1>
     <p style="margin:0 0 16px;font-size:15px;line-height:23px;color:${INK};">
@@ -103,13 +130,10 @@ export function welcomeEmail({
       <li>Un coach IA disponible à toute heure dès que tu bloques.</li>
       <li>À la fin : un quiz lead-magnet publié qui capte des leads en automatique.</li>
     </ul>
-    <p style="margin:0 0 20px;font-size:15px;line-height:23px;color:${INK};">
-      ${isNewAccount
-        ? "Clique ci-dessous pour activer ton compte et choisir ton mot de passe."
-        : "Clique ci-dessous pour rejoindre ton espace et reprendre là où tu en es."}
-    </p>
     ${button(actionUrl, cta)}
     ${fallbackLink(actionUrl)}
+    <div style="height:20px;"></div>
+    ${helpBox}
   `;
   return {
     subject: isNewAccount

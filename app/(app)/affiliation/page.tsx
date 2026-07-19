@@ -5,7 +5,8 @@
 import { redirect } from "next/navigation";
 import { getViewer } from "@/lib/parcours";
 import { getAffiliateGains, type AffiliateGains } from "@/lib/affiliateTracking";
-import { AffiliationClient } from "./AffiliationClient";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { AffiliationClient, type AffiliateAsset } from "./AffiliationClient";
 
 export const metadata = {
   title: "Affiliation - L'Atelier du Quiz",
@@ -20,6 +21,14 @@ export default async function AffiliationPage() {
   // Vrais gains depuis les commissions attribuées par les webhooks Systeme.io.
   const gains: AffiliateGains | null = sa ? await getAffiliateGains(sa) : null;
 
+  // Visuels déposés par l'admin, à récupérer par les affiliés.
+  const { data: assetRows } = await supabaseAdmin
+    .from("affiliate_assets")
+    .select("id, title, description, kind, url, file_type")
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: false });
+  const assets = (assetRows ?? []) as AffiliateAsset[];
+
   return (
     <AffiliationClient
       firstName={p?.full_name ?? null}
@@ -27,6 +36,7 @@ export default async function AffiliationPage() {
       activityType={p?.activity_type ?? null}
       initialAffiliateId={sa}
       gains={gains}
+      assets={assets}
     />
   );
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, Users, Sparkles, Languages, Boxes, Inbox, Star, ArrowUpRight } from "lucide-react";
+import { CalendarDays, Users, Sparkles, Languages, Boxes, Inbox, Star, Image, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
@@ -13,6 +13,7 @@ const links = [
   { href: "/admin/modeles", label: "Modèles SIO", icon: Boxes },
   { href: "/admin/feedback", label: "Retours", icon: Inbox },
   { href: "/admin/spotlights", label: "Mises en avant", icon: Star },
+  { href: "/admin/visuels", label: "Visuels affiliés", icon: Image },
 ];
 
 export function AdminNav() {
