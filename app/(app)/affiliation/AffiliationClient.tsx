@@ -354,8 +354,14 @@ export function AffiliationClient({
                     <GainStat label="Total gagné (net)" cents={gains?.totalCents ?? 0} highlight />
                     <GainStat label="Garantie 30j en cours" cents={gains?.guaranteeCents ?? 0} />
                     <GainStat label="Prêt à verser" cents={gains?.payableCents ?? 0} />
-                    <GainStat label="Remboursé" cents={gains?.refundedCents ?? 0} />
+                    <GainStat label="Versé (estimé)" cents={gains?.paidCents ?? 0} />
                   </div>
+                  {(gains?.refundsCount ?? 0) > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Remboursé : {eurCents(gains?.refundedCents ?? 0)} ({gains?.refundsCount} vente
+                      {(gains?.refundsCount ?? 0) > 1 ? "s" : ""}), déjà déduit de ton total.
+                    </p>
+                  )}
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="rounded-lg border border-border p-3 text-sm">
                       <div className="text-xs text-muted-foreground">

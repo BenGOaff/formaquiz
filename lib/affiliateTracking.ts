@@ -429,9 +429,20 @@ export async function getAffiliateGains(sa: string): Promise<AffiliateGains> {
     } else if (r.status === "paid") {
       displayStatus = "paid";
     } else {
-      // pending / approved : acquis si la garantie est passée.
-      const matured = now.getTime() - new Date(r.sale_at).getTime() >= holdMs;
-      displayStatus = matured ? "payable" : "guarantee";
+      // pending / approved : cycle Systeme.io.
+      //  - garantie : moins de 30 jours après la vente.
+      //  - à verser : garantie passée, avant le prochain versement mensuel.
+      //  - versé (estimé) : le versement (~10 du mois suivant la maturité) est
+      //    passé. Systeme.io reste la référence si un solde sous le minimum
+      //    a repoussé le paiement.
+      const maturedAt = new Date(r.sale_at).getTime() + holdMs;
+      if (now.getTime() < maturedAt) {
+        displayStatus = "guarantee";
+      } else {
+        const md = new Date(maturedAt);
+        const payoutDate = new Date(md.getFullYear(), md.getMonth() + 1, 10);
+        displayStatus = now.getTime() >= payoutDate.getTime() ? "paid" : "payable";
+      }
     }
 
     if (displayStatus === "refunded") {
