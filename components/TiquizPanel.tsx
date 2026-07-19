@@ -35,6 +35,56 @@ export function TiquizPanel({
   const [disconnecting, setDisconnecting] = useState(false);
   const autoRan = useRef(false);
 
+  // Sélecteur projet/quiz (Gwenn 19 juil 2026) : pour les comptes Tiquiz avec
+  // plusieurs projets/quiz, choisir lequel s'affiche. La sélection est
+  // mémorisée côté serveur ; on re-synchronise à chaque changement.
+  type ProjectRef = { id: string; name: string; is_default: boolean };
+  type QuizRef = { id: string; title: string; project_id: string | null };
+  const [projects, setProjects] = useState<ProjectRef[]>([]);
+  const [quizzes, setQuizzes] = useState<QuizRef[]>([]);
+  const [scope, setScope] = useState<string>("");
+
+  useEffect(() => {
+    if (!connected) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/me/tiquiz-quizzes");
+        const data = await res.json().catch(() => ({}));
+        if (cancelled || !data?.ok) return;
+        setProjects((data.projects ?? []) as ProjectRef[]);
+        setQuizzes((data.quizzes ?? []) as QuizRef[]);
+        setScope(String(data.selectedScope ?? ""));
+      } catch {
+        /* liste indispo : on masque juste le sélecteur */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [connected]);
+
+  async function changeScope(next: string) {
+    setScope(next);
+    setBusy(true);
+    try {
+      await fetch("/api/me/tiquiz-selection", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scope: next }),
+      });
+      // Re-synchronise les métriques avec la nouvelle sélection puis refresh.
+      await fetch("/api/integrations/tiquiz/sync", { method: "POST" });
+      // Signale au Quiz Doctor (même page) de se ré-auditer sur la sélection.
+      window.dispatchEvent(new Event("tiquiz-scope-changed"));
+      router.refresh();
+    } catch {
+      toast.error("Impossible d'appliquer la sélection.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function disconnect() {
     if (!confirm("Déconnecter ce compte Tiquiz ? Tes badges déjà obtenus restent acquis.")) return;
     setDisconnecting(true);
@@ -121,6 +171,51 @@ export function TiquizPanel({
             {busy ? "..." : "Actualiser"}
           </Button>
         </div>
+
+        {/* Sélecteur projet/quiz : affiché seulement si l'user a de quoi
+            choisir (plusieurs quiz ou plusieurs projets). */}
+        {(quizzes.length > 1 || projects.length > 1) && (
+          <div className="flex flex-col gap-1">
+            <label htmlFor="tiquiz-scope" className="text-xs text-muted-foreground">
+              Projet / quiz affiché
+            </label>
+            <select
+              id="tiquiz-scope"
+              value={scope}
+              onChange={(e) => changeScope(e.target.value)}
+              disabled={busy}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            >
+              <option value="">Tous mes quiz</option>
+              {projects.map((p) => {
+                const projQuizzes = quizzes.filter((q) => q.project_id === p.id);
+                if (projQuizzes.length === 0) return null;
+                return (
+                  <optgroup key={p.id} label={p.name}>
+                    <option value={`project:${p.id}`}>Tout {p.name}</option>
+                    {projQuizzes.map((q) => (
+                      <option key={q.id} value={`quiz:${q.id}`}>
+                        {q.title}
+                      </option>
+                    ))}
+                  </optgroup>
+                );
+              })}
+              {/* Quiz sans projet (project_id null) : rares, mais on les montre. */}
+              {quizzes.filter((q) => !q.project_id).length > 0 && (
+                <optgroup label="Sans projet">
+                  {quizzes
+                    .filter((q) => !q.project_id)
+                    .map((q) => (
+                      <option key={q.id} value={`quiz:${q.id}`}>
+                        {q.title}
+                      </option>
+                    ))}
+                </optgroup>
+              )}
+            </select>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {tiles.map((t) => (

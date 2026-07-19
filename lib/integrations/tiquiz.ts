@@ -42,6 +42,16 @@ export interface TiquizConnection {
   connected_at: string;
   last_synced_at: string | null;
   metrics: TiquizMetrics | null;
+  /** Sélection projet/quiz mémorisée : "" (tout) | "project:<id>" | "quiz:<id>". */
+  selected_scope: string | null;
+}
+
+/** Traduit la sélection mémorisée en query string pour l'API partenaire. */
+export function scopeToQuery(scope: string | null | undefined): string {
+  const s = String(scope ?? "").trim();
+  if (s.startsWith("quiz:")) return `?quizId=${encodeURIComponent(s.slice(5))}`;
+  if (s.startsWith("project:")) return `?projectId=${encodeURIComponent(s.slice(8))}`;
+  return "";
 }
 
 export async function getTiquizConnection(userId: string): Promise<TiquizConnection | null> {
@@ -90,7 +100,7 @@ export async function fetchQuizAudit(
   const conn = await getTiquizConnection(userId);
   if (!conn?.token) return null;
   try {
-    const res = await fetch(`${TIQUIZ_BASE}/api/partner/quiz-audit`, {
+    const res = await fetch(`${TIQUIZ_BASE}/api/partner/quiz-audit${scopeToQuery(conn.selected_scope)}`, {
       headers: { "x-partner-secret": SHARED, Authorization: `Bearer ${conn.token}` },
       cache: "no-store",
     });
@@ -143,9 +153,38 @@ export async function fetchQuizProfiles(
   return (best.resultProfiles ?? []).filter((p) => p.title.trim().length > 0);
 }
 
-async function fetchMetrics(token: string): Promise<TiquizMetrics | null> {
+export interface TiquizProjectRef { id: string; name: string; is_default: boolean }
+export interface TiquizQuizRef { id: string; title: string; project_id: string | null; mode: string | null; status: string | null }
+
+/** Liste des projets + quiz du compte Tiquiz (pour le sélecteur). Titres
+ *  nettoyés du HTML. Renvoie null si non connecté / erreur. */
+export async function fetchTiquizQuizList(
+  userId: string,
+): Promise<{ projects: TiquizProjectRef[]; quizzes: TiquizQuizRef[] } | null> {
+  const conn = await getTiquizConnection(userId);
+  if (!conn?.token) return null;
   try {
-    const res = await fetch(`${TIQUIZ_BASE}/api/partner/metrics`, {
+    const res = await fetch(`${TIQUIZ_BASE}/api/partner/quizzes`, {
+      headers: { "x-partner-secret": SHARED, Authorization: `Bearer ${conn.token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (!json?.ok) return null;
+    const projects = (json.projects ?? []) as TiquizProjectRef[];
+    const quizzes = ((json.quizzes ?? []) as TiquizQuizRef[]).map((q) => ({
+      ...q,
+      title: stripTiquizHtml(q.title) || "Quiz sans titre",
+    }));
+    return { projects, quizzes };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchMetrics(token: string, scope?: string | null): Promise<TiquizMetrics | null> {
+  try {
+    const res = await fetch(`${TIQUIZ_BASE}/api/partner/metrics${scopeToQuery(scope)}`, {
       headers: { "x-partner-secret": SHARED, Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
@@ -296,7 +335,7 @@ export async function syncMetrics(
   const conn = await getTiquizConnection(userId);
   if (!conn) return { metrics: null, newBadges: [] };
 
-  const metrics = await fetchMetrics(conn.token);
+  const metrics = await fetchMetrics(conn.token, conn.selected_scope);
   if (!metrics) return { metrics: conn.metrics, newBadges: [] };
 
   await supabaseAdmin
