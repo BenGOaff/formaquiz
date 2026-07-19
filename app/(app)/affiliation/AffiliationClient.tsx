@@ -6,7 +6,7 @@
 // VRAIS gains (commissions attribuées par les webhooks) + un simulateur, et
 // un kit de promo personnalisé selon le business de l'élève.
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -32,6 +32,9 @@ import {
   MessageSquare,
   ImageIcon,
   Download,
+  Pencil,
+  RotateCcw,
+  Bold,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -59,6 +62,7 @@ import {
   VIDEO_IDEAS,
   fillSwipe,
 } from "@/lib/affiliateSwipe";
+import { renderSwipeEmailHtml } from "@/lib/affiliateEmailRender";
 
 const eur = (n: number) =>
   new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(
@@ -122,6 +126,8 @@ export interface AffiliateAsset {
   file_type: string | null;
 }
 
+export type EmailOverride = { subject?: string | null; bodyHtml?: string | null };
+
 export function AffiliationClient({
   firstName,
   niche,
@@ -129,6 +135,7 @@ export function AffiliationClient({
   initialAffiliateId,
   gains,
   assets,
+  emailOverrides,
 }: {
   firstName: string | null;
   niche: string | null;
@@ -136,6 +143,7 @@ export function AffiliationClient({
   initialAffiliateId: string;
   gains: Gains;
   assets: AffiliateAsset[];
+  emailOverrides: Record<string, EmailOverride>;
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>(initialAffiliateId ? "gains" : "lien");
@@ -663,7 +671,13 @@ export function AffiliationClient({
           </Card>
 
           {SWIPE_EMAILS.map((mail) => (
-            <SwipeEmailCard key={mail.n} mail={mail} link={link} firstName={firstName} />
+            <SwipeEmailCard
+              key={mail.n}
+              mail={mail}
+              link={link}
+              firstName={firstName}
+              override={emailOverrides[String(mail.n)]}
+            />
           ))}
         </div>
       )}
@@ -859,17 +873,117 @@ function CopyButton({ text, label = "Copier" }: { text: string; label?: string }
   );
 }
 
-/** Un email de la séquence swipe : objets A/B/C + corps, avec copie. */
+/** Texte brut (repli) depuis du HTML, pour le copier-coller sans HTML. */
+function htmlToPlain(html: string): string {
+  if (typeof document === "undefined") return html;
+  const div = document.createElement("div");
+  div.innerHTML = html;
+  return div.innerText.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+/** Bouton copier qui préserve la mise en forme (text/html + repli text/plain). */
+function CopyRichButton({ html, label = "Copier le mail" }: { html: string; label?: string }) {
+  const [done, setDone] = useState(false);
+  async function copy() {
+    const text = htmlToPlain(html);
+    try {
+      if (typeof window !== "undefined" && "ClipboardItem" in window && navigator.clipboard?.write) {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "text/html": new Blob([html], { type: "text/html" }),
+            "text/plain": new Blob([text], { type: "text/plain" }),
+          }),
+        ]);
+      } else {
+        await navigator.clipboard.writeText(text);
+      }
+      setDone(true);
+      toast.success("Copié avec la mise en forme !");
+      setTimeout(() => setDone(false), 1800);
+    } catch {
+      try {
+        await navigator.clipboard.writeText(text);
+        setDone(true);
+        setTimeout(() => setDone(false), 1800);
+      } catch {
+        toast.error("Impossible de copier. Sélectionne le texte à la main.");
+      }
+    }
+  }
+  return (
+    <Button size="sm" onClick={copy} className="shrink-0">
+      {done ? <Check className="size-4" /> : <Copy className="size-4" />}
+      {done ? "Copié" : label}
+    </Button>
+  );
+}
+
+/**
+ * Un email de la séquence : objets A/B/C + corps RICHE (vrai gras, tailles,
+ * couleurs, interligne), éditable et enregistrable par l'affilié, copiable
+ * avec la mise en forme. Aucun markdown affiché.
+ */
 function SwipeEmailCard({
   mail,
   link,
   firstName,
+  override,
 }: {
   mail: (typeof SWIPE_EMAILS)[number];
   link: string;
   firstName: string | null;
+  override?: EmailOverride;
 }) {
-  const body = fillSwipe(mail.body, { link, firstName });
+  const defaultHtml = useMemo(
+    () => renderSwipeEmailHtml(fillSwipe(mail.body, { link, firstName })),
+    [mail.body, link, firstName],
+  );
+  const [bodyHtml, setBodyHtml] = useState<string>(override?.bodyHtml || defaultHtml);
+  const [customized, setCustomized] = useState<boolean>(!!override?.bodyHtml);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const editorRef = useRef<HTMLDivElement | null>(null);
+
+  async function patch(payload: { subject?: string | null; bodyHtml?: string | null }) {
+    const res = await fetch("/api/me/affiliate-emails", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ n: mail.n, ...payload }),
+    });
+    if (!res.ok) throw new Error("save failed");
+  }
+
+  async function save() {
+    const html = editorRef.current?.innerHTML ?? bodyHtml;
+    setSaving(true);
+    try {
+      await patch({ bodyHtml: html });
+      setBodyHtml(html);
+      setCustomized(true);
+      setEditing(false);
+      toast.success("Ton email est enregistré.");
+    } catch {
+      toast.error("Enregistrement impossible. Réessaie.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function reset() {
+    setSaving(true);
+    try {
+      await patch({ bodyHtml: null, subject: null });
+      setBodyHtml(defaultHtml);
+      setCustomized(false);
+      setEditing(false);
+      toast.success("Email réinitialisé.");
+    } catch {
+      toast.error("Réinitialisation impossible.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <Card>
       <CardContent className="flex flex-col gap-3 py-5">
@@ -877,10 +991,11 @@ function SwipeEmailCard({
           <div className="flex flex-col gap-0.5">
             <span className="text-xs font-semibold uppercase tracking-wide text-primary">
               Email {mail.n}
+              {customized ? " · personnalisé" : ""}
             </span>
             <span className="text-sm font-semibold">{mail.role}</span>
           </div>
-          <CopyButton text={body} label="Copier le mail" />
+          {!editing && <CopyRichButton html={bodyHtml} />}
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -895,11 +1010,70 @@ function SwipeEmailCard({
           </ul>
         </div>
 
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2">
           <span className="text-xs font-medium text-muted-foreground">Corps du mail</span>
-          <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-lg border border-border bg-muted/30 p-3 text-sm">
-            {body}
-          </pre>
+          {editing ? (
+            <>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onMouseDown={(e) => {
+                    // Garde la sélection dans l'éditeur.
+                    e.preventDefault();
+                    document.execCommand("bold");
+                  }}
+                >
+                  <Bold className="size-4" />
+                  Gras
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  Sélectionne du texte puis clique sur Gras.
+                </span>
+              </div>
+              <div
+                ref={editorRef}
+                contentEditable
+                suppressContentEditableWarning
+                dangerouslySetInnerHTML={{ __html: bodyHtml }}
+                className="max-h-96 min-h-40 overflow-auto rounded-lg border border-input bg-background p-4 text-sm outline-none focus:ring-2 focus:ring-primary/40"
+              />
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={save} disabled={saving}>
+                  {saving ? "Enregistrement..." : "Enregistrer"}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setEditing(false)} disabled={saving}>
+                  Annuler
+                </Button>
+                {customized && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={reset}
+                    disabled={saving}
+                    className="ml-auto text-muted-foreground"
+                  >
+                    <RotateCcw className="size-3.5" />
+                    Revenir au modèle
+                  </Button>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <div
+                className="max-h-96 overflow-auto rounded-lg border border-border bg-muted/20 p-4"
+                dangerouslySetInnerHTML={{ __html: bodyHtml }}
+              />
+              <div>
+                <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+                  <Pencil className="size-3.5" />
+                  Personnaliser cet email
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       </CardContent>
     </Card>
