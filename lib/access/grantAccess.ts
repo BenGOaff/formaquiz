@@ -74,11 +74,18 @@ export async function grantAccessByEmail(
     created = true;
     actionUrl = data.properties?.action_link ?? null;
   } else {
-    // Compte existant : lien magique pour une entree directe dans l'espace.
+    // Compte existant : lien magique qui retombe sur /bienvenue (page
+    // PUBLIQUE qui consomme les jetons du hash et ÉTABLIT la session).
+    // NB : viser /dashboard directement échoue -> le middleware bloque
+    // (pas encore de cookie de session) et renvoie vers /login AVANT que
+    // le hash #access_token soit consommé, d'où l'élève coincé sur un
+    // formulaire de connexion sans mot de passe (drame 19 juil 2026).
+    // /bienvenue les connecte directement puis propose de choisir un mot
+    // de passe (ou "plus tard" -> dashboard).
     const { data } = await supabaseAdmin.auth.admin.generateLink({
       type: "magiclink",
       email,
-      options: { redirectTo: `${APP_URL}/dashboard` },
+      options: { redirectTo: `${APP_URL}/bienvenue` },
     });
     actionUrl = data?.properties?.action_link ?? null;
   }
@@ -107,6 +114,30 @@ export async function grantAccessByEmail(
   }
 
   return { ok: true, created };
+}
+
+/**
+ * Renvoie le lien d'accès à un élève existant (il n'a pas reçu / a perdu
+ * l'email). Génère un lien magique frais vers /bienvenue (connexion directe
+ * + choix du mot de passe) et renvoie NOTRE email brandé. NE MODIFIE PAS
+ * l'enrollment (un simple renvoi ne (re)donne pas l'accès tout seul).
+ */
+export async function resendAccessLinkByEmail(email: string): Promise<GrantResult> {
+  const user = await findUserByEmail(email);
+  if (!user) return { ok: false, created: false, reason: "no_account" };
+
+  const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+    type: "magiclink",
+    email,
+    options: { redirectTo: `${APP_URL}/bienvenue` },
+  });
+  const actionUrl = data?.properties?.action_link ?? null;
+  if (error || !actionUrl) return { ok: false, created: false, reason: "link_failed" };
+
+  const { subject, html } = welcomeEmail({ actionUrl, isNewAccount: false });
+  const sent = await sendEmail({ to: email, subject, html });
+  if (!sent.ok) return { ok: false, created: false, reason: sent.reason ?? "email_failed" };
+  return { ok: true, created: false };
 }
 
 /**
