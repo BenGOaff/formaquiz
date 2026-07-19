@@ -16,11 +16,12 @@ import { refundCommissionByOrder } from "@/lib/affiliateTracking";
 
 const WEBHOOK_SECRET = process.env.SYSTEME_IO_WEBHOOK_SECRET;
 
-// Événements qui terminent un accès payé : on révoque l'enrollment.
-const TERMINAL_EVENT_RE = /CANCEL|REFUND|EXPIR|CHARGEBACK/i;
+// Événements qui terminent un accès payé : on révoque l'enrollment + on
+// annule la commission affiliée. Termes EN et FR (Systeme.io "Vente annulée").
+const TERMINAL_EVENT_RE = /CANCEL|REFUND|EXPIR|CHARGEBACK|ANNUL|REMBOURS|RESILI|RÉSILI/i;
 // Problème de paiement transitoire : on ne révoque PAS (le retry peut
-// réussir, SIO enverra un CANCEL définitif sinon).
-const TRANSIENT_FAILURE_RE = /FAIL|DECLIN|DISPUT/i;
+// réussir, SIO enverra un CANCEL définitif sinon). "Échec du paiement".
+const TRANSIENT_FAILURE_RE = /FAIL|DECLIN|DISPUT|ECHEC|ÉCHEC/i;
 
 function secretMatches(received: string | null, expected: string | undefined): boolean {
   if (!received || !expected) return false;
@@ -91,6 +92,12 @@ export async function POST(req: NextRequest) {
 
   const eventType = extractStr(body, ["type", "event", "event_type", "data.type"]);
   const eventId = extractStr(body, ["id", "event_id", "data.id", "webhook_event_id"]);
+  // Classification explicite via l'URL (?event=cancel), utile quand le payload
+  // Systeme.io "Vente annulée" ne porte pas de type reconnaissable : il suffit
+  // de pointer cette automatisation sur ...&event=cancel pour garantir la
+  // révocation d'accès + l'annulation de la commission.
+  const eventHint = (new URL(req.url).searchParams.get("event") ?? "").toLowerCase();
+  const forcedTerminal = /cancel|refund|annul|rembours|resili/.test(eventHint);
   const email = extractStr(body, [
     "data.customer.email",
     "customer.email",
@@ -118,7 +125,10 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Révocation (remboursement / annulation) ──
-  if (eventType && TERMINAL_EVENT_RE.test(eventType) && !TRANSIENT_FAILURE_RE.test(eventType)) {
+  const isTerminal =
+    forcedTerminal ||
+    (!!eventType && TERMINAL_EVENT_RE.test(eventType) && !TRANSIENT_FAILURE_RE.test(eventType));
+  if (isTerminal) {
     await revokeAccessByEmail(email);
     // La commission affiliée liée à cette commande ne doit plus compter
     // (garantie 30 jours). Best-effort : ne bloque jamais la révocation.
