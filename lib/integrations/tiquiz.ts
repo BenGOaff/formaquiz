@@ -13,6 +13,25 @@ import type { TiquizMetrics } from "@/lib/types";
 const TIQUIZ_BASE = (process.env.TIQUIZ_BASE_URL ?? "https://quiz.tipote.com").trim();
 const SHARED = (process.env.PARTNER_SHARED_SECRET ?? "").trim();
 
+/**
+ * Les titres de quiz Tiquiz sont stockés en HTML riche (spans colorés,
+ * alignement). Dans l'Atelier on les affiche en TEXTE seul, sinon le user
+ * voit le balisage brut (drame Gwenn 19 juil 2026 : "Ton meilleur quiz :
+ * <div style=...>"). On nettoie à l'ingestion, une seule fois.
+ */
+export function stripTiquizHtml(input: string | null | undefined): string {
+  return String(input ?? "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#0*39;|&apos;|&rsquo;/gi, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export const TIQUIZ_AUTHORIZE_URL = `${TIQUIZ_BASE}/connect/quizing`;
 
 export interface TiquizConnection {
@@ -78,7 +97,18 @@ export async function fetchQuizAudit(
     if (!res.ok) return null;
     const json = await res.json();
     if (!json?.ok) return null;
-    return (json.quizzes ?? []) as import("@/lib/quizDoctor").QuizStruct[];
+    const quizzes = (json.quizzes ?? []) as import("@/lib/quizDoctor").QuizStruct[];
+    // Nettoyage HTML des titres (quiz + profils de résultat) : affichés en
+    // texte seul dans le Quiz Doctor et les emails par profil.
+    for (const q of quizzes) {
+      if (q && typeof q.title === "string") q.title = stripTiquizHtml(q.title);
+      if (Array.isArray(q?.resultProfiles)) {
+        for (const p of q.resultProfiles) {
+          if (p && typeof p.title === "string") p.title = stripTiquizHtml(p.title);
+        }
+      }
+    }
+    return quizzes;
   } catch {
     return null;
   }
@@ -122,7 +152,12 @@ async function fetchMetrics(token: string): Promise<TiquizMetrics | null> {
     if (!res.ok) return null;
     const json = await res.json();
     if (!json?.ok) return null;
-    return json.metrics as TiquizMetrics;
+    const metrics = json.metrics as TiquizMetrics;
+    // Titre du meilleur quiz : texte seul (le HTML riche vient de Tiquiz).
+    if (metrics?.topQuiz?.title) {
+      metrics.topQuiz.title = stripTiquizHtml(metrics.topQuiz.title);
+    }
+    return metrics;
   } catch {
     return null;
   }
