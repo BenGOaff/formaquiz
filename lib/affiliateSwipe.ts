@@ -365,6 +365,60 @@ export const VIDEO_IDEAS: VideoIdea[] = [
   },
 ];
 
+export interface DefaultAsset {
+  title: string;
+  description: string;
+  /** Chemin public (servi depuis /public/affiliate-kit). */
+  url: string;
+  fileType: string;
+}
+
+/**
+ * Kit visuel officiel de L'Atelier du Quiz, fourni d'office à tous les
+ * affiliés (logo, icône, mockups, jaquette). Servi depuis /public : le
+ * process de deploy doit recopier /public dans le build standalone (déjà
+ * le cas pour le logo / favicon). Béné peut en ajouter d'autres via
+ * l'admin (bucket Supabase) ; les deux listes s'affichent ensemble.
+ */
+export const DEFAULT_ASSETS: DefaultAsset[] = [
+  {
+    title: "Logo Atelier du Quiz",
+    description: "Logo complet, fond transparent (PNG).",
+    url: "/affiliate-kit/logo-atelier-du-quiz.png",
+    fileType: "image/png",
+  },
+  {
+    title: "Logo Atelier du Quiz (vectoriel)",
+    description: "Logo complet en SVG, net à toutes les tailles.",
+    url: "/affiliate-kit/logo-atelier-du-quiz.svg",
+    fileType: "image/svg+xml",
+  },
+  {
+    title: "Icône seule",
+    description: "Icône carrée, idéale en avatar ou vignette.",
+    url: "/affiliate-kit/logo-icone.png",
+    fileType: "image/png",
+  },
+  {
+    title: "Mockup produit",
+    description: "Visuel produit à poser dans tes posts et emails.",
+    url: "/affiliate-kit/mockup-atelier-du-quiz.png",
+    fileType: "image/png",
+  },
+  {
+    title: "Mockup produit (fond blanc)",
+    description: "Même mockup sur fond blanc, pour les fonds clairs.",
+    url: "/affiliate-kit/mockup-atelier-du-quiz-fond-blanc.png",
+    fileType: "image/png",
+  },
+  {
+    title: "Jaquette Atelier du Quiz",
+    description: "Couverture verticale, pour vignettes et miniatures.",
+    url: "/affiliate-kit/jaquette-atelier-du-quiz.png",
+    fileType: "image/png",
+  },
+];
+
 /** Remplace {LIEN} et {TON_PRENOM} par les valeurs de l'affilié. {first_name}
  *  est laissé intact (champ de fusion de l'outil d'emailing de l'affilié). */
 export function fillSwipe(text: string, opts: { link: string; firstName: string | null }): string {

@@ -60,6 +60,7 @@ import {
   SWIPE_POSTS,
   ARTICLE_ANGLES,
   VIDEO_IDEAS,
+  DEFAULT_ASSETS,
   fillSwipe,
 } from "@/lib/affiliateSwipe";
 import { renderSwipeEmailHtml } from "@/lib/affiliateEmailRender";
@@ -699,42 +700,34 @@ export function AffiliationClient({
             </CardContent>
           </Card>
 
-          {assets.length > 0 && (
-            <Card>
-              <CardContent className="flex flex-col gap-3 py-5">
-                <span className="flex items-center gap-2 text-sm font-semibold">
-                  <ImageIcon className="size-4 text-primary" />
-                  Visuels à télécharger
-                </span>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {assets.map((a) => (
-                    <div key={a.id} className="flex flex-col gap-2 rounded-lg border border-border p-2">
-                      <div className="flex aspect-video items-center justify-center overflow-hidden rounded-md bg-muted/40">
-                        {(a.file_type ?? "").startsWith("image/") ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={a.url} alt={a.title} className="h-full w-full object-contain" />
-                        ) : (
-                          <ImageIcon className="size-7 text-muted-foreground" />
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">{a.title}</p>
-                        {a.description && (
-                          <p className="line-clamp-2 text-xs text-muted-foreground">{a.description}</p>
-                        )}
-                      </div>
-                      <Button asChild variant="outline" size="sm">
-                        <a href={a.url} target="_blank" rel="noopener noreferrer" download>
-                          <Download className="size-4" />
-                          Télécharger
-                        </a>
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          <Card>
+            <CardContent className="flex flex-col gap-3 py-5">
+              <span className="flex items-center gap-2 text-sm font-semibold">
+                <ImageIcon className="size-4 text-primary" />
+                Visuels à télécharger
+              </span>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {DEFAULT_ASSETS.map((a) => (
+                  <AssetTile
+                    key={a.url}
+                    url={a.url}
+                    title={a.title}
+                    description={a.description}
+                    fileType={a.fileType}
+                  />
+                ))}
+                {assets.map((a) => (
+                  <AssetTile
+                    key={a.id}
+                    url={a.url}
+                    title={a.title}
+                    description={a.description}
+                    fileType={a.file_type}
+                  />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
           <Card>
             <CardContent className="flex flex-col gap-3 py-5">
@@ -1077,6 +1070,43 @@ function SwipeEmailCard({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/** Vignette d'un visuel téléchargeable (kit officiel ou upload admin). */
+function AssetTile({
+  url,
+  title,
+  description,
+  fileType,
+}: {
+  url: string;
+  title: string;
+  description?: string | null;
+  fileType?: string | null;
+}) {
+  const isImage = (fileType ?? "").startsWith("image/");
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-border p-2">
+      <div className="flex aspect-video items-center justify-center overflow-hidden rounded-md bg-muted/40">
+        {isImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={url} alt={title} className="h-full w-full object-contain" />
+        ) : (
+          <ImageIcon className="size-7 text-muted-foreground" />
+        )}
+      </div>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium">{title}</p>
+        {description && <p className="line-clamp-2 text-xs text-muted-foreground">{description}</p>}
+      </div>
+      <Button asChild variant="outline" size="sm">
+        <a href={url} target="_blank" rel="noopener noreferrer" download>
+          <Download className="size-4" />
+          Télécharger
+        </a>
+      </Button>
+    </div>
   );
 }
 
