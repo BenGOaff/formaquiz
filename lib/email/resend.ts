@@ -3,13 +3,19 @@
 //
 // Config requise dans le .env :
 //   RESEND_API_KEY        cle API Resend (re_...)
-//   QUIZING_EMAIL_FROM  expediteur sur le domaine verifie,
-//                         ex: "L'Atelier du Quiz <bonjour@send.tipote.com>"
+//   FORMAQUIZ_EMAIL_FROM  expediteur sur le domaine verifie,
+//                         ex: "FormaQuiz <bonjour@send.tipote.com>"
+//                         (alias historique accepte : QUIZING_EMAIL_FROM)
 // Optionnel :
-//   QUIZING_REPLY_TO    adresse de reponse reellement relevee
+//   FORMAQUIZ_REPLY_TO    adresse de reponse reellement relevee
 //                         (ex: une boite que Bene lit). Sans ca, les
 //                         reponses partent vers le domaine d'envoi et
 //                         risquent de se perdre.
+//                         (alias historique accepte : QUIZING_REPLY_TO)
+//
+// NB drame 19 juil 2026 : le .env prod nommait ces vars FORMAQUIZ_* alors
+// que le code ne lisait que QUIZING_* -> "not_configured", aucun email
+// d'invitation ne partait. On accepte desormais LES DEUX noms.
 //
 // L'envoi est best-effort : si la config manque ou que Resend renvoie une
 // erreur, on log et on renvoie { ok:false } SANS jamais throw. Les appelants
@@ -18,8 +24,8 @@
 import "server-only";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const EMAIL_FROM = process.env.QUIZING_EMAIL_FROM;
-const REPLY_TO = process.env.QUIZING_REPLY_TO;
+const EMAIL_FROM = process.env.FORMAQUIZ_EMAIL_FROM ?? process.env.QUIZING_EMAIL_FROM;
+const REPLY_TO = process.env.FORMAQUIZ_REPLY_TO ?? process.env.QUIZING_REPLY_TO;
 
 export interface SendResult {
   ok: boolean;
@@ -37,7 +43,7 @@ export async function sendEmail({
 }): Promise<SendResult> {
   if (!RESEND_API_KEY || !EMAIL_FROM) {
     console.error(
-      "[email] RESEND_API_KEY ou QUIZING_EMAIL_FROM manquant. Email non envoye :",
+      "[email] RESEND_API_KEY ou FORMAQUIZ_EMAIL_FROM manquant. Email non envoye :",
       subject,
     );
     return { ok: false, reason: "not_configured" };

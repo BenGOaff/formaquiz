@@ -17,9 +17,39 @@ export interface StudentRow {
   status: "active" | "revoked" | null;
   completedDays: number;
   createdAt: string;
+  /** Dernière connexion (auth). null si jamais connecté. */
+  lastSignInAt: string | null;
+  /** L'élève a activé son affiliation (sio_affiliate_id renseigné). */
+  isAffiliate: boolean;
+  /** Personnes distinctes amenées via son lien affilié (conversions). */
+  invitedCount: number;
 }
 
-export function StudentsTable({ initialRows }: { initialRows: StudentRow[] }) {
+/** "il y a 2 jours", "à l'instant"... FR, sans tiret long. */
+function timeAgo(iso: string | null): string {
+  if (!iso) return "jamais connecté";
+  const then = new Date(iso).getTime();
+  if (!Number.isFinite(then)) return "jamais connecté";
+  const diff = Date.now() - then;
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "à l'instant";
+  if (min < 60) return `il y a ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `il y a ${h} h`;
+  const d = Math.floor(h / 24);
+  if (d < 30) return `il y a ${d} j`;
+  const mo = Math.floor(d / 30);
+  if (mo < 12) return `il y a ${mo} mois`;
+  return `il y a ${Math.floor(mo / 12)} an(s)`;
+}
+
+export function StudentsTable({
+  initialRows,
+  totalDays,
+}: {
+  initialRows: StudentRow[];
+  totalDays: number;
+}) {
   const router = useRouter();
   const [rows, setRows] = useState<StudentRow[]>(initialRows);
   const [query, setQuery] = useState("");
@@ -113,7 +143,7 @@ export function StudentsTable({ initialRows }: { initialRows: StudentRow[] }) {
           <Card key={r.userId}>
             <CardContent className="flex items-center gap-3 py-3">
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <p className="truncate font-medium">{r.fullName ?? r.email}</p>
                   {r.status === "active" ? (
                     <Badge variant="success">Actif</Badge>
@@ -122,11 +152,21 @@ export function StudentsTable({ initialRows }: { initialRows: StudentRow[] }) {
                   ) : (
                     <Badge variant="outline">Sans accès</Badge>
                   )}
+                  {r.isAffiliate && (
+                    <Badge variant="outline" title="A activé son affiliation">
+                      Affilié{r.invitedCount > 0 ? ` · ${r.invitedCount} amené${r.invitedCount > 1 ? "s" : ""}` : ""}
+                    </Badge>
+                  )}
                 </div>
-                <p className="truncate text-xs text-muted-foreground">
-                  {r.fullName ? `${r.email} · ` : ""}
-                  {r.completedDays} jour{r.completedDays > 1 ? "s" : ""} complété
-                  {r.completedDays > 1 ? "s" : ""}
+                {r.fullName && (
+                  <p className="truncate text-xs text-muted-foreground">{r.email}</p>
+                )}
+                <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                  <span>
+                    Progression : <strong className="text-foreground">{r.completedDays}/{totalDays}</strong> jour{totalDays > 1 ? "s" : ""}
+                  </span>
+                  <span aria-hidden>·</span>
+                  <span>Connexion : {timeAgo(r.lastSignInAt)}</span>
                 </p>
               </div>
               {r.status === "active" ? (
