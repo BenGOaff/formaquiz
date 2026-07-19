@@ -39,6 +39,16 @@ export function QuizDoctor({ connected }: { connected: boolean }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connected]);
 
+  // Re-audit quand l'user change de projet/quiz dans le panel Tiquiz
+  // (le sélecteur émet cet évènement après avoir mémorisé le choix).
+  useEffect(() => {
+    if (!connected) return;
+    const onScopeChange = () => run();
+    window.addEventListener("tiquiz-scope-changed", onScopeChange);
+    return () => window.removeEventListener("tiquiz-scope-changed", onScopeChange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connected]);
+
   if (!connected) return null;
 
   return (
