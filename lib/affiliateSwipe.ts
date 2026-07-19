@@ -63,9 +63,9 @@ Voici ce que tu obtiens :
 
 Tu as aussi la communauté des participants et 5 bonus pour aller plus loin (trafic payant, vente, sondages, popquiz, réseaux sociaux).
 
-Le tout pour 47€. Une seule fois. Accès à vie, et l'accès Tiquiz gratuit est inclus pour démarrer sans rien payer de plus.
+Le tout pour **47€. Une seule fois.** Accès à vie, et l'accès Tiquiz gratuit est inclus pour démarrer sans rien payer de plus.
 
-Et il y a une garantie : si tu appliques la méthode et que tu ne captes pas un seul lead en 30 jours, tu es remboursé.
+Et il y a une garantie : si tu appliques la méthode et que tu ne captes pas un seul lead en 30 jours, **tu es remboursé**.
 
 👉 Je découvre l'Atelier du Quiz : {LIEN}
 
@@ -93,9 +93,9 @@ Plutôt que d'attendre des mois pour construire une audience, elle a fait un qui
 
 Le résultat, sur 9 jours (chiffres réels) :
 
-- 285 leads qualifiés via la pub.
-- 63,50€ de budget pub. Au total, pas par jour.
-- 0,18€ le lead.
+- **285 leads qualifiés** via la pub.
+- **63,50€** de budget pub. Au total, pas par jour.
+- **0,18€ le lead.**
 
 Et ce n'est pas un coup de chance. C'est juste le bon enchaînement, dans le bon ordre : capter, attirer, profiler, transformer, optimiser. La méthode qu'on installe pas à pas dans l'Atelier.
 
@@ -123,11 +123,11 @@ Hier, l'histoire de Jocelyne. Et je parie que ton cerveau a fait un truc en la l
 
 Je te réponds vite fait.
 
-Ton expertise, tu l'as déjà. Tu as un métier, un vécu, des galères que d'autres traversent en ce moment. Le quiz sert justement à mettre ça en avant, et l'IA t'aide à le formuler à partir de tes mots.
+**Ton expertise, tu l'as déjà.** Tu as un métier, un vécu, des galères que d'autres traversent en ce moment. Le quiz sert justement à mettre ça en avant, et l'IA t'aide à le formuler à partir de tes mots.
 
-Le budget, tu n'en as pas besoin pour démarrer. On commence par le trafic gratuit, et l'accès Tiquiz gratuit est inclus. Tu fais tout le parcours sans sortir un euro de plus que les 47€.
+**Le budget, tu n'en as pas besoin pour démarrer.** On commence par le trafic gratuit, et l'accès Tiquiz gratuit est inclus. Tu fais tout le parcours sans sortir un euro de plus que les 47€.
 
-La technique, elle est guidée. Zéro code, zéro Make, zéro Zapier. L'IA écrit ton quiz, tu corriges en cliquant, la connexion à Systeme.io est expliquée clic par clic. Si tu sais répondre à des questions, tu sais faire ton quiz.
+**La technique, elle est guidée.** Zéro code, zéro Make, zéro Zapier. L'IA écrit ton quiz, tu corriges en cliquant, la connexion à Systeme.io est expliquée clic par clic. Si tu sais répondre à des questions, tu sais faire ton quiz.
 
 Et si malgré tout tu as un doute : la garantie couvre tes arrières. Pas un seul lead capté en 30 jours malgré la méthode appliquée ? Remboursé. Le risque est du côté du produit, pas du tien.
 
@@ -155,7 +155,7 @@ Pour qu'un quiz rapporte vraiment, il y a des étapes à respecter, dans l'ordre
 4. Transformer : convertir ces leads en ventes, avec les bons emails au bon moment.
 5. Optimiser : mesurer, ajuster, faire tourner en boucle.
 
-C'est la méthode CAPTO. Et voilà le truc que presque personne ne dit.
+C'est la méthode **CAPTO**. Et voilà le truc que presque personne ne dit.
 
 La plupart des gens font l'étape 1. Ils créent leur quiz. Ils sont fiers (à raison). Et ils s'arrêtent là.
 
@@ -186,7 +186,7 @@ Un maillon en cadeau, tout de suite : à l'étape "Capter", l'ordre de tes quest
 On me pose souvent les mêmes questions sur l'Atelier du Quiz. Je te réponds cash.
 
 "C'est un abonnement ?"
-Non. 47€ une seule fois, accès à vie, mises à jour comprises. Aucun prélèvement caché.
+Non. **47€ une seule fois**, accès à vie, mises à jour comprises. Aucun prélèvement caché.
 
 "Faut-il payer Tiquiz pour réussir ?"
 Non, tu démarres en gratuit. L'accès Tiquiz gratuit est inclus et il suffit pour créer et publier ton premier quiz. Tu passeras au payant seulement quand ton quiz te ramènera déjà des leads.
@@ -234,7 +234,7 @@ C'est exactement ce que tu installes dans l'Atelier du Quiz, en 7 jours, accompa
 - Des visiteurs sans un euro de pub et le mécanisme de viralité qui fait grossir ta liste.
 - Un coach IA branché sur tes données, la communauté et 5 bonus (trafic payant, vente, sondages, popquiz, réseaux sociaux).
 
-Le tout pour 47€, une seule fois, avec la garantie remboursé si tu ne captes pas un seul lead en 30 jours.
+Le tout pour **47€, une seule fois**, avec la garantie remboursé si tu ne captes pas un seul lead en 30 jours.
 
 Au fond, tu as deux options. Fermer ce mail, et dans un mois ton quiz est au même point qu'aujourd'hui. Ou cliquer, répondre à quelques questions, et dans 7 jours avoir un système qui te ramène des leads en automatique.
 

@@ -29,6 +29,10 @@ export default async function AffiliationPage() {
     .order("created_at", { ascending: false });
   const assets = (assetRows ?? []) as AffiliateAsset[];
 
+  const emailOverrides =
+    (p as { affiliate_email_overrides?: Record<string, { subject?: string | null; bodyHtml?: string | null }> } | null)
+      ?.affiliate_email_overrides ?? {};
+
   return (
     <AffiliationClient
       firstName={p?.full_name ?? null}
@@ -37,6 +41,7 @@ export default async function AffiliationPage() {
       initialAffiliateId={sa}
       gains={gains}
       assets={assets}
+      emailOverrides={emailOverrides}
     />
   );
 }

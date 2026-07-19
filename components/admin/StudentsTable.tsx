@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { UserPlus } from "lucide-react";
+import { UserPlus, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -105,6 +105,22 @@ export function StudentsTable({
     toast.success(action === "grant" ? "Accès accordé." : "Accès révoqué.");
   }
 
+  async function resendLink(row: StudentRow) {
+    setBusyId(row.userId);
+    const res = await fetch(`/api/admin/students/${row.userId}/access`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "resend" }),
+    });
+    setBusyId(null);
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      toast.error(json.reason === "no_email" ? "Cet élève n'a pas d'email." : "Envoi impossible.");
+      return;
+    }
+    toast.success("Lien d'accès renvoyé par email.");
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <Card>
@@ -169,25 +185,37 @@ export function StudentsTable({
                   <span>Connexion : {timeAgo(r.lastSignInAt)}</span>
                 </p>
               </div>
-              {r.status === "active" ? (
+              <div className="flex shrink-0 items-center gap-1">
                 <Button
                   variant="ghost"
                   size="sm"
                   disabled={busyId === r.userId}
-                  onClick={() => setAccess(r, "revoke")}
+                  onClick={() => resendLink(r)}
+                  title="Renvoyer le lien d'accès par email"
                 >
-                  Révoquer
+                  <Send className="size-4" />
+                  <span className="hidden sm:inline">Renvoyer le lien</span>
                 </Button>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={busyId === r.userId}
-                  onClick={() => setAccess(r, "grant")}
-                >
-                  Accorder l'accès
-                </Button>
-              )}
+                {r.status === "active" ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={busyId === r.userId}
+                    onClick={() => setAccess(r, "revoke")}
+                  >
+                    Révoquer
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={busyId === r.userId}
+                    onClick={() => setAccess(r, "grant")}
+                  >
+                    Accorder l'accès
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
         ))}
