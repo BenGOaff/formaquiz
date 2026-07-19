@@ -14,7 +14,7 @@ export type Persona =
 
 export const PERSONAS: { value: Persona; label: string }[] = [
   { value: "freelance", label: "Freelance / prestataire de services" },
-  { value: "infopreneur", label: "Infopreneur (je vends des formations)" },
+  { value: "infopreneur", label: "Infopreneur (je vends des formations ou infoproduits)" },
   { value: "coach", label: "Coach ou consultant" },
   { value: "auteur", label: "Auteur" },
   { value: "createur", label: "Créateur de contenu" },
