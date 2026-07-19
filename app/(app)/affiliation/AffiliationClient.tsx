@@ -61,6 +61,8 @@ import {
   ARTICLE_ANGLES,
   VIDEO_IDEAS,
   DEFAULT_ASSETS,
+  DEFAULT_POSTS,
+  POSTS_TEXT_DOC,
   fillSwipe,
 } from "@/lib/affiliateSwipe";
 import { renderSwipeEmailHtml } from "@/lib/affiliateEmailRender";
@@ -731,9 +733,41 @@ export function AffiliationClient({
 
           <Card>
             <CardContent className="flex flex-col gap-3 py-5">
+              <div className="flex items-start justify-between gap-3">
+                <span className="flex items-center gap-2 text-sm font-semibold">
+                  <ImageIcon className="size-4 text-primary" />
+                  Posts prêts à publier
+                </span>
+                <Button asChild variant="outline" size="sm">
+                  <a href={POSTS_TEXT_DOC.url} target="_blank" rel="noopener noreferrer" download>
+                    <Download className="size-4" />
+                    Textes des posts
+                  </a>
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Des visuels et carrousels aux couleurs de l'Atelier, à publier tels quels. Les
+                légendes sont dans le document Word (bouton ci-dessus), à copier-coller et adapter.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {DEFAULT_POSTS.map((a) => (
+                  <AssetTile
+                    key={a.url}
+                    url={a.url}
+                    title={a.title}
+                    description={a.description}
+                    fileType={a.fileType}
+                  />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="flex flex-col gap-3 py-5">
               <span className="flex items-center gap-2 text-sm font-semibold">
                 <MessageSquare className="size-4 text-primary" />
-                Posts réseaux sociaux
+                Posts réseaux sociaux (textes)
               </span>
               {SWIPE_POSTS.map((post, i) => (
                 <SwipeTextBlock

@@ -417,7 +417,53 @@ export const DEFAULT_ASSETS: DefaultAsset[] = [
     url: "/affiliate-kit/jaquette-atelier-du-quiz.png",
     fileType: "image/png",
   },
+  {
+    title: "Logo fond foncé",
+    description: "Version du logo à poser sur un fond sombre (SVG).",
+    url: "/affiliate-kit/logo-atelier-du-quiz-fond-fonce.svg",
+    fileType: "image/svg+xml",
+  },
 ];
+
+/**
+ * Posts réseaux prêts à publier (format 4:5), fournis d'office. Numéros
+ * impairs = visuel image (PNG), numéros pairs = carrousel (PDF). Servis
+ * depuis /public/affiliate-kit/posts.
+ */
+export const DEFAULT_POSTS: DefaultAsset[] = [
+  { n: 1, kind: "image" },
+  { n: 2, kind: "carousel" },
+  { n: 3, kind: "image" },
+  { n: 4, kind: "carousel" },
+  { n: 5, kind: "image" },
+  { n: 6, kind: "carousel" },
+  { n: 7, kind: "image" },
+  { n: 8, kind: "carousel" },
+  { n: 9, kind: "image" },
+  { n: 10, kind: "carousel" },
+  { n: 11, kind: "image" },
+  { n: 12, kind: "carousel" },
+  { n: 13, kind: "image" },
+  { n: 14, kind: "carousel" },
+  { n: 15, kind: "image" },
+].map(({ n, kind }) => {
+  const num = String(n).padStart(2, "0");
+  const isImg = kind === "image";
+  return {
+    title: `Post ${n}`,
+    description: isImg ? "Visuel prêt à publier (image)." : "Carrousel prêt à publier (PDF).",
+    url: `/affiliate-kit/posts/post-${num}.${isImg ? "png" : "pdf"}`,
+    fileType: isImg ? "image/png" : "application/pdf",
+  };
+});
+
+/** Pack "textes des posts" (légendes) à télécharger (Word). */
+export const POSTS_TEXT_DOC: DefaultAsset = {
+  title: "Textes des posts (Word)",
+  description: "Toutes les légendes des posts, à copier-coller et adapter.",
+  url: "/affiliate-kit/posts/kit-reseaux-sociaux-affilies.docx",
+  fileType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+};
 
 /** Remplace {LIEN} et {TON_PRENOM} par les valeurs de l'affilié. {first_name}
  *  est laissé intact (champ de fusion de l'outil d'emailing de l'affilié). */
