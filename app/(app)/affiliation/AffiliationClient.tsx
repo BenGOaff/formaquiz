@@ -25,6 +25,11 @@ import {
   AlertTriangle,
   CheckCircle2,
   ArrowRight,
+  Mail,
+  Megaphone,
+  FileText,
+  Video,
+  MessageSquare,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -45,6 +50,13 @@ import {
   AFFILIATE_ARGUMENTS,
   affiliateIntro,
 } from "@/lib/affiliate";
+import {
+  SWIPE_EMAILS,
+  SWIPE_POSTS,
+  ARTICLE_ANGLES,
+  VIDEO_IDEAS,
+  fillSwipe,
+} from "@/lib/affiliateSwipe";
 
 const eur = (n: number) =>
   new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(
@@ -82,7 +94,7 @@ const STATUS_LABEL: Record<string, string> = {
   rejected: "Rejeté",
 };
 
-type Tab = "lien" | "gains" | "promo" | "paiement";
+type Tab = "lien" | "gains" | "promo" | "emails" | "contenus" | "paiement";
 
 export function AffiliationClient({
   firstName,
@@ -154,7 +166,7 @@ export function AffiliationClient({
   }
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6">
+    <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <header className="flex flex-col gap-1">
         <h1 className="flex items-center gap-2 font-display text-2xl font-bold sm:text-3xl">
           <Share2 className="size-7 text-primary" />
@@ -173,6 +185,12 @@ export function AffiliationClient({
         </TabBtn>
         <TabBtn active={tab === "promo"} onClick={() => setTab("promo")} icon={Rocket}>
           Promouvoir
+        </TabBtn>
+        <TabBtn active={tab === "emails"} onClick={() => setTab("emails")} icon={Mail}>
+          Emails
+        </TabBtn>
+        <TabBtn active={tab === "contenus"} onClick={() => setTab("contenus")} icon={Megaphone}>
+          Contenus
         </TabBtn>
         <TabBtn active={tab === "paiement"} onClick={() => setTab("paiement")} icon={CheckCircle2}>
           Paiement
@@ -457,6 +475,124 @@ export function AffiliationClient({
         </div>
       )}
 
+      {/* ───── Onglet Emails ───── */}
+      {tab === "emails" && (
+        <div className="flex flex-col gap-6">
+          <Card>
+            <CardContent className="flex flex-col gap-3 py-5">
+              <span className="flex items-center gap-2 text-sm font-semibold">
+                <Mail className="size-4 text-primary" />
+                Ta séquence email prête à envoyer
+              </span>
+              <p className="text-sm text-muted-foreground">
+                6 emails à copier-coller dans ton outil d'emailing. Ton lien affilié est déjà
+                inséré. Rythme conseillé : 1 email par jour sur 6 jours, ou espacé sur 10 à 12 jours.
+              </p>
+              <ul className="flex flex-col gap-1.5 text-xs text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <ArrowRight className="mt-0.5 size-3.5 shrink-0 text-primary" />
+                  <span>
+                    <code className="rounded bg-muted px-1 py-0.5">{"{first_name}"}</code> reste tel
+                    quel : c'est le champ de fusion de TON outil (il met le prénom du destinataire).
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <ArrowRight className="mt-0.5 size-3.5 shrink-0 text-primary" />
+                  <span>3 objets par email : teste le A, garde B et C pour relancer les non-ouvreurs.</span>
+                </li>
+              </ul>
+              {!effectiveId && (
+                <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                  <span>
+                    Ajoute d'abord ton identifiant dans l'onglet Mon lien : sans ça, tes emails
+                    partent avec un lien non tracké et tu ne touches aucune commission.
+                  </span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {SWIPE_EMAILS.map((mail) => (
+            <SwipeEmailCard key={mail.n} mail={mail} link={link} firstName={firstName} />
+          ))}
+        </div>
+      )}
+
+      {/* ───── Onglet Contenus ───── */}
+      {tab === "contenus" && (
+        <div className="flex flex-col gap-6">
+          <Card>
+            <CardContent className="flex flex-col gap-2 py-5">
+              <span className="flex items-center gap-2 text-sm font-semibold">
+                <Megaphone className="size-4 text-primary" />
+                Ta bibliothèque de contenus
+              </span>
+              <p className="text-sm text-muted-foreground">
+                Des posts réseaux, des angles d'articles et des idées de vidéos, prêts à réutiliser.
+                Ton lien affilié est déjà inséré dans les posts. Adapte le ton à ta voix.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="flex flex-col gap-3 py-5">
+              <span className="flex items-center gap-2 text-sm font-semibold">
+                <MessageSquare className="size-4 text-primary" />
+                Posts réseaux sociaux
+              </span>
+              {SWIPE_POSTS.map((post, i) => (
+                <SwipeTextBlock
+                  key={i}
+                  eyebrow={post.platform}
+                  title={post.hook}
+                  text={fillSwipe(post.body, { link, firstName })}
+                />
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="flex flex-col gap-3 py-5">
+              <span className="flex items-center gap-2 text-sm font-semibold">
+                <FileText className="size-4 text-primary" />
+                Angles d'articles de blog
+              </span>
+              <ul className="flex flex-col gap-3">
+                {ARTICLE_ANGLES.map((a, i) => (
+                  <li key={i} className="rounded-lg border border-border p-3">
+                    <p className="text-sm font-semibold">{a.title}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{a.angle}</p>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="flex flex-col gap-3 py-5">
+              <span className="flex items-center gap-2 text-sm font-semibold">
+                <Video className="size-4 text-primary" />
+                Idées de vidéos promo
+              </span>
+              <ul className="flex flex-col gap-3">
+                {VIDEO_IDEAS.map((v, i) => (
+                  <li key={i} className="rounded-lg border border-border p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                        {v.format}
+                      </span>
+                      <p className="text-sm font-semibold">{v.title}</p>
+                    </div>
+                    <p className="mt-1 text-sm text-muted-foreground">{v.outline}</p>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* ───── Onglet Paiement ───── */}
       {tab === "paiement" && (
         <Card>
@@ -512,6 +648,90 @@ function TabBtn({
       <Icon className="size-4" />
       {children}
     </button>
+  );
+}
+
+/** Bouton "copier" générique avec feedback visuel. */
+function CopyButton({ text, label = "Copier" }: { text: string; label?: string }) {
+  const [done, setDone] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      setDone(true);
+      toast.success("Copié !");
+      setTimeout(() => setDone(false), 1800);
+    } catch {
+      toast.error("Impossible de copier. Sélectionne le texte à la main.");
+    }
+  }
+  return (
+    <Button variant="outline" size="sm" onClick={copy} className="shrink-0">
+      {done ? <Check className="size-4" /> : <Copy className="size-4" />}
+      {done ? "Copié" : label}
+    </Button>
+  );
+}
+
+/** Un email de la séquence swipe : objets A/B/C + corps, avec copie. */
+function SwipeEmailCard({
+  mail,
+  link,
+  firstName,
+}: {
+  mail: (typeof SWIPE_EMAILS)[number];
+  link: string;
+  firstName: string | null;
+}) {
+  const body = fillSwipe(mail.body, { link, firstName });
+  return (
+    <Card>
+      <CardContent className="flex flex-col gap-3 py-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs font-semibold uppercase tracking-wide text-primary">
+              Email {mail.n}
+            </span>
+            <span className="text-sm font-semibold">{mail.role}</span>
+          </div>
+          <CopyButton text={body} label="Copier le mail" />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-muted-foreground">Objets à tester (A / B / C)</span>
+          <ul className="flex flex-col gap-1">
+            {mail.subjects.map((s, i) => (
+              <li key={i} className="flex items-center justify-between gap-2 rounded-lg bg-muted/40 px-3 py-1.5 text-sm">
+                <span className="min-w-0 truncate">{s}</span>
+                <CopyButton text={s} label="" />
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-muted-foreground">Corps du mail</span>
+          <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-lg border border-border bg-muted/30 p-3 text-sm">
+            {body}
+          </pre>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Bloc de contenu copiable (post réseau) avec en-tête. */
+function SwipeTextBlock({ eyebrow, title, text }: { eyebrow: string; title: string; text: string }) {
+  return (
+    <div className="rounded-lg border border-border p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-xs font-medium uppercase tracking-wide text-primary">{eyebrow}</span>
+          <span className="text-sm font-semibold">{title}</span>
+        </div>
+        <CopyButton text={text} label="Copier" />
+      </div>
+      <pre className="mt-2 whitespace-pre-wrap text-sm text-foreground">{text}</pre>
+    </div>
   );
 }
 
