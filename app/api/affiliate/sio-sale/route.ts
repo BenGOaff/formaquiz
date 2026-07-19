@@ -20,6 +20,7 @@ import {
   extractFunnelUrl,
   extractOfferId,
   extractOrderId,
+  extractPaymentRef,
   extractProductName,
   extractSaFromPayload,
 } from "@/lib/affiliateTracking";
@@ -54,6 +55,9 @@ export async function POST(req: NextRequest) {
 
   const email = extractEmail(body);
   const orderId = extractOrderId(body);
+  // Réf. de paiement (facture) : clé d'idempotence par échéance -> chaque mois
+  // d'un abonnement Tiquiz récurrent compte, au lieu d'être dédupliqué.
+  const paymentRef = extractPaymentRef(body);
   const productName = extractProductName(body);
   const offerId = extractOfferId(body);
   const funnelUrl = extractFunnelUrl(body);
@@ -78,6 +82,7 @@ export async function POST(req: NextRequest) {
   const result = await attributeQuizingSale({
     email,
     sio_order_id: orderId,
+    sio_payment_ref: paymentRef,
     sale_amount_cents: amountCents,
     product,
     product_name: productName,

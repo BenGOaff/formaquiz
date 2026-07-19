@@ -236,6 +236,37 @@ export function extractOrderId(body: unknown): string | null {
   return null;
 }
 
+/**
+ * Référence UNIQUE d'un paiement (clé d'idempotence). Pour un abonnement
+ * Tiquiz récurrent, chaque échéance mensuelle a sa propre facture / son
+ * propre paiement : on prend cet id-là pour que CHAQUE mois compte (sinon,
+ * si Systeme.io réutilise le même order.id chaque mois, seul le 1er mois
+ * serait enregistré). Fallback sur l'order id pour les ventes uniques.
+ */
+export function extractPaymentRef(body: unknown): string | null {
+  const paths = [
+    "invoice.id",
+    "data.invoice.id",
+    "invoice_id",
+    "data.invoice_id",
+    "payment.id",
+    "data.payment.id",
+    "payment_id",
+    "data.payment_id",
+    "transaction.id",
+    "data.transaction.id",
+    "transaction_id",
+    "subscription_payment.id",
+    "data.subscription_payment.id",
+    "subscription_payment_id",
+  ];
+  for (const p of paths) {
+    const c = pick(body, p);
+    if (c != null && String(c).trim()) return String(c).trim();
+  }
+  return extractOrderId(body);
+}
+
 /** Montant de la vente en centimes. Systeme.io envoie des euros décimaux. */
 export function extractAmountCents(body: unknown): number {
   const paths = ["order.total", "data.order.total", "amount", "total", "price", "order.amount", "data.amount", "data.total"];
@@ -433,8 +464,8 @@ export async function getAffiliateGains(sa: string): Promise<AffiliateGains> {
       //  - garantie : moins de 30 jours après la vente.
       //  - à verser : garantie passée, avant le prochain versement mensuel.
       //  - versé (estimé) : le versement (~10 du mois suivant la maturité) est
-      //    passé. Systeme.io reste la référence si un solde sous le minimum
-      //    a repoussé le paiement.
+      //    passé. Fiable ici (paiement dès le 1er euro, pas de seuil mini) ;
+      //    Systeme.io reste la référence officielle.
       const maturedAt = new Date(r.sale_at).getTime() + holdMs;
       if (now.getTime() < maturedAt) {
         displayStatus = "guarantee";
@@ -524,6 +555,9 @@ export type AttributeResult =
 export async function attributeQuizingSale(input: {
   email: string;
   sio_order_id: string;
+  /** Réf. de paiement (facture/paiement) : clé d'idempotence, distincte à
+   *  chaque échéance récurrente. Fallback sur sio_order_id si absente. */
+  sio_payment_ref?: string | null;
   sale_amount_cents: number;
   product: ProductMatch;
   product_name?: string | null;
@@ -563,6 +597,7 @@ export async function attributeQuizingSale(input: {
     const { error } = await supabaseAdmin.from("affiliate_commissions").insert({
       sa,
       sio_order_id: input.sio_order_id,
+      sio_payment_ref: (input.sio_payment_ref ?? "").trim() || input.sio_order_id,
       source_app: input.product.source_app,
       customer_email: email,
       conversion_id: conversionId,
