@@ -39,19 +39,21 @@ export function LoginForm() {
       return;
     }
     setLoading(true);
-    const supabase = getSupabaseBrowserClient();
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
-      },
-    });
-    setLoading(false);
-    if (error) {
+    // Passe par NOTRE endpoint serveur (flux implicite, fiable cross-device)
+    // au lieu de signInWithOtp (PKCE, cassé si on ouvre le mail sur un autre
+    // appareil). Anti-énumération : le serveur répond toujours ok.
+    try {
+      await fetch("/api/auth/magic-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      toast.success("Lien de connexion envoyé. Regarde ta boîte mail.");
+    } catch {
       toast.error("Envoi impossible pour le moment.");
-      return;
+    } finally {
+      setLoading(false);
     }
-    toast.success("Lien de connexion envoyé. Regarde ta boîte mail.");
   }
 
   return (

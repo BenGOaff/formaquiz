@@ -54,6 +54,31 @@ export function scopeToQuery(scope: string | null | undefined): string {
   return "";
 }
 
+/**
+ * Résout la sélection EFFECTIVE (le quiz que l'Atelier étudie), pour que le
+ * coach, le Quiz Doctor, les analyses et les emails par profil parlent TOUS
+ * du même quiz. Règle : sélection mémorisée valide -> on la garde ; sinon
+ * défaut = quiz le plus récent (hors sondage), qu'on MÉMORISE (auto-init).
+ * Ainsi le défaut est identique partout, même avant que l'user ait ouvert
+ * la carte "Quiz suivi". Best-effort : renvoie "" si rien d'exploitable.
+ */
+async function resolveScope(userId: string, conn: TiquizConnection): Promise<string> {
+  const stored = String(conn.selected_scope ?? "").trim();
+  if (stored.startsWith("quiz:") || stored.startsWith("project:")) return stored;
+
+  const list = await fetchTiquizQuizList(userId);
+  const firstQuiz = list?.quizzes.find((q) => q.mode !== "survey");
+  if (!firstQuiz) return "";
+  const scope = `quiz:${firstQuiz.id}`;
+  // Mémorise le défaut (idempotent) : les prochains appels sont directs.
+  await supabaseAdmin
+    .from("tiquiz_connections")
+    .update({ selected_scope: scope })
+    .eq("user_id", userId)
+    .then(() => {}, () => {});
+  return scope;
+}
+
 export async function getTiquizConnection(userId: string): Promise<TiquizConnection | null> {
   const { data } = await supabaseAdmin
     .from("tiquiz_connections")
@@ -100,7 +125,8 @@ export async function fetchQuizAudit(
   const conn = await getTiquizConnection(userId);
   if (!conn?.token) return null;
   try {
-    const res = await fetch(`${TIQUIZ_BASE}/api/partner/quiz-audit${scopeToQuery(conn.selected_scope)}`, {
+    const scope = await resolveScope(userId, conn);
+    const res = await fetch(`${TIQUIZ_BASE}/api/partner/quiz-audit${scopeToQuery(scope)}`, {
       headers: { "x-partner-secret": SHARED, Authorization: `Bearer ${conn.token}` },
       cache: "no-store",
     });
@@ -335,7 +361,8 @@ export async function syncMetrics(
   const conn = await getTiquizConnection(userId);
   if (!conn) return { metrics: null, newBadges: [] };
 
-  const metrics = await fetchMetrics(conn.token, conn.selected_scope);
+  const scope = await resolveScope(userId, conn);
+  const metrics = await fetchMetrics(conn.token, scope);
   if (!metrics) return { metrics: conn.metrics, newBadges: [] };
 
   await supabaseAdmin
