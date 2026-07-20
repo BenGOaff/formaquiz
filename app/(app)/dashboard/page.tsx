@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { NoAccess } from "@/components/NoAccess";
+import { TiquizFocusCard } from "@/components/TiquizFocusCard";
 import { cn } from "@/lib/utils";
 import type { DayWithProgress } from "@/lib/types";
 
@@ -40,35 +41,41 @@ export default async function DashboardPage() {
         </p>
       </header>
 
-      {/* Barre de progression du parcours */}
-      <Card>
-        <CardContent className="flex flex-col gap-3 py-5">
-          <div className="flex items-center justify-between text-sm">
-            <span className="flex items-center gap-2 font-medium">
-              <Trophy className="size-4 text-primary" />
-              Ta progression
-            </span>
-            <span className="text-muted-foreground">
-              {completed} / {total} jours
-            </span>
-          </div>
-          <Progress value={pct} />
-          {current && (
-            <Link
-              href={`/jour/${current.day_number}`}
-              className="mt-1 inline-flex w-fit items-center gap-2 text-sm font-medium text-primary hover:underline"
-            >
-              <Sparkles className="size-4" />
-              Reprendre : {dayLabel(current)} {current.title}
-            </Link>
-          )}
-          {allDone && (
-            <p className="mt-1 text-sm font-medium text-success">
-              Parcours terminé, bravo ! Les bonus t'attendent plus bas.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      {/* Accueil en 2 colonnes : progression à gauche, quiz suivi à droite. */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Barre de progression du parcours */}
+        <Card className="h-full">
+          <CardContent className="flex h-full flex-col gap-3 py-5">
+            <div className="flex items-center justify-between text-sm">
+              <span className="flex items-center gap-2 font-medium">
+                <Trophy className="size-4 text-primary" />
+                Ta progression
+              </span>
+              <span className="text-muted-foreground">
+                {completed} / {total} jours
+              </span>
+            </div>
+            <Progress value={pct} />
+            {current && (
+              <Link
+                href={`/jour/${current.day_number}`}
+                className="mt-1 inline-flex w-fit items-center gap-2 text-sm font-medium text-primary hover:underline"
+              >
+                <Sparkles className="size-4" />
+                Reprendre : {dayLabel(current)} {current.title}
+              </Link>
+            )}
+            {allDone && (
+              <p className="mt-1 text-sm font-medium text-success">
+                Parcours terminé, bravo ! Les bonus t'attendent plus bas.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Quiz suivi par l'Atelier (sélecteur single-quiz). */}
+        <TiquizFocusCard />
+      </div>
 
       {/* Certificat : debloque une fois le parcours termine */}
       {allDone && (
