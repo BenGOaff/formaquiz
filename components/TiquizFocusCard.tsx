@@ -11,7 +11,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Target, ExternalLink, Loader2, Plus, Link2 } from "lucide-react";
+import { Target, ExternalLink, Loader2, Plus, Link2, RefreshCw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -28,48 +28,61 @@ export function TiquizFocusCard() {
   const [quizzes, setQuizzes] = useState<QuizRef[]>([]);
   const [scope, setScope] = useState("");
   const [busy, setBusy] = useState(false);
+  // Distingue "impossible de charger la liste" (API Tiquiz KO / pas déployée)
+  // de "vraiment aucun quiz" : sinon on afficherait "crée ton premier quiz"
+  // à quelqu'un qui en a plein (drame Gwenn 19 juil 2026).
+  const [loadError, setLoadError] = useState(false);
   const initRan = useRef(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const res = await fetch("/api/me/tiquiz-quizzes");
-        const data = await res.json().catch(() => ({}));
-        if (cancelled) return;
-        if (!data?.ok) return;
-        setConnected(Boolean(data.connected));
-        setProjects((data.projects ?? []) as ProjectRef[]);
-        // Quiz "profil" uniquement (mode quiz) : ni sondages ni popquiz.
-        const qs = ((data.quizzes ?? []) as QuizRef[]).filter((q) => q.mode === "quiz");
-        setQuizzes(qs);
-        const stored = String(data.selectedScope ?? "");
-        const storedId = stored.startsWith("quiz:") ? stored.slice(5) : "";
-        const valid = qs.some((q) => q.id === storedId);
-        if (valid) {
-          setScope(stored);
-        } else if (qs.length > 0 && !initRan.current) {
-          // Défaut = quiz le plus récent (liste triée created_at desc côté
-          // Tiquiz). Persisté une fois, silencieusement (pas de resync ici :
-          // la synchro des stats se fait sur la page Avancées).
-          initRan.current = true;
-          const def = `quiz:${qs[0].id}`;
-          setScope(def);
-          void fetch("/api/me/tiquiz-selection", {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ scope: def }),
-          });
-        }
-      } catch {
-        /* ignore : la carte affichera l'état par défaut */
-      } finally {
-        if (!cancelled) setLoading(false);
+  async function load() {
+    setLoading(true);
+    setLoadError(false);
+    try {
+      const res = await fetch("/api/me/tiquiz-quizzes");
+      const data = await res.json().catch(() => ({}));
+      if (!data?.ok) {
+        setLoadError(true);
+        return;
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
+      setConnected(Boolean(data.connected));
+      if (data.error) {
+        // Connecté mais la liste n'a pas pu être récupérée : NE PAS conclure
+        // "aucun quiz". On propose de réessayer.
+        setLoadError(true);
+        return;
+      }
+      setProjects((data.projects ?? []) as ProjectRef[]);
+      // Tous les quiz SAUF les sondages (les popquiz ne sont pas un `mode`).
+      const qs = ((data.quizzes ?? []) as QuizRef[]).filter((q) => q.mode !== "survey");
+      setQuizzes(qs);
+      const stored = String(data.selectedScope ?? "");
+      const storedId = stored.startsWith("quiz:") ? stored.slice(5) : "";
+      const valid = qs.some((q) => q.id === storedId);
+      if (valid) {
+        setScope(stored);
+      } else if (qs.length > 0 && !initRan.current) {
+        // Défaut = quiz le plus récent (liste triée created_at desc côté
+        // Tiquiz). Persisté une fois, silencieusement (la synchro des stats
+        // se fait sur la page Avancées).
+        initRan.current = true;
+        const def = `quiz:${qs[0].id}`;
+        setScope(def);
+        void fetch("/api/me/tiquiz-selection", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ scope: def }),
+        });
+      }
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function changeQuiz(next: string) {
@@ -109,6 +122,25 @@ export function TiquizFocusCard() {
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="size-4 animate-spin" /> Chargement...
           </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Liste indisponible (API Tiquiz KO / pas encore déployée) : on NE dit PAS
+  // "aucun quiz". On propose de réessayer.
+  if (loadError) {
+    return (
+      <Card className="h-full">
+        <CardContent className="flex h-full flex-col gap-3 py-5">
+          {Header}
+          <p className="text-sm text-muted-foreground">
+            Impossible de récupérer tes quiz Tiquiz pour le moment. Réessaie dans un instant.
+          </p>
+          <Button size="sm" variant="outline" onClick={() => load()} className="mt-auto w-fit">
+            <RefreshCw />
+            Réessayer
+          </Button>
         </CardContent>
       </Card>
     );
@@ -163,12 +195,12 @@ export function TiquizFocusCard() {
       <CardContent className="flex h-full flex-col gap-3 py-5">
         {Header}
         <p className="text-sm text-muted-foreground">
-          L'Atelier analyse un quiz à la fois. Choisis celui que tu veux suivre, c'est gardé en
-          mémoire.
+          L'Atelier analyse un quiz à la fois. Choisis sur quel quiz tu veux bosser, c'est gardé en
+          mémoire jusqu'à ce que tu en changes.
         </p>
         <div className="flex flex-col gap-1.5">
           <label htmlFor="tiquiz-quiz" className="text-xs text-muted-foreground">
-            Quiz sélectionné
+            Choisis ton quiz
           </label>
           <select
             id="tiquiz-quiz"
