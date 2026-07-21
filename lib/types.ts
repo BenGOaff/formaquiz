@@ -16,6 +16,9 @@ export interface Question {
   help_text: string | null;
   options: QuestionOption[];
   required: boolean;
+  // Multi-select : l'élève peut choisir plusieurs options (stockées jointes
+  // par des virgules dans answers.value_choice). Défaut false = choix unique.
+  multi: boolean;
   sort_order: number;
 }
 

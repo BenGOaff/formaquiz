@@ -151,6 +151,7 @@ export async function getDayDetail(
     questions: ((questions ?? []) as Question[]).map((q) => ({
       ...q,
       options: Array.isArray(q.options) ? q.options : [],
+      multi: Boolean((q as { multi?: boolean }).multi),
     })),
     answers: answerMap,
   };
