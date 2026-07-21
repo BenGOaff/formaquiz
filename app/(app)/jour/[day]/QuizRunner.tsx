@@ -55,6 +55,14 @@ export function QuizRunner({
     () => !!q && q.type !== "action" && q.options.length > 0,
     [q],
   );
+  // Multi-select : l'élève peut cocher plusieurs options (Jour 1 objectifs).
+  // Les valeurs choisies sont stockées jointes par des virgules dans
+  // value_choice, comme un quiz Tiquiz qui vise plusieurs objectifs.
+  const isMulti = !!q?.multi && isChoice;
+  const selectedValues = useMemo(
+    () => new Set((draft?.value_choice ?? "").split(",").map((s) => s.trim()).filter(Boolean)),
+    [draft?.value_choice],
+  );
 
   const hasValue =
     !!draft && (isChoice ? draft.value_choice.trim() !== "" : draft.value_text.trim() !== "");
@@ -62,6 +70,19 @@ export function QuizRunner({
 
   function setDraft(questionId: string, patch: Partial<Draft>) {
     setDrafts((prev) => ({ ...prev, [questionId]: { ...prev[questionId], ...patch } }));
+  }
+
+  // Coche/décoche une valeur en mode multi-select ; on garde l'ordre de clic
+  // et on re-sérialise en chaîne "a,b,c".
+  function toggleMultiChoice(questionId: string, value: string) {
+    setDrafts((prev) => {
+      const current = (prev[questionId]?.value_choice ?? "")
+        .split(",").map((s) => s.trim()).filter(Boolean);
+      const next = current.includes(value)
+        ? current.filter((v) => v !== value)
+        : [...current, value];
+      return { ...prev, [questionId]: { ...prev[questionId], value_choice: next.join(",") } };
+    });
   }
 
   async function saveAnswer(question: Question): Promise<boolean> {
@@ -215,25 +236,46 @@ export function QuizRunner({
             <div className="flex flex-col gap-1">
               <h2 className="font-display text-lg font-semibold leading-snug">{q.prompt}</h2>
               {q.help_text && <p className="text-sm text-muted-foreground">{q.help_text}</p>}
+              {isMulti && (
+                <p className="text-xs font-medium text-primary">Plusieurs choix possibles.</p>
+              )}
             </div>
 
             {isChoice ? (
               <div className="flex flex-col gap-2">
                 {q.options.map((opt) => {
-                  const selected = draft?.value_choice === opt.value;
+                  const selected = isMulti
+                    ? selectedValues.has(opt.value)
+                    : draft?.value_choice === opt.value;
                   return (
                     <button
                       key={opt.value}
                       type="button"
-                      onClick={() => setDraft(q.id, { value_choice: opt.value })}
+                      onClick={() =>
+                        isMulti
+                          ? toggleMultiChoice(q.id, opt.value)
+                          : setDraft(q.id, { value_choice: opt.value })
+                      }
+                      aria-pressed={selected}
                       className={cn(
-                        "rounded-lg border px-4 py-3 text-left text-sm transition-colors",
+                        "flex items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm transition-colors",
                         selected
                           ? "border-primary bg-surface-soft font-medium ring-1 ring-primary"
                           : "border-border bg-background hover:border-primary/50 hover:bg-muted",
                       )}
                     >
-                      {opt.label}
+                      {isMulti && (
+                        <span
+                          aria-hidden
+                          className={cn(
+                            "flex size-4 shrink-0 items-center justify-center rounded border transition-colors",
+                            selected ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background",
+                          )}
+                        >
+                          {selected && <CheckCircle2 className="size-3" />}
+                        </span>
+                      )}
+                      <span>{opt.label}</span>
                     </button>
                   );
                 })}

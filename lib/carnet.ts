@@ -26,6 +26,17 @@ function displayAnswer(question: Question, answer: Answer): string {
   }
   const choice = (answer.value_choice ?? "").trim();
   if (!choice) return (answer.value_text ?? "").trim();
+  // Multi-select : plusieurs valeurs jointes par des virgules -> on remappe
+  // chaque valeur vers son libellé et on rejoint (fallback sur la valeur brute
+  // si un ancien slug n'existe plus dans les options).
+  if (question.multi || choice.includes(",")) {
+    return choice
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean)
+      .map((v) => question.options.find((o) => o.value === v)?.label ?? v)
+      .join(", ");
+  }
   const opt = question.options.find((o) => o.value === choice);
   return opt?.label ?? choice;
 }
