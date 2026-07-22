@@ -4,11 +4,12 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, CheckCircle2, RotateCcw } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Lightbulb, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { RichContent } from "@/components/RichContent";
+import { celebrate } from "@/lib/celebrate";
 import { cn } from "@/lib/utils";
 import type { Answer, Question } from "@/lib/types";
 
@@ -100,6 +101,8 @@ export function QuizRunner({
         }),
       });
       if (!res.ok) throw new Error("save failed");
+      // Signale au coach que l'eleve avance : desamorce le nudge proactif.
+      window.dispatchEvent(new CustomEvent("coach:activity"));
       return true;
     } catch {
       toast.error("Ta réponse n'a pas pu être enregistrée. Réessaie.");
@@ -138,8 +141,10 @@ export function QuizRunner({
         newBadges?: { code: string; label: string }[];
       };
       setPhase("result");
-      // Celebration : badge(s) nouvellement debloque(s).
-      for (const b of data.newBadges ?? []) {
+      const badges = data.newBadges ?? [];
+      // Fete le jalon reel : jour valide. Plus gros si un badge tombe.
+      celebrate({ intensity: badges.length > 0 ? "huge" : "normal" });
+      for (const b of badges) {
         toast.success(`Badge débloqué : ${b.label}`, { icon: "🏅", duration: 5000 });
       }
       router.refresh(); // met à jour la progression du dashboard
@@ -288,6 +293,20 @@ export function QuizRunner({
                 rows={4}
                 autoFocus
               />
+            )}
+
+            {/* Revelation douce : apparait une fois l'eleve a repondu.
+                Renforce la memoire sans jamais recaler. */}
+            {q.reveal_html && hasValue && (
+              <div className="flex animate-quiz-step-in gap-3 rounded-lg border border-amber-200 bg-amber-50/70 p-3 text-sm">
+                <Lightbulb className="mt-0.5 size-4 shrink-0 text-amber-500" />
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-amber-600">
+                    À retenir
+                  </span>
+                  <RichContent html={q.reveal_html} />
+                </div>
+              </div>
             )}
           </div>
         )}

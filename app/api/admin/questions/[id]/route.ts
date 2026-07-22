@@ -14,6 +14,7 @@ const patchSchema = z.object({
   type: z.enum(["action", "decision", "self_eval", "recall"]).optional(),
   prompt: z.string().min(1).max(500).optional(),
   help_text: z.string().max(1000).nullable().optional(),
+  reveal_html: z.string().max(2000).nullable().optional(),
   options: z.array(optionSchema).optional(),
   required: z.boolean().optional(),
   sort_order: z.number().int().optional(),
