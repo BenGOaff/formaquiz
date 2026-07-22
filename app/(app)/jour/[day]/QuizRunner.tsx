@@ -101,6 +101,8 @@ export function QuizRunner({
         }),
       });
       if (!res.ok) throw new Error("save failed");
+      // Signale au coach que l'eleve avance : desamorce le nudge proactif.
+      window.dispatchEvent(new CustomEvent("coach:activity"));
       return true;
     } catch {
       toast.error("Ta réponse n'a pas pu être enregistrée. Réessaie.");
