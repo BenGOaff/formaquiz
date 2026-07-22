@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { BookOpen, Compass, Gift, ArrowRight } from "lucide-react";
+import { BookOpen, Compass, ArrowRight } from "lucide-react";
 import { getViewer } from "@/lib/parcours";
-import { getCarnet } from "@/lib/carnet";
+import { getCarnetSynthesis } from "@/lib/carnet";
+import { CarnetChantier } from "@/components/carnet/CarnetChantier";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { NoAccess } from "@/components/NoAccess";
 import {
@@ -22,7 +22,7 @@ export default async function CarnetPage() {
   if (!viewer) redirect("/login");
   if (!viewer.enrolled) return <NoAccess email={viewer.email} />;
 
-  const carnet = await getCarnet(viewer.userId);
+  const synthesis = await getCarnetSynthesis(viewer.userId);
   const profile = viewer.profile;
   const firstName = profile?.full_name?.split(" ")[0] ?? null;
   const hasCompass = Boolean(
@@ -73,15 +73,15 @@ export default async function CarnetPage() {
         </Card>
       )}
 
-      {carnet.length === 0 ? (
+      {synthesis.sections.length === 0 && !synthesis.hasAnything ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-4 py-10 text-center">
             <div className="flex size-12 items-center justify-center rounded-full bg-surface-soft text-primary">
               <BookOpen className="size-6" />
             </div>
             <p className="max-w-md text-sm text-muted-foreground">
-              Ton carnet est encore vierge. Réponds aux quiz du parcours et tes réponses
-              viendront le remplir au fil des jours.
+              Ton carnet est encore vierge. Réponds aux quiz du parcours et ton quiz
+              commencera à s'écrire ici, réponse après réponse.
             </p>
             <Button asChild>
               <Link href="/dashboard">
@@ -92,34 +92,7 @@ export default async function CarnetPage() {
           </CardContent>
         </Card>
       ) : (
-        carnet.map((day) => (
-          <Card key={`${day.isBonus ? "b" : "j"}-${day.dayNumber}`}>
-            <CardContent className="flex flex-col gap-4 py-5">
-              <div className="flex items-baseline gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-primary">
-                  {day.isBonus ? "Bonus" : `Jour ${day.dayNumber}`}
-                </span>
-                {day.isBonus && (
-                  <Badge variant="secondary">
-                    <Gift className="size-3" />
-                    Bonus
-                  </Badge>
-                )}
-                <h2 className="font-display font-semibold">{day.title}</h2>
-              </div>
-              <dl className="flex flex-col gap-4">
-                {day.entries.map((e) => (
-                  <div key={e.questionId} className="flex flex-col gap-1">
-                    <dt className="text-sm font-medium text-muted-foreground">{e.prompt}</dt>
-                    <dd className="whitespace-pre-wrap rounded-lg bg-surface-soft px-3 py-2 text-sm">
-                      {e.answer}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </CardContent>
-          </Card>
-        ))
+        <CarnetChantier synthesis={synthesis} />
       )}
     </div>
   );
