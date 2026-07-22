@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { NoAccess } from "@/components/NoAccess";
 import { TiquizFocusCard } from "@/components/TiquizFocusCard";
+import { ensureAutoConnect } from "@/lib/integrations/tiquiz";
 import { cn } from "@/lib/utils";
 import type { DayWithProgress } from "@/lib/types";
 
@@ -17,6 +18,15 @@ export default async function DashboardPage() {
   if (!viewer) redirect("/login");
   if (!viewer.enrolled) return <NoAccess email={viewer.email} />;
   if (!viewer.profile?.diagnostic_completed_at) redirect("/diagnostic");
+
+  // Auto-connexion Tiquiz si meme email (et pas d'opt-out manuel), pour que
+  // la carte "Focus Tiquiz" du dashboard s'affiche connectee sans clic. Meme
+  // logique que la page Avancees : idempotent, retourne tot si deja connecte.
+  await ensureAutoConnect(
+    viewer.userId,
+    viewer.email,
+    viewer.profile?.tiquiz_autolink_optout ?? false,
+  );
 
   const days = await getDaysWithProgress(viewer.userId);
   const parcours = days.filter((d) => !d.is_bonus);
