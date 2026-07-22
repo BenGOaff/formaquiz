@@ -32,7 +32,11 @@ export function stripTiquizHtml(input: string | null | undefined): string {
     .trim();
 }
 
-export const TIQUIZ_AUTHORIZE_URL = `${TIQUIZ_BASE}/connect/quizing`;
+// La page de consentement cote Tiquiz est servie a /connect/formaquiz
+// (app/connect/formaquiz). Le rebrand "quizing" du 18 juin a pointe ce
+// lien vers /connect/quizing qui n'existe PAS cote Tiquiz -> 404 au clic
+// sur "Connecter mon Tiquiz" (retour Yves). On garde le chemin reel.
+export const TIQUIZ_AUTHORIZE_URL = `${TIQUIZ_BASE}/connect/formaquiz`;
 
 export interface TiquizConnection {
   user_id: string;
