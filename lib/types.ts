@@ -14,6 +14,10 @@ export interface Question {
   type: QuestionType;
   prompt: string;
   help_text: string | null;
+  // Revelation douce apres reponse (questions "recall" surtout) : l'idee a
+  // retenir, montree une fois que l'eleve a repondu. Jamais bloquant, jamais
+  // un score. NULL = pas de revelation.
+  reveal_html: string | null;
   options: QuestionOption[];
   required: boolean;
   // Multi-select : l'élève peut choisir plusieurs options (stockées jointes

@@ -167,6 +167,7 @@ function QuestionCard({
   const [type, setType] = useState<QuestionType>(question.type);
   const [prompt, setPrompt] = useState(question.prompt);
   const [helpText, setHelpText] = useState(question.help_text ?? "");
+  const [revealHtml, setRevealHtml] = useState(question.reveal_html ?? "");
   const [required, setRequired] = useState(question.required);
   const [options, setOptions] = useState<QuestionOption[]>(question.options);
   const [saving, setSaving] = useState(false);
@@ -182,6 +183,7 @@ function QuestionCard({
         type,
         prompt,
         help_text: helpText || null,
+        reveal_html: revealHtml || null,
         required,
         options: isChoice ? options.filter((o) => o.label.trim()).map((o) => ({ ...o, value: o.value || slugify(o.label) })) : [],
       }),
@@ -256,6 +258,20 @@ function QuestionCard({
             onChange={(e) => setHelpText(e.target.value)}
             placeholder="Aide / précision (optionnel)"
           />
+
+          {isChoice && (
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">
+                Révélation après réponse (optionnel)
+              </span>
+              <Textarea
+                value={revealHtml}
+                onChange={(e) => setRevealHtml(e.target.value)}
+                rows={2}
+                placeholder="L'idée à retenir, montrée une fois que l'élève a répondu. Pas un score, pas un piège."
+              />
+            </div>
+          )}
 
           {isChoice && (
             <div className="flex flex-col gap-2">
