@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, Users, Sparkles, Languages, Boxes, Inbox, Star, Image, ArrowUpRight } from "lucide-react";
+import { CalendarDays, Users, Sparkles, ScrollText, Languages, Boxes, Inbox, Star, Image, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
   { href: "/admin/jours", label: "Jours", icon: CalendarDays },
   { href: "/admin/eleves", label: "Élèves", icon: Users },
   { href: "/admin/coach", label: "Coach", icon: Sparkles },
+  { href: "/admin/coach/journal", label: "Journal", icon: ScrollText },
   { href: "/admin/personas", label: "Personas", icon: Languages },
   { href: "/admin/modeles", label: "Modèles SIO", icon: Boxes },
   { href: "/admin/feedback", label: "Retours", icon: Inbox },
@@ -18,10 +19,15 @@ const links = [
 
 export function AdminNav() {
   const pathname = usePathname();
+  // Onglet actif = le lien le PLUS spécifique qui préfixe le chemin courant
+  // (sinon "Coach" et "Journal" s'allumeraient tous les deux sur le journal).
+  const activeHref = links
+    .filter((l) => pathname === l.href || pathname.startsWith(l.href + "/"))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
   return (
     <nav className="flex items-center gap-1">
       {links.map((l) => {
-        const active = pathname.startsWith(l.href);
+        const active = l.href === activeHref;
         const Icon = l.icon;
         return (
           <Link

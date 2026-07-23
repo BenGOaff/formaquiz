@@ -82,6 +82,24 @@ function clip(s: string, max: number): string {
   return s.length > max ? s.slice(0, max).trimEnd() + "..." : s;
 }
 
+/**
+ * Detecte et retire le marqueur d'escalade [[ESCALADE: raison]] pose par le
+ * coach quand il est bloque (voir ESCALADE_RULES). Retourne le texte NETTOYE
+ * (sans marqueur, a montrer a l'eleve) et la raison si presente (sinon null).
+ * A appeler sur le texte BRUT du modele, avant tout autre traitement.
+ */
+export function extractEscalation(text: string): { text: string; reason: string | null } {
+  const re = /\[\[\s*ESCALADE\s*:\s*([^\]]*?)\s*\]\]/gi;
+  let reason: string | null = null;
+  const stripped = text.replace(re, (_m, r: string) => {
+    const clean = (r || "").trim();
+    // On garde la premiere raison non vide rencontree.
+    if (reason == null) reason = clean.length ? clean : "";
+    return "";
+  });
+  return { text: stripped.trim(), reason };
+}
+
 // Instruction par defaut (utilisee si l'admin n'en a pas defini une).
 // Pas de tiret long : on nomme les caracteres au lieu de les ecrire.
 const SYSTEM_PERSONA = `Tu es le coach IA de L'Atelier du Quiz, la formation de Béné : lancer un quiz lead-magnet avec Tiquiz en 7 jours (parcours du Jour 0 au Jour 7). Tu aides l'élève à avancer sur SON projet et à se débloquer.
@@ -114,6 +132,20 @@ const SYSTEME_IO_LINK_RULES = `
 Quand tu recommandes Systeme.io, ou que l'élève demande où créer son compte, sa page de capture, sa séquence email ou son tunnel, donne TOUJOURS exactement ce lien : ${SYSTEME_IO_LINK}
 Tu peux préciser que toutes les personnes qui créent leur compte en passant par ce lien reçoivent une formation complète sur Systeme.io, offerte.
 Ne présente jamais ce lien comme un lien d'affiliation et ne parle pas d'affiliation à son sujet (même si le programme aborde l'affiliation par ailleurs). N'utilise jamais un autre lien vers systeme.io que celui-ci.`;
+
+// Marqueur d'escalade : signal TECHNIQUE et INVISIBLE pour l'eleve, retire
+// cote serveur avant affichage (app/api/coach/route.ts). Injecte hors
+// SYSTEM_PERSONA pour s'appliquer aussi quand l'admin definit sa propre
+// instruction. Le coach l'ajoute de son propre jugement quand il est bloque.
+const ESCALADE_RULES = `
+
+=== ESCALADE VERS BÉNÉ (signal technique, invisible pour l'élève) ===
+Dans DEUX cas précis, et seulement ces deux-là, tu dois terminer ta réponse par un marqueur technique :
+1. Tu ne peux PAS répondre à partir du contenu du programme et des documents fournis (l'info n'y est pas).
+2. L'élève signale un bug, un problème technique, un blocage sur l'outil ou une situation qui demande vraiment l'intervention humaine de Béné.
+Dans ces cas, réponds normalement à l'élève (dis-lui franchement que tu ne sais pas et que tu fais remonter à Béné, ou accuse réception de son problème), PUIS ajoute au TOUT dernier caractère de ta réponse, sur une nouvelle ligne, exactement ce marqueur :
+[[ESCALADE: raison courte]]
+Remplace "raison courte" par 3 à 8 mots décrivant le motif (par exemple : "info absente du programme" ou "bug de connexion Tiquiz signalé"). Ce marqueur est destiné à Béné uniquement, il est retiré avant d'être montré à l'élève : ne le commente jamais, ne l'explique jamais, ne le mets jamais ailleurs qu'à la toute fin. En dehors de ces deux cas, n'écris JAMAIS ce marqueur.`;
 
 /**
  * Construit le prompt systeme complet : persona + regle lien Systeme.io +
@@ -161,7 +193,7 @@ export function buildCoachSystemPrompt(input: {
     })
     .join("\n\n");
 
-  let prompt = `${persona}${SYSTEME_IO_LINK_RULES}\n\n=== PROGRAMME (vue d'ensemble des jours) ===\n${index}`;
+  let prompt = `${persona}${SYSTEME_IO_LINK_RULES}${ESCALADE_RULES}\n\n=== PROGRAMME (vue d'ensemble des jours) ===\n${index}`;
 
   // Documents de connaissance charges par l'admin (bornes en taille).
   if (docs && docs.length) {
