@@ -13,9 +13,13 @@ import { buildClaudeMessageBody } from "@/lib/claudeRequest";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import {
   buildCoachSystemPrompt,
+  extractEscalation,
   type CoachAnswer,
   type CoachQuizContext,
 } from "@/lib/coach/knowledge";
+import { sendEmail } from "@/lib/email/resend";
+import { coachEscalationEmail } from "@/lib/email/templates";
+import { ADMIN_EMAILS } from "@/lib/adminEmails";
 import { getTiquizConnection, fetchQuizAudit } from "@/lib/integrations/tiquiz";
 import { computeTiquizInsights } from "@/lib/insights/tiquizInsights";
 import { auditQuiz } from "@/lib/quizDoctor";
@@ -300,7 +304,11 @@ export async function POST(req: NextRequest) {
   if (text == null) {
     return NextResponse.json({ ok: false, reason: "ai_error" }, { status: 502 });
   }
-  let reply = sanitizeAiText((text || "").trim());
+  // Marqueur d'escalade [[ESCALADE: ...]] : le coach le pose quand il ne sait
+  // pas repondre ou que l'eleve signale un bug. On l'EXTRAIT et on le RETIRE
+  // AVANT sanitisation/affichage : il ne doit JAMAIS etre montre a l'eleve.
+  const { text: withoutMarker, reason: escalationReason } = extractEscalation(text || "");
+  let reply = sanitizeAiText(withoutMarker.trim());
   if (!reply) reply = "Désolée, je n'ai pas réussi à répondre. Reformule, ou pose la question dans la communauté.";
 
   // Persiste les deux messages (le carnet de conversation de l'eleve).
@@ -325,6 +333,53 @@ export async function POST(req: NextRequest) {
         () => undefined,
         () => undefined,
       );
+  }
+
+  // Escalade : le coach a posé le marqueur (il ne sait pas répondre, ou l'élève
+  // a signalé un bug qui demande Béné). On enregistre une ligne (table interne
+  // admin, via service_role : la RLS interdit l'écriture côté élève) et on
+  // prévient Béné par email, avec un throttle pour ne pas la spammer sur une
+  // rafale du même élève. Best-effort : ne casse jamais la réponse au coach.
+  if (escalationReason !== null) {
+    try {
+      const THROTTLE_MIN = 30;
+      const windowStart = new Date(Date.now() - THROTTLE_MIN * 60_000).toISOString();
+      const { data: recent } = await supabaseAdmin
+        .from("coach_escalations")
+        .select("id")
+        .eq("user_id", viewer.userId)
+        .eq("resolved", false)
+        .gte("created_at", windowStart)
+        .limit(1);
+      const throttled = (recent?.length ?? 0) > 0;
+
+      const reason = escalationReason || "Non précisé";
+      await supabaseAdmin.from("coach_escalations").insert({
+        user_id: viewer.userId,
+        student_email: viewer.email ?? null,
+        thread_id: threadId,
+        day_number: dayNumber ?? null,
+        question: message.trim(),
+        reason,
+      });
+
+      // Un seul email par fenêtre de throttle, envoyé aux admins (source
+      // unique : lib/adminEmails.ts). Si l'email n'est pas configuré,
+      // sendEmail renvoie { ok:false } sans jamais throw.
+      if (!throttled) {
+        const { subject, html } = coachEscalationEmail({
+          studentEmail: viewer.email ?? null,
+          question: message.trim(),
+          reason,
+          dayNumber: dayNumber ?? null,
+        });
+        for (const to of ADMIN_EMAILS) {
+          await sendEmail({ to, subject, html });
+        }
+      }
+    } catch {
+      // Une escalade ratée ne doit jamais empêcher l'élève de recevoir sa réponse.
+    }
   }
 
   return NextResponse.json({ ok: true, reply });

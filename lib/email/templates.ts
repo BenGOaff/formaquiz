@@ -198,6 +198,50 @@ export function weeklyRecapEmail({
   };
 }
 
+/**
+ * Alerte admin : le coach IA a escaladé (il ne sait pas répondre, ou l'élève
+ * signale un bug). Béné peut reprendre la main. On lui donne l'élève, sa
+ * question, le motif, et un lien direct vers le journal du coach.
+ */
+export function coachEscalationEmail({
+  studentEmail,
+  question,
+  reason,
+  dayNumber,
+}: {
+  studentEmail: string | null;
+  question: string;
+  reason: string;
+  dayNumber: number | null;
+}): BuiltEmail {
+  const journalUrl = `${APP_URL}/admin/coach/journal`;
+  const who = studentEmail ? studentEmail : "un élève";
+  const dayLine = dayNumber != null
+    ? `<p style="margin:0 0 8px;font-size:14px;line-height:21px;color:${MUTED};">Jour concerné : <strong style="color:${INK};">Jour ${dayNumber}</strong></p>`
+    : "";
+  // Echappement minimal du contenu élève (affiché dans un email HTML).
+  const esc = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const inner = `
+    <h1 style="margin:0 0 16px;font-size:22px;line-height:28px;color:${INK};">Le coach a besoin de toi</h1>
+    <p style="margin:0 0 16px;font-size:15px;line-height:23px;color:${INK};">
+      Le coach IA a fait remonter une demande de <strong>${esc(who)}</strong>. Il ne savait pas répondre, ou l'élève a signalé un problème. À toi de reprendre la main.
+    </p>
+    ${dayLine}
+    <p style="margin:0 0 6px;font-size:13px;font-weight:700;color:${INK};">Motif</p>
+    <p style="margin:0 0 16px;font-size:15px;line-height:23px;color:${INK};">${esc(reason) || "Non précisé"}</p>
+    <p style="margin:0 0 6px;font-size:13px;font-weight:700;color:${INK};">Ce que l'élève a demandé</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;background:#f4f5fb;border:1px solid #e6e8f4;border-radius:12px;">
+      <tr><td style="padding:16px 18px;font-size:15px;line-height:23px;color:${INK};white-space:pre-wrap;">${esc(question)}</td></tr>
+    </table>
+    ${button(journalUrl, "Voir le journal du coach")}
+  `;
+  return {
+    subject: `Le coach a escaladé une demande (${who})`,
+    html: layout(inner),
+  };
+}
+
 /** Alerte admin : de nouveaux élèves méritent une mise en avant. */
 export function spotlightAdminEmail({
   items,
