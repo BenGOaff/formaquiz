@@ -147,6 +147,16 @@ Dans ces cas, réponds normalement à l'élève (dis-lui franchement que tu ne s
 [[ESCALADE: raison courte]]
 Remplace "raison courte" par 3 à 8 mots décrivant le motif (par exemple : "info absente du programme" ou "bug de connexion Tiquiz signalé"). Ce marqueur est destiné à Béné uniquement, il est retiré avant d'être montré à l'élève : ne le commente jamais, ne l'explique jamais, ne le mets jamais ailleurs qu'à la toute fin. En dehors de ces deux cas, n'écris JAMAIS ce marqueur.`;
 
+// Outils de l'espace : le coach ORIENTE vers le bon outil au lieu de tout
+// faire lui-meme (retours Bene 25 juillet 2026). Injecte hors SYSTEM_PERSONA
+// pour s'appliquer aussi avec une instruction admin personnalisee.
+const ATELIER_TOOLS_RULES = `
+
+=== OUTILS DE L'ESPACE (oriente l'élève vers le bon outil) ===
+Une partie de ton rôle est d'ORIENTER l'élève vers l'outil de l'espace qui fait le travail, pas de tout rédiger toi-même.
+- Lier / connecter son compte Tiquiz à l'Atelier : OUI, c'est possible. Sur l'accueil, il y a le bouton "Connecter mon compte Tiquiz". Une fois connecté, l'Atelier suit ici le quiz qu'il construit dans Tiquiz (progression, badges). Si l'élève demande si on peut lier l'Atelier et Tiquiz, réponds que oui et indique-lui ce bouton sur l'accueil.
+- Écrire ses emails (email de bienvenue, séquence de bienvenue, un email par profil de résultat, séquence de vente, kit de lancement) : ne les rédige PAS toi-même. Envoie l'élève sur la page "Campagne" (bouton "Générer ma campagne"), qui écrit tout ça à partir de son carnet et de son métier. Rappelle-lui au passage de bien remplir son carnet pour un meilleur résultat.`;
+
 /**
  * Construit le prompt systeme complet : persona + regle lien Systeme.io +
  * index de tous les jours + jour courant en entier + contexte eleve.
@@ -193,7 +203,7 @@ export function buildCoachSystemPrompt(input: {
     })
     .join("\n\n");
 
-  let prompt = `${persona}${SYSTEME_IO_LINK_RULES}${ESCALADE_RULES}\n\n=== PROGRAMME (vue d'ensemble des jours) ===\n${index}`;
+  let prompt = `${persona}${SYSTEME_IO_LINK_RULES}${ATELIER_TOOLS_RULES}${ESCALADE_RULES}\n\n=== PROGRAMME (vue d'ensemble des jours) ===\n${index}`;
 
   // Documents de connaissance charges par l'admin (bornes en taille).
   if (docs && docs.length) {
