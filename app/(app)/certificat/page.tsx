@@ -1,17 +1,19 @@
-// app/(app)/certificat/page.tsx — page de l'examen de certification.
-// Accessible une fois le parcours (7 jours) termine. Si l'eleve a deja
-// son certificat, on lui propose de le revoir ou de repasser l'examen.
+// app/(app)/certificat/page.tsx — le certificat de reussite de l'eleve.
+// Plus d'examen : le certificat se debloque des que les 7 jours du
+// parcours sont termines. Cette page sert aussi d'acces PERMANENT (on la
+// retrouve depuis le compte) : l'eleve peut y revenir, changer le nom
+// affiche, re-telecharger et re-partager quand il veut.
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Award, Lock } from "lucide-react";
 import { getViewer, getDaysWithProgress } from "@/lib/parcours";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { getPublicExam, EXAM_TOTAL, EXAM_PASS_MARK } from "@/lib/certification";
+import { getAppUrl } from "@/lib/appUrl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { NoAccess } from "@/components/NoAccess";
-import { ExamRunner } from "./ExamRunner";
+import { CertificateStudio } from "./CertificateStudio";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +28,7 @@ export default async function CertificatPage() {
   const total = parcours.length;
   const allDone = total > 0 && completed === total;
 
-  // Examen verrouille tant que le parcours n'est pas boucle.
+  // Certificat verrouille tant que le parcours n'est pas boucle.
   if (!allDone) {
     const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
     return (
@@ -39,8 +41,8 @@ export default async function CertificatPage() {
             Ton certificat t'attend
           </h1>
           <p className="text-sm text-muted-foreground">
-            L'examen de certification se débloque quand tu as terminé les{" "}
-            {total} jours du parcours. Encore un petit effort.
+            Ton certificat de réussite se débloque quand tu as terminé les{" "}
+            {total} jours de l'Atelier. Encore un petit effort.
           </p>
         </header>
         <Card>
@@ -61,52 +63,39 @@ export default async function CertificatPage() {
     );
   }
 
-  // Certificat deja obtenu ?
+  // Certificat deja delivre ? On prefill le nom et le numero.
   const supabase = await getSupabaseServerClient();
   const { data: existing } = await supabase
     .from("certificates")
-    .select("share_token, score, total")
+    .select("share_token, cert_number, full_name")
     .eq("user_id", viewer.userId)
     .maybeSingle();
 
-  const exam = getPublicExam();
+  const suggestedName =
+    viewer.profile?.full_name?.trim() || viewer.email?.split("@")[0] || "";
 
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-6">
+    <div className="mx-auto flex max-w-2xl flex-col gap-6">
       <header className="flex flex-col gap-2 text-center">
         <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
           <Award className="size-7" />
         </div>
         <h1 className="font-display text-2xl font-bold">
-          Certificat de fin de formation
+          Ton certificat de réussite
         </h1>
         <p className="text-sm text-muted-foreground">
-          Un examen de {EXAM_TOTAL} questions pour valider tes compétences. Il
-          te faut {EXAM_PASS_MARK} bonnes réponses pour décrocher ton certificat
-          officiel, partageable sur tes réseaux. Tu peux le repasser autant de
-          fois que tu veux.
+          Tu as terminé L'Atelier du Quiz. Choisis le nom à afficher, génère
+          ton certificat officiel, puis télécharge-le et partage-le.
         </p>
       </header>
 
-      {existing?.share_token && (
-        <Card className="border-success/40">
-          <CardContent className="flex flex-col gap-3 py-5 text-center">
-            <p className="text-sm font-medium text-success">
-              Tu as déjà ton certificat ({existing.score}/{existing.total}).
-            </p>
-            <Button asChild variant="outline" className="mx-auto w-fit">
-              <Link href={`/cert/${existing.share_token}`}>
-                Revoir et partager mon certificat
-              </Link>
-            </Button>
-            <p className="text-xs text-muted-foreground">
-              Tu peux retenter l'examen ci-dessous pour améliorer ton score.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      <ExamRunner questions={exam} />
+      <CertificateStudio
+        appUrl={getAppUrl()}
+        initialToken={(existing?.share_token as string) ?? null}
+        initialName={(existing?.full_name as string) ?? ""}
+        initialNumber={(existing?.cert_number as string) ?? null}
+        suggestedName={suggestedName}
+      />
     </div>
   );
 }

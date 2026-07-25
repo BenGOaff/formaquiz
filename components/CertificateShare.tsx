@@ -35,7 +35,7 @@ export function CertificateShare({
   const [copied, setCopied] = useState(false);
 
   const shareText =
-    "Je viens d'obtenir mon Certificat de fin de formation de L'Atelier du Quiz.";
+    "Je viens d'obtenir mon Certificat de réussite de L'Atelier du Quiz.";
   const encodedUrl = encodeURIComponent(url);
   const encodedText = encodeURIComponent(shareText);
 

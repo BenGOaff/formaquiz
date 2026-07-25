@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, CheckCircle2, Lightbulb, RotateCcw } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Lightbulb, RotateCcw, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,6 +27,7 @@ export function QuizRunner({
   resultHtml,
   nextDayNumber,
   isBonus = false,
+  isFinalDay = false,
 }: {
   dayNumber: number;
   questions: Question[];
@@ -35,6 +36,7 @@ export function QuizRunner({
   resultHtml: string | null;
   nextDayNumber: number | null;
   isBonus?: boolean;
+  isFinalDay?: boolean;
 }) {
   const router = useRouter();
   const [phase, setPhase] = useState<"quiz" | "result">(
@@ -142,8 +144,9 @@ export function QuizRunner({
       };
       setPhase("result");
       const badges = data.newBadges ?? [];
-      // Fete le jalon reel : jour valide. Plus gros si un badge tombe.
-      celebrate({ intensity: badges.length > 0 ? "huge" : "normal" });
+      // Fete le jalon reel : jour valide. Plus gros si un badge tombe ou si
+      // c'est le DERNIER jour du parcours (fin de l'Atelier = gros jalon).
+      celebrate({ intensity: badges.length > 0 || isFinalDay ? "huge" : "normal" });
       for (const b of badges) {
         toast.success(`Badge débloqué : ${b.label}`, { icon: "🏅", duration: 5000 });
       }
@@ -171,6 +174,31 @@ export function QuizRunner({
               Bravo, tu as bouclé le jour. On enchaîne quand tu veux.
             </p>
           )}
+
+          {/* Fin de l'Atelier : on met en avant le certificat de reussite. */}
+          {isFinalDay && (
+            <div className="flex flex-col gap-3 rounded-xl border border-primary/40 bg-gradient-to-br from-surface-soft to-card p-5 text-center">
+              <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-primary/15 text-primary shadow-sm">
+                <Award className="size-7" />
+              </div>
+              <p className="font-display text-lg font-bold">
+                Bravo, tu as terminé L'Atelier du Quiz !
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Tu peux récupérer ton certificat de réussite : télécharge-le,
+                partage-le pour célébrer tes nouvelles compétences, et sers-t'en
+                même pour vendre une prestation de création de quiz à tes propres
+                clients.
+              </p>
+              <Button asChild size="lg" className="mx-auto w-fit">
+                <Link href="/certificat">
+                  <Award />
+                  Récupérer mon certificat
+                </Link>
+              </Button>
+            </div>
+          )}
+
           <div className="flex flex-col gap-2 sm:flex-row">
             {nextDayNumber !== null ? (
               <Button asChild size="lg">

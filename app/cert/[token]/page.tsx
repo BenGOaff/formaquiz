@@ -1,14 +1,14 @@
 // app/cert/[token]/page.tsx — page PUBLIQUE du certificat (hors espace
 // membre). Lue par n'importe qui avec le lien, et scrapee par les reseaux
 // pour l'apercu. Lecture par token via la service_role (pas de policy
-// publique sur la table).
+// publique sur la table). On affiche le VRAI certificat (image rendue
+// depuis le template) et on invite le visiteur a decouvrir l'Atelier.
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getAppUrl } from "@/lib/appUrl";
 import { CERT_BRAND, CERT_TITLE } from "@/lib/certification";
-import { Certificate } from "@/components/Certificate";
 import { CertificateShare } from "@/components/CertificateShare";
 import { Button } from "@/components/ui/button";
 
@@ -16,13 +16,13 @@ export const dynamic = "force-dynamic";
 
 interface CertRow {
   full_name: string | null;
-  issued_at: string;
+  cert_number: string | null;
 }
 
 async function loadCertificate(token: string): Promise<CertRow | null> {
   const { data } = await supabaseAdmin
     .from("certificates")
-    .select("full_name, issued_at")
+    .select("full_name, cert_number")
     .eq("share_token", token)
     .maybeSingle();
   return (data as CertRow) ?? null;
@@ -37,9 +37,9 @@ export async function generateMetadata({
   const cert = await loadCertificate(token);
   if (!cert) return { title: CERT_TITLE };
 
-  const name = cert.full_name ?? "Un élève";
+  const name = cert.full_name?.trim() || "Un élève";
   const title = `${CERT_TITLE} - ${CERT_BRAND}`;
-  const description = `${name} a validé le parcours et l'examen de ${CERT_BRAND}.`;
+  const description = `${name} a terminé le parcours de ${CERT_BRAND}.`;
   const url = `${getAppUrl()}/cert/${token}`;
 
   return {
@@ -52,7 +52,7 @@ export async function generateMetadata({
       description,
       url,
       type: "website",
-      images: [{ url: `${url}/opengraph-image`, width: 1200, height: 630 }],
+      images: [{ url: `${url}/opengraph-image`, width: 1200, height: 848 }],
     },
     twitter: {
       card: "summary_large_image",
@@ -73,13 +73,17 @@ export default async function PublicCertificatePage({
   if (!cert) notFound();
 
   const url = `${getAppUrl()}/cert/${token}`;
-  const imageUrl = `${url}/opengraph-image`;
-  const name = cert.full_name?.trim() || "Élève de l'Atelier";
+  const imageUrl = `${url}/image?dl=1`;
 
   return (
     <main className="min-h-screen bg-surface py-10">
-      <div className="container flex flex-col items-center gap-8">
-        <Certificate fullName={name} issuedAt={cert.issued_at} />
+      <div className="container flex max-w-3xl flex-col items-center gap-8">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`/cert/${token}/image?w=1400`}
+          alt={CERT_TITLE}
+          className="w-full h-auto rounded-xl border border-border shadow-card"
+        />
 
         <CertificateShare url={url} imageUrl={imageUrl} />
 

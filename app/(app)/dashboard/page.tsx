@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Play, Sparkles, Gift, Trophy, Award } from "lucide-react";
+import { Play, Sparkles, Gift, Trophy, Award, ArrowRight } from "lucide-react";
 import { getViewer, getDaysWithProgress } from "@/lib/parcours";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
@@ -97,16 +97,16 @@ export default async function DashboardPage() {
               </div>
               <div className="flex flex-1 flex-col gap-0.5">
                 <p className="font-display font-semibold">
-                  Passe ton certificat de fin de formation
+                  Récupère ton certificat de réussite
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Valide tes compétences et décroche ton certificat officiel, à
-                  partager sur tes réseaux.
+                  Tu as terminé l'Atelier : génère ton certificat officiel, à
+                  télécharger et partager sur tes réseaux.
                 </p>
               </div>
               <span className="inline-flex items-center gap-1 text-sm font-medium text-primary">
-                Commencer
-                <Play className="size-4" />
+                Récupérer
+                <ArrowRight className="size-4" />
               </span>
             </CardContent>
           </Card>

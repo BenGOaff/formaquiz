@@ -213,6 +213,7 @@ export default async function DayPage({
         resultHtml={resultHtml}
         nextDayNumber={nextDayNumber}
         isBonus={d.is_bonus}
+        isFinalDay={!d.is_bonus && nextDayNumber === null}
       />
 
       <BlockerButton dayNumber={d.day_number} />

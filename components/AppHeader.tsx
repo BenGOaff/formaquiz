@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   UserCircle,
   Settings,
+  Award,
   Link2,
   ChevronDown,
   Send,
@@ -176,6 +177,9 @@ export function AppHeader({
                   </MenuLink>
                   <MenuLink href="/profil?tab=reglages" icon={Settings}>
                     Réglages
+                  </MenuLink>
+                  <MenuLink href="/certificat" icon={Award}>
+                    Mon certificat
                   </MenuLink>
                   <MenuLink href="/avancees" icon={Link2}>
                     Connexion Tiquiz

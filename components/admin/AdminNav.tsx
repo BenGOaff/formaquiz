@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, Users, Sparkles, ScrollText, Languages, Boxes, Inbox, Star, Image, ArrowUpRight } from "lucide-react";
+import { CalendarDays, Users, Sparkles, ScrollText, Languages, Boxes, Inbox, Star, Image, Award, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
@@ -15,6 +15,7 @@ const links = [
   { href: "/admin/feedback", label: "Retours", icon: Inbox },
   { href: "/admin/spotlights", label: "Mises en avant", icon: Star },
   { href: "/admin/visuels", label: "Visuels affiliés", icon: Image },
+  { href: "/admin/certificats", label: "Certificats", icon: Award },
 ];
 
 export function AdminNav() {
