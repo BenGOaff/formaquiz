@@ -4,8 +4,11 @@
 // Config requise dans le .env :
 //   RESEND_API_KEY        cle API Resend (re_...)
 //   FORMAQUIZ_EMAIL_FROM  expediteur sur le domaine verifie,
-//                         ex: "FormaQuiz <bonjour@send.tipote.com>"
+//                         ex: "L'Atelier du Quiz <bonjour@send.tipote.com>"
 //                         (alias historique accepte : QUIZING_EMAIL_FROM)
+//                         NB: le display-name est de toute facon force a
+//                         "L'Atelier du Quiz" cote code (cf. withBrandName),
+//                         seule l'adresse de l'env est utilisee.
 // Optionnel :
 //   FORMAQUIZ_REPLY_TO    adresse de reponse reellement relevee
 //                         (ex: une boite que Bene lit). Sans ca, les
@@ -24,8 +27,22 @@
 import "server-only";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const EMAIL_FROM = process.env.FORMAQUIZ_EMAIL_FROM ?? process.env.QUIZING_EMAIL_FROM;
+const RAW_EMAIL_FROM = process.env.FORMAQUIZ_EMAIL_FROM ?? process.env.QUIZING_EMAIL_FROM;
 const REPLY_TO = process.env.FORMAQUIZ_REPLY_TO ?? process.env.QUIZING_REPLY_TO;
+
+// Nom d'expediteur affiche = marque ACTUELLE, toujours. Le .env prod garde
+// encore l'ancien libelle "FormaQuiz <...>" (rebrand non repercute), ce qui
+// affichait "FormaQuiz" dans la boite de reception des eleves. On force donc
+// le display-name cote code et on ne conserve de l'env QUE l'adresse verifiee.
+const BRAND_FROM_NAME = "L'Atelier du Quiz";
+function withBrandName(raw: string | undefined): string | undefined {
+  if (!raw) return raw;
+  const m = raw.match(/<([^>]+)>/);
+  const address = (m ? m[1] : raw).trim();
+  if (!address) return raw;
+  return `${BRAND_FROM_NAME} <${address}>`;
+}
+const EMAIL_FROM = withBrandName(RAW_EMAIL_FROM);
 
 export interface SendResult {
   ok: boolean;
@@ -37,7 +54,7 @@ export async function sendEmail({
   subject,
   html,
 }: {
-  to: string;
+  to: string | string[];
   subject: string;
   html: string;
 }): Promise<SendResult> {

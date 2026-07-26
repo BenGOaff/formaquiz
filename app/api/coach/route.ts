@@ -19,7 +19,7 @@ import {
 } from "@/lib/coach/knowledge";
 import { sendEmail } from "@/lib/email/resend";
 import { coachEscalationEmail } from "@/lib/email/templates";
-import { ADMIN_EMAILS } from "@/lib/adminEmails";
+import { ESCALATION_ALERT_EMAILS } from "@/lib/adminEmails";
 import { getTiquizConnection, fetchQuizAudit } from "@/lib/integrations/tiquiz";
 import { computeTiquizInsights } from "@/lib/insights/tiquizInsights";
 import { auditQuiz } from "@/lib/quizDoctor";
@@ -68,6 +68,15 @@ async function callAnthropicWithRetry(apiKey: string, body: unknown): Promise<st
       });
       if (res.ok) {
         const data = await res.json();
+        // Trace du prompt caching : cache_creation = 1er appel (on ecrit le
+        // cache), cache_read = appels suivants (on lit le cache, facture ~10%).
+        // Sert a confirmer en prod que le cache prend bien.
+        const u = data?.usage;
+        if (u && (u.cache_creation_input_tokens || u.cache_read_input_tokens)) {
+          console.log(
+            `[coach] cache write=${u.cache_creation_input_tokens ?? 0} read=${u.cache_read_input_tokens ?? 0} input=${u.input_tokens ?? 0}`,
+          );
+        }
         return Array.isArray(data?.content)
           ? data.content
               .filter((b: { type?: string }) => b.type === "text")
@@ -234,7 +243,7 @@ export async function POST(req: NextRequest) {
     // Non connecte ou endpoint indisponible : le coach fonctionne sans.
   }
 
-  const systemBase = buildCoachSystemPrompt({
+  const { cacheablePrefix, dynamic } = buildCoachSystemPrompt({
     instruction: settings?.instruction ?? null,
     docs: knowledge ?? [],
     days: days ?? [],
@@ -253,8 +262,9 @@ export async function POST(req: NextRequest) {
 
   // Coach proactif : on injecte les signaux REELS du funnel Tiquiz (si
   // connecte et si une fuite claire est detectee), pour que le coach
-  // conseille a partir des vrais chiffres, en priorite.
-  let system = systemBase;
+  // conseille a partir des vrais chiffres, en priorite. Ces signaux
+  // varient par eleve -> partie DYNAMIQUE (jamais cachee).
+  let dynamicPart = dynamic;
   try {
     const connection = await getTiquizConnection(viewer.userId);
     // On remonte TOUS les insights (deja bornes a 2, chacun = 1 constat +
@@ -269,13 +279,27 @@ export async function POST(req: NextRequest) {
           return `- [${tag}] ${i.title} ACTION : ${i.action}`;
         })
         .join("\n");
-      system +=
+      dynamicPart +=
         "\n\n=== SIGNAUX RÉELS DE SON FUNNEL TIQUIZ (chiffres à jour, à prioriser) ===\n" +
         lines +
         "\nAppuie-toi EN PRIORITÉ sur ces signaux réels : félicite quand c'est un succès, corrige quand c'est une fuite, guide vers la diffusion quand le volume manque.";
     }
   } catch {
     // Pas de signaux disponibles : le coach fonctionne normalement.
+  }
+
+  // Prompt système en deux blocs pour le prompt caching Anthropic :
+  //   1. Le prefixe STABLE (persona + règles + faits Tiquiz + programme +
+  //      docs admin), marqué cache_control -> facturé ~10% après le 1er
+  //      appel et partagé entre tous les élèves (même préfixe exact).
+  //   2. La partie DYNAMIQUE (contexte de l'élève), jamais cachée.
+  // Le cache éphémère dure ~5 min : sur une session de coaching (plusieurs
+  // messages) et entre élèves, les hits sont fréquents.
+  const system: Array<Record<string, unknown>> = [
+    { type: "text", text: cacheablePrefix, cache_control: { type: "ephemeral" } },
+  ];
+  if (dynamicPart.trim()) {
+    system.push({ type: "text", text: dynamicPart });
   }
 
   const threadId = await getOrCreateThread(supabase, viewer.userId);
@@ -363,19 +387,19 @@ export async function POST(req: NextRequest) {
         reason,
       });
 
-      // Un seul email par fenêtre de throttle, envoyé aux admins (source
-      // unique : lib/adminEmails.ts). Si l'email n'est pas configuré,
+      // Un seul email par fenêtre de throttle, en UN SEUL envoi groupé aux
+      // destinataires d'alerte (cf. ESCALATION_ALERT_EMAILS). Avant, on
+      // bouclait sur chaque admin -> Béné recevait 2 emails (ses 2 adresses
+      // admin tombent dans la même boîte). Si l'email n'est pas configuré,
       // sendEmail renvoie { ok:false } sans jamais throw.
-      if (!throttled) {
+      if (!throttled && ESCALATION_ALERT_EMAILS.length > 0) {
         const { subject, html } = coachEscalationEmail({
           studentEmail: viewer.email ?? null,
           question: message.trim(),
           reason,
           dayNumber: dayNumber ?? null,
         });
-        for (const to of ADMIN_EMAILS) {
-          await sendEmail({ to, subject, html });
-        }
+        await sendEmail({ to: [...ESCALATION_ALERT_EMAILS], subject, html });
       }
     } catch {
       // Une escalade ratée ne doit jamais empêcher l'élève de recevoir sa réponse.
