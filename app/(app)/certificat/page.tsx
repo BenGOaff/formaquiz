@@ -9,6 +9,7 @@ import { Award, Lock } from "lucide-react";
 import { getViewer, getDaysWithProgress } from "@/lib/parcours";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getAppUrl } from "@/lib/appUrl";
+import { isValidAffiliateId } from "@/lib/affiliate";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -74,6 +75,10 @@ export default async function CertificatPage() {
   const suggestedName =
     viewer.profile?.full_name?.trim() || viewer.email?.split("@")[0] || "";
 
+  // Si l'eleve n'a pas d'ID affilie valide, le QR de son certificat pointe
+  // vers la page de vente sans ref (aucune commission). On l'en informe.
+  const hasAffiliate = isValidAffiliateId(viewer.profile?.sio_affiliate_id ?? null);
+
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
       <header className="flex flex-col gap-2 text-center">
@@ -95,6 +100,7 @@ export default async function CertificatPage() {
         initialName={(existing?.full_name as string) ?? ""}
         initialNumber={(existing?.cert_number as string) ?? null}
         suggestedName={suggestedName}
+        hasAffiliate={hasAffiliate}
       />
     </div>
   );

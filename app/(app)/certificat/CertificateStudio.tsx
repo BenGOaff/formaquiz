@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
-import { Award, Sparkles, Loader2, Pencil } from "lucide-react";
+import { Award, Sparkles, Loader2, Pencil, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,12 +22,14 @@ export function CertificateStudio({
   initialName,
   initialNumber,
   suggestedName,
+  hasAffiliate,
 }: {
   appUrl: string;
   initialToken: string | null;
   initialName: string;
   initialNumber: string | null;
   suggestedName: string;
+  hasAffiliate: boolean;
 }) {
   const [name, setName] = useState(initialName || suggestedName);
   const [token, setToken] = useState<string | null>(initialToken);
@@ -102,6 +105,21 @@ export function CertificateStudio({
                 autoFocus
               />
             </div>
+            {!hasAffiliate && (
+              <div className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+                <Info className="mt-0.5 size-5 shrink-0" />
+                <p>
+                  Tu fais de l'affiliation ? Le QR code de ton certificat pointe
+                  vers la page de vente de l'Atelier. Pour qu'un achat via ce QR
+                  te rapporte une commission, ajoute ton ID d'affilié Systeme.io
+                  dans l'
+                  <Link href="/affiliation" className="font-medium underline">
+                    onglet Affiliation
+                  </Link>
+                  . Ton certificat se mettra à jour automatiquement.
+                </p>
+              </div>
+            )}
             <div className="flex flex-wrap gap-2">
               <Button onClick={generate} disabled={busy} size="lg">
                 {busy ? (

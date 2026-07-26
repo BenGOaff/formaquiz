@@ -5,7 +5,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { normalizeAffiliateId, isValidAffiliateId } from "@/lib/affiliate";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import {
+  normalizeAffiliateId,
+  isValidAffiliateId,
+  buildAffiliateLink,
+  ATELIER_SALES_URL,
+} from "@/lib/affiliate";
 
 const schema = z.object({
   // On accepte l'ID brut OU un lien collé : normalizeAffiliateId extrait le sa.
@@ -49,6 +55,19 @@ export async function PATCH(req: NextRequest) {
 
   const { error } = await supabase.from("profiles").update(update).eq("id", user.id);
   if (error) return NextResponse.json({ ok: false, reason: "db" }, { status: 400 });
+
+  // On rafraichit le qr_url du certificat existant de l'eleve pour qu'il suive
+  // son nouvel etat affilie SANS regeneration manuelle : lien affilie si ID
+  // valide, sinon retour a la page de vente generique. RLS bloque l'update de
+  // certificates cote user, donc service_role. Best-effort : un echec ici ne
+  // doit pas faire echouer l'enregistrement de l'ID (deja persiste ci-dessus).
+  const { error: certErr } = await supabaseAdmin
+    .from("certificates")
+    .update({ qr_url: sa ? buildAffiliateLink(sa) : ATELIER_SALES_URL })
+    .eq("user_id", user.id);
+  if (certErr) {
+    console.error("[me/affiliate] qr_url refresh failed:", certErr.message);
+  }
 
   return NextResponse.json({ ok: true, affiliateId: sa });
 }
