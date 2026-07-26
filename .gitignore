@@ -24,3 +24,6 @@ yarn-debug.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Cache local du modele d embeddings (transformers.js) - ne jamais committer
+.cache/

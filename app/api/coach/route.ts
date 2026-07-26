@@ -17,6 +17,7 @@ import {
   type CoachAnswer,
   type CoachQuizContext,
 } from "@/lib/coach/knowledge";
+import { embedQuery } from "@/lib/coach/embedder";
 import { sendEmail } from "@/lib/email/resend";
 import { coachEscalationEmail } from "@/lib/email/templates";
 import { ESCALATION_ALERT_EMAILS } from "@/lib/adminEmails";
@@ -286,6 +287,33 @@ export async function POST(req: NextRequest) {
     }
   } catch {
     // Pas de signaux disponibles : le coach fonctionne normalement.
+  }
+
+  // RAG : on récupère les passages les plus pertinents de la formation
+  // (indexés dans coach_chunks, embeddings locaux) pour la question posée, et
+  // on les injecte dans la couche DYNAMIQUE. Best-effort total : si la table
+  // n'existe pas encore, si le modèle n'est pas chargé, ou si rien ne
+  // dépasse le seuil, le coach répond normalement sans ces extraits.
+  try {
+    const qvec = await embedQuery(message);
+    const { data: hits } = await supabaseAdmin.rpc("match_coach_chunks", {
+      query_embedding: qvec,
+      match_count: 6,
+      similarity_threshold: 0.75,
+    });
+    if (Array.isArray(hits) && hits.length > 0) {
+      const blocks = hits
+        .map(
+          (h: { title?: string | null; source?: string; content?: string }) =>
+            `# ${h.title || h.source || "Formation"}\n${h.content ?? ""}`,
+        )
+        .join("\n\n");
+      dynamicPart +=
+        "\n\n=== EXTRAITS PERTINENTS DE LA FORMATION (sélectionnés pour cette question, appuie-toi dessus en priorité) ===\n" +
+        blocks;
+    }
+  } catch {
+    // RAG indisponible : le coach fonctionne sans les extraits.
   }
 
   // Prompt système en deux blocs pour le prompt caching Anthropic :
