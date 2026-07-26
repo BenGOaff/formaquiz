@@ -21,8 +21,11 @@
 import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
 import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createClient } from "@supabase/supabase-js";
 import { pipeline, env as xenovaEnv } from "@xenova/transformers";
+// NB : on n'utilise PAS @supabase/supabase-js ici. Sur Node < 22 (le serveur
+// tourne en Node 20), son client realtime exige un WebSocket natif absent et
+// plante à la création. On tape donc l'API REST (PostgREST) via fetch, comme
+// scripts/check-pending-migrations.mjs.
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -196,9 +199,12 @@ async function main() {
     return;
   }
 
-  const supa = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+  const REST = `${SUPABASE_URL.replace(/\/$/, "")}/rest/v1/coach_chunks`;
+  const sbHeaders = {
+    apikey: SERVICE_ROLE_KEY,
+    Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+    "Content-Type": "application/json",
+  };
 
   console.log(`▶ ${allChunks.length} chunks. Chargement du modèle d'embeddings...`);
 
@@ -219,14 +225,14 @@ async function main() {
     }
   }
 
-  // Rebuild complet : on vide puis on réinsère par lots.
+  // Rebuild complet : on vide puis on réinsère par lots (via l'API REST).
   console.log("▶ Réécriture de la table coach_chunks...");
-  const { error: delErr } = await supa
-    .from("coach_chunks")
-    .delete()
-    .neq("id", "00000000-0000-0000-0000-000000000000");
-  if (delErr) {
-    console.error("Échec du vidage :", delErr.message);
+  const delRes = await fetch(
+    `${REST}?id=neq.00000000-0000-0000-0000-000000000000`,
+    { method: "DELETE", headers: { ...sbHeaders, Prefer: "return=minimal" } },
+  );
+  if (!delRes.ok) {
+    console.error("Échec du vidage :", delRes.status, await delRes.text().catch(() => ""));
     process.exit(1);
   }
 
@@ -239,9 +245,13 @@ async function main() {
       content: c.content,
       embedding: c.embedding,
     }));
-    const { error } = await supa.from("coach_chunks").insert(rows);
-    if (error) {
-      console.error("Échec d'insertion :", error.message);
+    const insRes = await fetch(REST, {
+      method: "POST",
+      headers: { ...sbHeaders, Prefer: "return=minimal" },
+      body: JSON.stringify(rows),
+    });
+    if (!insRes.ok) {
+      console.error("Échec d'insertion :", insRes.status, await insRes.text().catch(() => ""));
       process.exit(1);
     }
   }
