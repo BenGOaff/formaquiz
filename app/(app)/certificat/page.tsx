@@ -9,7 +9,8 @@ import { Award, Lock } from "lucide-react";
 import { getViewer, getDaysWithProgress } from "@/lib/parcours";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getAppUrl } from "@/lib/appUrl";
-import { isValidAffiliateId } from "@/lib/affiliate";
+import { isValidAffiliateId, buildAffiliateLink, ATELIER_SALES_URL } from "@/lib/affiliate";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -68,7 +69,7 @@ export default async function CertificatPage() {
   const supabase = await getSupabaseServerClient();
   const { data: existing } = await supabase
     .from("certificates")
-    .select("share_token, cert_number, full_name")
+    .select("share_token, cert_number, full_name, qr_url")
     .eq("user_id", viewer.userId)
     .maybeSingle();
 
@@ -77,7 +78,24 @@ export default async function CertificatPage() {
 
   // Si l'eleve n'a pas d'ID affilie valide, le QR de son certificat pointe
   // vers la page de vente sans ref (aucune commission). On l'en informe.
-  const hasAffiliate = isValidAffiliateId(viewer.profile?.sio_affiliate_id ?? null);
+  const sa = String(viewer.profile?.sio_affiliate_id ?? "").trim();
+  const hasAffiliate = isValidAffiliateId(sa);
+
+  // AUTO-REPARATION (cas Monique) : le qr_url est un snapshot pose a la
+  // generation. Si l'ID affilie a ete ajoute (ou retire) APRES, le snapshot
+  // est perime et l'eleve perd ses commissions sans le savoir. On resynchronise
+  // ici a CHAQUE visite de la page : plus besoin de regenerer, ni de tomber
+  // au bon moment. Service role car RLS n'autorise que le select cote eleve.
+  if (existing) {
+    const expectedQr = hasAffiliate ? buildAffiliateLink(sa) : ATELIER_SALES_URL;
+    if ((existing.qr_url as string | null) !== expectedQr) {
+      const { error: healErr } = await supabaseAdmin
+        .from("certificates")
+        .update({ qr_url: expectedQr })
+        .eq("user_id", viewer.userId);
+      if (healErr) console.error("[certificat] qr_url self-heal failed:", healErr.message);
+    }
+  }
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">

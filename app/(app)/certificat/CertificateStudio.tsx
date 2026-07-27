@@ -85,6 +85,32 @@ export function CertificateStudio({
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Statut affilie TOUJOURS visible (pas seulement en edition) : le QR
+          est resynchronise a chaque visite par la page serveur, cet encart
+          reflete donc l'etat REEL du certificat. */}
+      {!hasAffiliate ? (
+        <div className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+          <Info className="mt-0.5 size-5 shrink-0" />
+          <p>
+            Le QR code de ton certificat pointe vers la page de vente de
+            l&apos;Atelier SANS ton lien affilié : les achats via ce QR ne te
+            rapportent aucune commission. Ajoute ton ID d&apos;affilié
+            Systeme.io dans l&apos;
+            <Link href="/affiliation" className="font-medium underline">
+              onglet Affiliation
+            </Link>
+            , ton certificat se mettra à jour tout seul.
+          </p>
+        </div>
+      ) : token ? (
+        <div className="flex items-start gap-3 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
+          <Award className="mt-0.5 size-5 shrink-0" />
+          <p>
+            Le QR code de ton certificat contient ton lien affilié : chaque
+            achat de l&apos;Atelier via ce QR te rapporte ta commission.
+          </p>
+        </div>
+      ) : null}
       {/* Champ nom : affiche a la premiere generation, ou quand on edite. */}
       {editing ? (
         <Card>
@@ -105,21 +131,6 @@ export function CertificateStudio({
                 autoFocus
               />
             </div>
-            {!hasAffiliate && (
-              <div className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
-                <Info className="mt-0.5 size-5 shrink-0" />
-                <p>
-                  Tu fais de l'affiliation ? Le QR code de ton certificat pointe
-                  vers la page de vente de l'Atelier. Pour qu'un achat via ce QR
-                  te rapporte une commission, ajoute ton ID d'affilié Systeme.io
-                  dans l'
-                  <Link href="/affiliation" className="font-medium underline">
-                    onglet Affiliation
-                  </Link>
-                  . Ton certificat se mettra à jour automatiquement.
-                </p>
-              </div>
-            )}
             <div className="flex flex-wrap gap-2">
               <Button onClick={generate} disabled={busy} size="lg">
                 {busy ? (
