@@ -162,6 +162,12 @@ export function TiquizFocusCard() {
               Connecter mon compte Tiquiz
             </a>
           </Button>
+          <a
+            href="/api/integrations/tiquiz/start?provider=tipote"
+            className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+          >
+            Ton quiz est sur Tipote ? Connecte ton compte Tipote
+          </a>
         </CardContent>
       </Card>
     );

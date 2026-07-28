@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { TIQUIZ_AUTHORIZE_URL } from "@/lib/integrations/tiquiz";
+import { authorizeUrlFor, normalizeProvider } from "@/lib/integrations/tiquiz";
 
 export const dynamic = "force-dynamic";
 
@@ -17,16 +17,22 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
+  // ?provider=tipote : l'eleve construit son quiz sur Tipote et pas sur
+  // Tiquiz (retour Maurice, 28 juillet 2026). Meme flux, autre domaine.
+  const provider = normalizeProvider(req.nextUrl.searchParams.get("provider"));
+
   const state = randomBytes(16).toString("hex");
-  const res = NextResponse.redirect(`${TIQUIZ_AUTHORIZE_URL}?state=${encodeURIComponent(state)}`);
-  res.cookies.set("tiquiz_oauth_state", state, {
+  const res = NextResponse.redirect(`${authorizeUrlFor(provider)}?state=${encodeURIComponent(state)}`);
+  const cookieOpts = {
     httpOnly: true,
     // En dev (http://localhost) un cookie Secure est ignore par le
     // navigateur : on ne le force qu'en production.
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    sameSite: "lax" as const,
     path: "/",
     maxAge: 600,
-  });
+  };
+  res.cookies.set("tiquiz_oauth_state", state, cookieOpts);
+  res.cookies.set("tiquiz_oauth_provider", provider, cookieOpts);
   return res;
 }

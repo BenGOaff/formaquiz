@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import {
   exchangeCodeForToken,
+  normalizeProvider,
   saveConnection,
   syncMetrics,
 } from "@/lib/integrations/tiquiz";
@@ -33,22 +34,27 @@ export async function GET(req: NextRequest) {
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
   const cookieState = req.cookies.get("tiquiz_oauth_state")?.value;
+  // Fournisseur pose par /start (tiquiz par defaut) : le code doit etre
+  // echange aupres du MEME domaine que celui qui l'a emis.
+  const provider = normalizeProvider(req.cookies.get("tiquiz_oauth_provider")?.value);
 
   const fail = () => {
     const r = NextResponse.redirect(appUrl(req, "/dashboard?tiquiz=error"));
     r.cookies.delete("tiquiz_oauth_state");
+    r.cookies.delete("tiquiz_oauth_provider");
     return r;
   };
 
   if (!code || !state || !cookieState || state !== cookieState) return fail();
 
-  const exchanged = await exchangeCodeForToken(code);
+  const exchanged = await exchangeCodeForToken(code, provider);
   if (!exchanged) return fail();
 
-  await saveConnection(user.id, exchanged.token, exchanged.tiquizUserId, exchanged.email);
+  await saveConnection(user.id, exchanged.token, exchanged.tiquizUserId, exchanged.email, provider);
   await syncMetrics(user.id); // premiere synchro (best-effort)
 
   const res = NextResponse.redirect(appUrl(req, "/dashboard?tiquiz=connected"));
   res.cookies.delete("tiquiz_oauth_state");
+  res.cookies.delete("tiquiz_oauth_provider");
   return res;
 }

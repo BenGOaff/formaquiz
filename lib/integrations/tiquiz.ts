@@ -11,7 +11,27 @@ import { snapshotFromDays, getDaysWithProgress } from "@/lib/parcours";
 import type { TiquizMetrics } from "@/lib/types";
 
 const TIQUIZ_BASE = (process.env.TIQUIZ_BASE_URL ?? "https://quiz.tipote.com").trim();
+// Pont Atelier <-> Tipote (retour Maurice, 28 juillet 2026) : les eleves
+// dont le quiz vit sur Tipote se connectent au meme titre que ceux sur
+// Tiquiz. Tipote expose exactement le meme contrat /api/partner/* et le
+// meme secret partage : seul le domaine change.
+const TIPOTE_BASE = (process.env.TIPOTE_BASE_URL ?? "https://app.tipote.com").trim();
 const SHARED = (process.env.PARTNER_SHARED_SECRET ?? "").trim();
+
+export type PartnerProvider = "tiquiz" | "tipote";
+
+export function normalizeProvider(v: unknown): PartnerProvider {
+  return v === "tipote" ? "tipote" : "tiquiz";
+}
+
+function baseFor(provider: unknown): string {
+  return normalizeProvider(provider) === "tipote" ? TIPOTE_BASE : TIQUIZ_BASE;
+}
+
+/** Nom montre a l'eleve pour une connexion donnee. */
+export function providerLabel(provider: unknown): string {
+  return normalizeProvider(provider) === "tipote" ? "Tipote" : "Tiquiz";
+}
 
 /**
  * Les titres de quiz Tiquiz sont stockés en HTML riche (spans colorés,
@@ -38,6 +58,11 @@ export function stripTiquizHtml(input: string | null | undefined): string {
 // sur "Connecter mon Tiquiz" (retour Yves). On garde le chemin reel.
 export const TIQUIZ_AUTHORIZE_URL = `${TIQUIZ_BASE}/connect/formaquiz`;
 
+/** Page de consentement du fournisseur choisi (meme chemin des deux cotes). */
+export function authorizeUrlFor(provider: unknown): string {
+  return `${baseFor(provider)}/connect/formaquiz`;
+}
+
 export interface TiquizConnection {
   user_id: string;
   tiquiz_user_id: string | null;
@@ -48,6 +73,8 @@ export interface TiquizConnection {
   metrics: TiquizMetrics | null;
   /** Sélection projet/quiz mémorisée : "" (tout) | "project:<id>" | "quiz:<id>". */
   selected_scope: string | null;
+  /** Fournisseur de la connexion : "tiquiz" (défaut) ou "tipote". */
+  provider: PartnerProvider;
 }
 
 /** Traduit la sélection mémorisée en query string pour l'API partenaire. */
@@ -91,6 +118,9 @@ export async function getTiquizConnection(userId: string): Promise<TiquizConnect
     .maybeSingle();
   if (!data) return null;
   const conn = data as TiquizConnection;
+  // Colonne provider absente (migration pas encore passee) ou valeur
+  // inattendue -> "tiquiz", comportement historique.
+  conn.provider = normalizeProvider((data as Record<string, unknown>).provider);
   // metrics jsonb vaut {} tant qu'aucune synchro n'a abouti : on normalise
   // en null pour que l'UI affiche l'etat "connecte, en cours" proprement.
   const m = conn.metrics as TiquizMetrics | Record<string, never> | null;
@@ -101,9 +131,10 @@ export async function getTiquizConnection(userId: string): Promise<TiquizConnect
 /** Echange app-a-app du code de consentement contre un token durable. */
 export async function exchangeCodeForToken(
   code: string,
+  provider: PartnerProvider = "tiquiz",
 ): Promise<{ token: string; tiquizUserId: string | null; email: string | null } | null> {
   try {
-    const res = await fetch(`${TIQUIZ_BASE}/api/partner/token`, {
+    const res = await fetch(`${baseFor(provider)}/api/partner/token`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-partner-secret": SHARED },
       body: JSON.stringify({ code }),
@@ -130,7 +161,7 @@ export async function fetchQuizAudit(
   if (!conn?.token) return null;
   try {
     const scope = await resolveScope(userId, conn);
-    const res = await fetch(`${TIQUIZ_BASE}/api/partner/quiz-audit${scopeToQuery(scope)}`, {
+    const res = await fetch(`${baseFor(conn.provider)}/api/partner/quiz-audit${scopeToQuery(scope)}`, {
       headers: { "x-partner-secret": SHARED, Authorization: `Bearer ${conn.token}` },
       cache: "no-store",
     });
@@ -194,7 +225,7 @@ export async function fetchTiquizQuizList(
   const conn = await getTiquizConnection(userId);
   if (!conn?.token) return null;
   try {
-    const res = await fetch(`${TIQUIZ_BASE}/api/partner/quizzes`, {
+    const res = await fetch(`${baseFor(conn.provider)}/api/partner/quizzes`, {
       headers: { "x-partner-secret": SHARED, Authorization: `Bearer ${conn.token}` },
       cache: "no-store",
     });
@@ -212,9 +243,13 @@ export async function fetchTiquizQuizList(
   }
 }
 
-async function fetchMetrics(token: string, scope?: string | null): Promise<TiquizMetrics | null> {
+async function fetchMetrics(
+  token: string,
+  scope?: string | null,
+  provider: PartnerProvider = "tiquiz",
+): Promise<TiquizMetrics | null> {
   try {
-    const res = await fetch(`${TIQUIZ_BASE}/api/partner/metrics${scopeToQuery(scope)}`, {
+    const res = await fetch(`${baseFor(provider)}/api/partner/metrics${scopeToQuery(scope)}`, {
       headers: { "x-partner-secret": SHARED, Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
@@ -237,6 +272,7 @@ export async function saveConnection(
   token: string,
   tiquizUserId: string | null,
   tiquizEmail: string | null,
+  provider: PartnerProvider = "tiquiz",
 ): Promise<void> {
   await supabaseAdmin.from("tiquiz_connections").upsert(
     {
@@ -244,6 +280,7 @@ export async function saveConnection(
       token,
       tiquiz_user_id: tiquizUserId,
       tiquiz_email: tiquizEmail,
+      provider,
       connected_at: new Date().toISOString(),
     },
     { onConflict: "user_id" },
@@ -255,12 +292,13 @@ export async function saveConnection(
     .eq("id", userId);
 }
 
-/** Tente l'auto-connexion par email (compte Tiquiz de meme adresse). */
-async function autoLink(
+/** Tente l'auto-connexion par email aupres d'UN fournisseur. */
+async function autoLinkAt(
   email: string,
-): Promise<{ token: string; tiquizUserId: string | null; email: string | null } | null> {
+  provider: PartnerProvider,
+): Promise<{ token: string; tiquizUserId: string | null; email: string | null; provider: PartnerProvider } | null> {
   try {
-    const res = await fetch(`${TIQUIZ_BASE}/api/partner/auto-link`, {
+    const res = await fetch(`${baseFor(provider)}/api/partner/auto-link`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-partner-secret": SHARED },
       body: JSON.stringify({ email }),
@@ -273,10 +311,19 @@ async function autoLink(
       token: json.token as string,
       tiquizUserId: (json.user_id as string) ?? null,
       email: (json.email as string) ?? email,
+      provider,
     };
   } catch {
     return null;
   }
+}
+
+/** Auto-connexion par email : Tiquiz d'abord (cas majoritaire des eleves),
+ *  sinon Tipote (retour Maurice : quiz construit sur app.tipote.com). */
+async function autoLink(
+  email: string,
+): Promise<{ token: string; tiquizUserId: string | null; email: string | null; provider: PartnerProvider } | null> {
+  return (await autoLinkAt(email, "tiquiz")) ?? (await autoLinkAt(email, "tipote"));
 }
 
 /**
@@ -298,7 +345,7 @@ export async function ensureAutoConnect(
   const linked = await autoLink(email);
   if (!linked) return false;
 
-  await saveConnection(userId, linked.token, linked.tiquizUserId, linked.email);
+  await saveConnection(userId, linked.token, linked.tiquizUserId, linked.email, linked.provider);
   await syncMetrics(userId);
   return true;
 }
@@ -309,7 +356,7 @@ export async function disconnect(userId: string): Promise<void> {
   const conn = await getTiquizConnection(userId);
   if (conn?.token) {
     try {
-      await fetch(`${TIQUIZ_BASE}/api/partner/revoke`, {
+      await fetch(`${baseFor(conn.provider)}/api/partner/revoke`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-partner-secret": SHARED },
         body: JSON.stringify({ token: conn.token }),
@@ -366,7 +413,7 @@ export async function syncMetrics(
   if (!conn) return { metrics: null, newBadges: [] };
 
   const scope = await resolveScope(userId, conn);
-  const metrics = await fetchMetrics(conn.token, scope);
+  const metrics = await fetchMetrics(conn.token, scope, conn.provider);
   if (!metrics) return { metrics: conn.metrics, newBadges: [] };
 
   await supabaseAdmin
