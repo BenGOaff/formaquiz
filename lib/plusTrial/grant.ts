@@ -24,8 +24,18 @@ import { extractFunnelUrl, extractSaFromPayload } from "@/lib/affiliateTracking"
 
 const TIQUIZ_BASE = (process.env.TIQUIZ_BASE_URL ?? "https://quiz.tipote.com").trim().replace(/\/$/, "");
 const SHARED = (process.env.PARTNER_SHARED_SECRET ?? "").trim();
+
+function envDays(name: string, fallback: number): number {
+  const n = Number(process.env[name]);
+  return Number.isFinite(n) && n > 0 && n <= 366 ? Math.floor(n) : fallback;
+}
 // 2 mois offerts pour les 20 premiers acheteurs de l'Atelier (Béné 18 juil 2026).
-const TRIAL_DAYS = 60;
+const TRIAL_DAYS = envDays("PLUS_TRIAL_DAYS", 60);
+// Suite de l'opération (Béné 28 juil 2026) : quand les places 2 mois d'un
+// tunnel sont écoulées, chaque nouvel inscrit reçoit D'OFFICE 15 jours de
+// Plus (même mécanique, même démarrage à la première connexion). Aucune
+// place n'est consommée : l'offre 15 jours est illimitée.
+const FALLBACK_TRIAL_DAYS = envDays("PLUS_TRIAL_FALLBACK_DAYS", 15);
 
 export type PlusTrialFunnel = string;
 
@@ -134,13 +144,14 @@ interface TiquizGrantResponse {
 async function callTiquizGrant(
   email: string,
   funnel: string,
+  days: number,
 ): Promise<{ httpOk: boolean; body: TiquizGrantResponse | null }> {
   if (!SHARED) return { httpOk: false, body: null };
   try {
     const res = await fetch(`${TIQUIZ_BASE}/api/partner/grant-plus-trial`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-partner-secret": SHARED },
-      body: JSON.stringify({ email, days: TRIAL_DAYS, source: "atelier_plus_trial", funnel }),
+      body: JSON.stringify({ email, days, source: "atelier_plus_trial", funnel }),
       cache: "no-store",
     });
     const body = (await res.json().catch(() => null)) as TiquizGrantResponse | null;
@@ -212,25 +223,19 @@ export async function maybeGrantPlusTrial(args: MaybeGrantArgs): Promise<MaybeGr
     }
 
     // ── 2. Réserver une place AVANT l'appel (anti-survente) ──
+    // Tunnel plein -> BASCULE 15 JOURS (Béné 28 juil 2026) : plus aucune
+    // place 2 mois, mais chaque nouvel inscrit reçoit d'office 15 jours
+    // de Plus, sans consommer de place (offre illimitée). Même chemin
+    // d'octroi, seule la durée change.
     const placeNumber = await reservePlace(funnel);
-    if (placeNumber == null) {
-      await upsertClaim(claim?.id, {
-        funnel,
-        sio_email: sioEmail,
-        sio_order_id: args.orderId ?? null,
-        status: "full",
-        consumed_place: false,
-        origin: args.origin ?? "systeme_io",
-      });
-      return { ok: true, status: "full", reason: "no_place_left" };
-    }
+    const trialDays = placeNumber == null ? FALLBACK_TRIAL_DAYS : TRIAL_DAYS;
 
     // ── 3. Appeler Tiquiz ──
-    const { httpOk, body } = await callTiquizGrant(targetEmail, funnel);
+    const { httpOk, body } = await callTiquizGrant(targetEmail, funnel, trialDays);
 
-    // 3a. Erreur dure : on libère la place, claim rejouable.
+    // 3a. Erreur dure : on libère la place (si prise), claim rejouable.
     if (!httpOk || !body || body.ok === false) {
-      await releasePlace(funnel);
+      if (placeNumber != null) await releasePlace(funnel);
       await upsertClaim(claim?.id, {
         funnel,
         sio_email: sioEmail,
@@ -244,9 +249,9 @@ export async function maybeGrantPlusTrial(args: MaybeGrantArgs): Promise<MaybeGr
       return { ok: false, status: "error", reason: body?.reason ?? "tiquiz_unreachable" };
     }
 
-    // 3b. Déjà premium : pas de place consommée, on libère.
+    // 3b. Déjà premium : pas de place consommée, on libère (si prise).
     if (body.granted === false) {
-      await releasePlace(funnel);
+      if (placeNumber != null) await releasePlace(funnel);
       await upsertClaim(claim?.id, {
         funnel,
         sio_email: sioEmail,
@@ -260,15 +265,16 @@ export async function maybeGrantPlusTrial(args: MaybeGrantArgs): Promise<MaybeGr
       return { ok: true, status: "already_premium", reason: body.reason };
     }
 
-    // 3c. Octroyé : on garde la place.
+    // 3c. Octroyé : place gardée (offre 2 mois) ou aucune place (15 jours).
     await upsertClaim(claim?.id, {
       funnel,
       sio_email: sioEmail,
       sio_order_id: args.orderId ?? null,
       tiquiz_email: targetEmail,
       status: "granted",
-      consumed_place: true,
+      consumed_place: placeNumber != null,
       place_number: placeNumber,
+      trial_days: trialDays,
       granted_plan: body.granted_plan ?? null,
       pre_plan: body.pre_plan ?? null,
       expires_at: body.expires_at ?? null,
@@ -293,6 +299,7 @@ type ClaimFields = {
   expires_at?: string | null;
   consumed_place: boolean;
   place_number?: number | null;
+  trial_days?: number | null;
   origin?: string | null;
   last_error?: string | null;
 };
