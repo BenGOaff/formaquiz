@@ -214,7 +214,17 @@ export function TiquizFocusCard() {
           <select
             id="tiquiz-quiz"
             value={selectedId}
-            onChange={(e) => changeQuiz(`quiz:${e.target.value}`)}
+            onChange={(e) => {
+              // "Demarrer un nouveau quiz" : ouvre l'outil quiz de l'eleve
+              // (Tiquiz ou Tipote via la redirection intelligente) SANS
+              // toucher a la selection courante (demande Bene 29/07).
+              if (e.target.value === "__new__") {
+                e.target.value = selectedId;
+                window.open("/api/integrations/tiquiz/go?to=create", "_blank", "noopener");
+                return;
+              }
+              changeQuiz(`quiz:${e.target.value}`);
+            }}
             disabled={busy}
             className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
           >
@@ -242,6 +252,7 @@ export function TiquizFocusCard() {
                   ))}
               </optgroup>
             )}
+            <option value="__new__">+ Démarrer un nouveau quiz</option>
           </select>
         </div>
         <Button asChild variant="ghost" size="sm" className="mt-auto w-fit">
