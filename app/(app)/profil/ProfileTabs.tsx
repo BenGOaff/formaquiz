@@ -1,9 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Save, KeyRound, Camera, User, Settings } from "lucide-react";
+import { Save, KeyRound, Camera, User, Settings, Link2, Award, Unplug } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { Avatar } from "@/components/Avatar";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,7 +23,7 @@ import {
   type AdsBudget,
 } from "@/lib/businessProfile";
 
-type Tab = "profil" | "reglages";
+type Tab = "profil" | "reglages" | "connexion";
 
 export function ProfileTabs({
   userId,
@@ -64,6 +64,47 @@ export function ProfileTabs({
 
   const [password, setPassword] = useState("");
   const [savingPwd, setSavingPwd] = useState(false);
+
+  // Onglet Connexion : etat du pont quiz (Tiquiz OU Tipote). Charge une
+  // fois au montage (payload minuscule), rafraichi apres deconnexion.
+  const [connLoading, setConnLoading] = useState(true);
+  const [connConnected, setConnConnected] = useState(false);
+  const [connProvider, setConnProvider] = useState<string>("tiquiz");
+  const [connEmail, setConnEmail] = useState<string | null>(null);
+  const [disconnecting, setDisconnecting] = useState(false);
+
+  async function loadConnection() {
+    setConnLoading(true);
+    try {
+      const res = await fetch("/api/me/tiquiz-quizzes");
+      const data = await res.json().catch(() => ({}));
+      setConnConnected(Boolean(data?.connected));
+      if (data?.provider === "tipote" || data?.provider === "tiquiz") setConnProvider(data.provider);
+      setConnEmail(typeof data?.email === "string" ? data.email : null);
+    } catch {
+      setConnConnected(false);
+    } finally {
+      setConnLoading(false);
+    }
+  }
+  useEffect(() => {
+    void loadConnection();
+  }, []);
+
+  async function disconnectQuizTool() {
+    setDisconnecting(true);
+    try {
+      const res = await fetch("/api/integrations/tiquiz/disconnect", { method: "POST" });
+      if (!res.ok) throw new Error("disconnect failed");
+      toast.success("Compte déconnecté.");
+      await loadConnection();
+      router.refresh();
+    } catch {
+      toast.error("Déconnexion impossible. Réessaie.");
+    } finally {
+      setDisconnecting(false);
+    }
+  }
 
   async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -163,6 +204,18 @@ export function ProfileTabs({
         <TabButton active={tab === "reglages"} onClick={() => setTab("reglages")} icon={Settings}>
           Réglages
         </TabButton>
+        <TabButton active={tab === "connexion"} onClick={() => setTab("connexion")} icon={Link2}>
+          Connexion
+        </TabButton>
+        {/* Le certificat garde sa page dediee (studio complet) : l'onglet
+            y mene, pour que tous les reglages partent du meme endroit. */}
+        <a
+          href="/certificat"
+          className="flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <Award className="size-4" />
+          Certificat
+        </a>
       </div>
 
       {tab === "profil" && (
@@ -317,6 +370,67 @@ export function ProfileTabs({
                 </Button>
               </div>
             </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {tab === "connexion" && (
+        <Card>
+          <CardContent className="flex flex-col gap-4 py-5">
+            <div className="flex flex-col gap-1">
+              <span className="flex items-center gap-2 text-sm font-semibold">
+                <Link2 className="size-4 text-primary" />
+                Connexion de ton outil quiz
+              </span>
+              <p className="text-sm text-muted-foreground">
+                L&apos;Atelier lit les statistiques de ton quiz (leads, vues, partages) en lecture
+                seule, pour le suivi, le Quiz Doctor et les badges. Ton quiz peut vivre sur Tiquiz
+                ou sur Tipote.
+              </p>
+            </div>
+
+            {connLoading ? (
+              <p className="text-sm text-muted-foreground">Chargement...</p>
+            ) : connConnected ? (
+              <div className="flex flex-col gap-3">
+                <div className="rounded-lg border border-border bg-surface-soft px-4 py-3 text-sm">
+                  <p className="font-medium">
+                    Compte {connProvider === "tipote" ? "Tipote" : "Tiquiz"} connecté
+                  </p>
+                  {connEmail && <p className="text-muted-foreground">{connEmail}</p>}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button asChild size="sm" variant="outline">
+                    <a href={connProvider === "tipote" ? "/api/integrations/tiquiz/start" : "/api/integrations/tiquiz/start?provider=tipote"}>
+                      <Link2 />
+                      {connProvider === "tipote" ? "Basculer vers Tiquiz" : "Basculer vers Tipote"}
+                    </a>
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={disconnectQuizTool} disabled={disconnecting}>
+                    <Unplug />
+                    {disconnecting ? "Un instant..." : "Déconnecter"}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <Button asChild size="sm" className="w-fit">
+                  <a href="/api/integrations/tiquiz/start">
+                    <Link2 />
+                    Connecter mon compte Tiquiz
+                  </a>
+                </Button>
+                <Button asChild size="sm" variant="outline" className="w-fit">
+                  <a href="/api/integrations/tiquiz/start?provider=tipote">
+                    <Link2 />
+                    Connecter mon compte Tipote
+                  </a>
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Choisis l&apos;outil où vit ton quiz. Tu pourras basculer à tout moment.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

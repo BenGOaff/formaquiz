@@ -23,7 +23,7 @@ export default async function ProfilPage({
   if (!viewer.enrolled) return <NoAccess email={viewer.email} />;
 
   const p = viewer.profile;
-  const initialTab = tab === "reglages" ? "reglages" : "profil";
+  const initialTab = tab === "reglages" ? "reglages" : tab === "connexion" ? "connexion" : "profil";
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
