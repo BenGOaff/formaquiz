@@ -44,9 +44,11 @@ const EXTERNAL_LINKS = [
     icon: Send,
   },
   {
-    href: "https://quiz.tipote.com/dashboard",
-    label: "Tiquiz",
-    title: "Ouvrir mon tableau de bord Tiquiz",
+    // Redirection intelligente : Tiquiz OU Tipote selon ou vit le compte
+    // quiz de l'eleve (retour Maurice 29 juillet 2026).
+    href: "/api/integrations/tiquiz/go",
+    label: "Mon quiz",
+    title: "Ouvrir mon tableau de bord quiz (Tiquiz ou Tipote)",
     icon: Rocket,
   },
 ];
