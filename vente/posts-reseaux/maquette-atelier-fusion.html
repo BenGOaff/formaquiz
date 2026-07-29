@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atelier du Quiz · maquette fusion (design old + disposition bene)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#16182E;
+  --navy2:#2E386E;
+  --indigo:#5F6FDF;
+  --cyan:#20BBE6;
+  --grad:linear-gradient(120deg,#5F6FDF 0%,#20BBE6 100%);
+  --ink:#4A5170;
+  --ink-soft:#6B73A0;
+  --line:#E6E8F5;
+  --bg:#F7F8FC;
+  --bg-tint:#EEF1FB;
+  --card:#FFFFFF;
+  --shadow:0 18px 50px rgba(46,56,110,.14);
+  --shadow-sm:0 8px 24px rgba(46,56,110,.10);
+  --shadow-lg:0 28px 70px rgba(46,56,110,.18);
+  --r:12px;
+  --r-sm:8px;
+  --green:#2BB673;
+  --rose:#E5577D;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+  color:var(--ink);font-size:17px;line-height:1.65;
+  background:
+    radial-gradient(1200px 600px at 15% -10%, #E6F6FD 0%, rgba(230,246,253,0) 60%),
+    radial-gradient(1000px 700px at 100% 5%, #E9ECFB 0%, rgba(233,236,251,0) 55%),
+    var(--bg);
+  background-attachment:fixed;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,.h{font-family:"Bricolage Grotesque",Inter,sans-serif;color:var(--navy);margin:0;letter-spacing:-.02em}
+h1{font-size:clamp(34px,4.6vw,58px);font-weight:800;line-height:1.08}
+h2{font-size:clamp(28px,3.4vw,42px);font-weight:800;line-height:1.14}
+h3{font-size:20px;font-weight:700;line-height:1.3}
+p{margin:0 0 1em}
+a{color:inherit}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+.narrow{max-width:820px;margin:0 auto}
+section{padding:88px 0}
+.alt{background:linear-gradient(180deg,rgba(255,255,255,0) 0%,#FFFFFF 12%,#FFFFFF 88%,rgba(255,255,255,0) 100%)}
+
+/* ---------- barre de navigation ---------- */
+.nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.82);backdrop-filter:saturate(160%) blur(12px);border-bottom:1px solid var(--line)}
+.nav .wrap{display:flex;align-items:center;justify-content:space-between;height:66px;padding-top:0;padding-bottom:0}
+.logo{font-family:"Bricolage Grotesque";font-weight:800;font-size:19px;color:var(--navy);letter-spacing:-.02em;text-decoration:none}
+.logo span{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.navlinks{display:flex;align-items:center;gap:26px;font-size:15px;font-weight:500;color:var(--ink)}
+.navlinks a{text-decoration:none}
+.navlinks a:hover{color:var(--indigo)}
+
+/* ---------- boutons ---------- */
+.btn{
+  display:inline-flex;align-items:center;gap:10px;
+  font-family:Inter;font-weight:600;font-size:17px;color:#fff;text-decoration:none;
+  padding:16px 30px;border-radius:var(--r-sm);border:0;cursor:pointer;
+  background:var(--grad);
+  box-shadow:0 10px 26px rgba(46,56,110,.22), 0 0 14px rgba(32,187,230,.35);
+  transition:transform .18s ease, box-shadow .18s ease;
+}
+.btn:hover{transform:translateY(-2px);box-shadow:0 16px 34px rgba(46,56,110,.26), 0 0 20px rgba(32,187,230,.45)}
+.btn.sm{font-size:15px;padding:11px 20px}
+.btn.ghost{background:#fff;color:var(--navy2);border:1px solid var(--line);box-shadow:var(--shadow-sm)}
+.btn.ghost:hover{box-shadow:var(--shadow)}
+.btn-note{margin-top:14px;font-size:14.5px;color:var(--ink-soft)}
+.btn-note b{color:var(--navy2);font-weight:600}
+.center{text-align:center}
+
+/* ---------- hero ---------- */
+.hero{padding:76px 0 64px;text-align:center}
+.pill{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:12.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--navy2);background:#fff;border:1px solid var(--line);
+  padding:8px 16px;border-radius:999px;box-shadow:var(--shadow-sm);margin-bottom:26px;
+}
+.pill i{width:7px;height:7px;border-radius:50%;background:var(--cyan);display:inline-block}
+.hero h1{max-width:14ch;margin:0 auto}
+.mark{
+  background:linear-gradient(180deg,rgba(32,187,230,0) 58%, rgba(32,187,230,.26) 58%);
+  padding:0 .06em;
+}
+.mark-i{
+  position:relative;white-space:nowrap;
+}
+.mark-i::after{
+  content:"";position:absolute;left:0;right:0;bottom:.02em;height:.14em;border-radius:99px;
+  background:var(--grad);opacity:.85;
+}
+.hero .lead{font-size:19px;max-width:60ch;margin:26px auto 0;color:var(--ink)}
+.hand{font-family:Caveat,cursive;font-size:25px;color:var(--navy2);display:block;margin:22px 0 30px}
+
+/* ---------- équation ---------- */
+.eq{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;margin-top:44px}
+.eq .b{
+  background:#fff;border:1px solid var(--line);border-radius:var(--r);
+  padding:12px 20px;font-weight:600;font-size:15.5px;color:var(--navy);box-shadow:var(--shadow-sm);
+  display:flex;align-items:center;gap:8px;
+}
+.eq .b .dot{width:7px;height:7px;border-radius:50%;background:var(--green)}
+.eq .op{color:var(--ink-soft);font-weight:600;font-size:17px}
+.eq .b.res{background:var(--grad);color:#fff;border-color:transparent;box-shadow:0 10px 26px rgba(46,56,110,.20)}
+
+/* ---------- vsl ---------- */
+.vsl-shell{
+  background:#fff;border:1px solid var(--line);border-radius:18px;
+  padding:14px;box-shadow:var(--shadow-lg);max-width:880px;margin:0 auto;
+}
+.vsl{position:relative;aspect-ratio:16/9;border-radius:var(--r);overflow:hidden;background:#0F1120;display:grid;place-items:center;cursor:pointer}
+.vsl img{width:100%;height:100%;object-fit:cover;opacity:.9}
+.vsl .play{
+  position:absolute;width:82px;height:82px;border-radius:50%;background:rgba(255,255,255,.95);
+  display:grid;place-items:center;box-shadow:0 14px 40px rgba(0,0,0,.35);transition:transform .2s ease;
+}
+.vsl:hover .play{transform:scale(1.07)}
+.vsl .play::after{content:"";border-left:22px solid var(--navy2);border-top:14px solid transparent;border-bottom:14px solid transparent;margin-left:6px}
+.vsl .dur{position:absolute;right:14px;bottom:14px;background:rgba(16,18,32,.82);color:#fff;font-size:13px;font-weight:600;padding:5px 10px;border-radius:6px}
+.vsl-cap{margin-top:16px;font-size:14.5px;color:var(--ink-soft);text-align:center}
+
+/* ---------- comparatif ---------- */
+.vs{display:grid;grid-template-columns:1fr auto 1fr;gap:0;align-items:center;margin-top:52px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:32px 30px;box-shadow:var(--shadow);text-align:left}
+.panel.old{background:#F4F5FA;box-shadow:var(--shadow-sm)}
+.panel.new{background:linear-gradient(160deg,#5F6FDF 0%,#4E63DC 60%,#3F86D8 100%);color:#fff;border-color:transparent;box-shadow:0 24px 60px rgba(46,56,110,.28)}
+.panel.new h3,.panel.new li{color:#fff}
+.panel h3{margin-bottom:20px;font-size:19px}
+.panel.old h3{color:var(--ink-soft)}
+.panel ul{list-style:none;margin:0;padding:0;display:grid;gap:14px}
+.panel li{display:flex;gap:12px;align-items:flex-start;font-size:16px;line-height:1.5}
+.ic{flex:0 0 22px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;margin-top:2px}
+.ic.no{background:#E9EAF2;color:var(--ink-soft)}
+.ic.ok{background:rgba(255,255,255,.22);color:#fff}
+.vsbadge{
+  width:62px;height:62px;border-radius:50%;background:#fff;border:1px solid var(--line);
+  display:grid;place-items:center;font-family:"Bricolage Grotesque";font-weight:800;color:var(--navy2);
+  font-size:15px;box-shadow:var(--shadow);margin:0 -18px;z-index:2;position:relative;
+}
+
+
+/* ---------- temoignages ---------- */
+.tw{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:44px;text-align:left}
+.tm{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 20px;box-shadow:var(--shadow-sm)}
+.tm .who{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.tm .av{width:30px;height:30px;border-radius:50%;background:var(--grad);color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px;font-family:"Bricolage Grotesque"}
+.tm .nm{font-weight:600;font-size:14.5px;color:var(--navy2)}
+.tm p{margin:0;font-size:15.5px;line-height:1.5;color:var(--ink)}
+.tm.big{grid-column:span 3;padding:30px 32px;box-shadow:var(--shadow);border-left:3px solid transparent;
+  background:linear-gradient(#fff,#fff) padding-box, var(--grad) border-box;border:1px solid transparent;border-left-width:3px}
+.tm.big p{font-size:17px}
+.tm.big .lead{font-family:"Bricolage Grotesque";font-weight:700;font-size:20px;color:var(--navy);margin-bottom:14px;line-height:1.35}
+.tm.big ol{margin:14px 0 0;padding-left:20px;display:grid;gap:10px}
+.tm.big li{font-size:16px;line-height:1.5}
+.tsrc{margin-top:22px;font-size:14px;color:var(--ink-soft);text-align:center}
+@media(max-width:900px){.tw{grid-template-columns:1fr}.tm.big{grid-column:span 1}}
+
+/* ---------- cartes ---------- */
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:46px}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:28px 26px;box-shadow:var(--shadow);transition:transform .2s ease,box-shadow .2s ease;text-align:left}
+.card sup,.panel sup{font-size:.62em;vertical-align:super;line-height:0}
+.card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.card.hi{background:linear-gradient(160deg,#5F6FDF 0%,#4360DC 100%);border-color:transparent;color:#fff}
+.card.hi h3,.card.hi .kicker{color:#fff}
+.card.hi p{color:rgba(255,255,255,.9)}
+.kicker{font-size:12.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--indigo);display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.kicker .dot{width:7px;height:7px;border-radius:50%;background:var(--green)}
+.card h3{margin-bottom:10px}
+.card p{font-size:15.5px;margin:0;line-height:1.6}
+
+/* ---------- timeline 7 jours ---------- */
+.days{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:46px}
+.day{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:22px 20px;box-shadow:var(--shadow-sm);position:relative;overflow:hidden}
+.day::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--grad)}
+.day .n{font-family:"Bricolage Grotesque";font-weight:800;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--indigo);margin-bottom:8px}
+.day h3{font-size:17px;margin-bottom:6px}
+.day p{font-size:14.5px;margin:0;color:var(--ink-soft);line-height:1.55}
+
+/* ---------- offre ---------- */
+.offer{background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow-lg);padding:46px 44px;max-width:880px;margin:46px auto 0;text-align:center}
+.price{font-family:"Bricolage Grotesque";font-weight:800;font-size:76px;color:var(--navy);line-height:1;letter-spacing:-.03em}
+.price sup{font-size:34px;vertical-align:super;margin-left:2px}
+.price-sub{font-size:15.5px;color:var(--ink-soft);margin-top:6px}
+.checks{display:grid;grid-template-columns:1fr 1fr;gap:12px 28px;text-align:left;margin:34px 0 32px}
+.checks div{display:flex;gap:11px;align-items:flex-start;font-size:15.5px;color:var(--navy2)}
+.checks .ic{background:rgba(43,182,115,.12);color:var(--green)}
+.seal{display:inline-flex;align-items:center;gap:12px;background:#F2FBF6;border:1px solid #D6EFE2;border-radius:999px;padding:10px 20px;font-size:14.5px;color:#1E7A4E;font-weight:500;margin-top:26px}
+
+/* ---------- faq ---------- */
+.faq{max-width:820px;margin:44px auto 0;display:grid;gap:12px}
+details{background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow-sm);overflow:hidden}
+summary{list-style:none;cursor:pointer;padding:20px 24px;font-weight:600;color:var(--navy);display:flex;justify-content:space-between;gap:16px;align-items:center;font-size:16.5px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-size:22px;color:var(--indigo);font-weight:400;line-height:1}
+details[open] summary::after{content:"–"}
+details p{padding:0 24px 22px;margin:0;font-size:15.5px}
+
+/* ---------- pied ---------- */
+.foot{padding:52px 0;text-align:center;color:var(--ink-soft);font-size:14px;border-top:1px solid var(--line);margin-top:40px}
+
+/* ---------- annotations de maquette ---------- */
+.note{
+  max-width:1080px;margin:0 auto;padding:14px 24px;font-size:13.5px;color:#7A4B00;
+  background:#FFF8E8;border:1px dashed #F0D9A0;border-radius:10px;font-family:Inter;
+}
+.note b{color:#8A5300}
+
+@media(max-width:900px){
+  .grid3{grid-template-columns:1fr}
+  .days{grid-template-columns:1fr 1fr}
+  .vs{grid-template-columns:1fr;gap:18px}
+  .vsbadge{margin:0 auto}
+  .checks{grid-template-columns:1fr}
+  .offer{padding:34px 24px}
+  section{padding:60px 0}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="wrap">
+    <a class="logo" href="#">L'Atelier du <span>Quiz</span></a>
+    <div class="navlinks">
+      <a href="#video">La vidéo</a>
+      <a href="#methode">La méthode</a>
+      <a href="#faq">Questions</a>
+      <a class="btn sm" href="#offre">Je rejoins l'Atelier</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="pill"><i></i>Nouveau · le quizing</span>
+    <h1>7 jours pour lancer ton <span class="mark-i">quiz marketing</span> et collecter des <span class="mark">milliers d'emails</span>.</h1>
+    <p class="lead">L'Atelier du Quiz n'est pas une énième formation. C'est un programme qui te prend par la main pour que tu crées ton quiz, que tu attires du trafic qualifié dessus et que tu remplisses ta mailing list de futurs acheteurs.</p>
+    <span class="hand">Même si tu pars de zéro et que la technique te fait peur.</span>
+    <a class="btn" href="#offre">Je rejoins l'Atelier</a>
+    <div class="btn-note"><b>47 €</b> · paiement unique · garantie 30 jours</div>
+
+    <div class="eq">
+      <div class="b">Ton quiz</div><span class="op">+</span>
+      <div class="b"><span class="dot"></span>Coach IA</div><span class="op">+</span>
+      <div class="b">Quiz Doctor</div><span class="op">+</span>
+      <div class="b">Communauté</div><span class="op">=</span>
+      <div class="b res">Quizing</div>
+    </div>
+  </div>
+</header>
+
+<div class="note"><b>Emplacement 1 de la VSL.</b> Juste sous le hero, dans sa propre section. Le titre a déjà qualifié en 5 secondes ; la vidéo prend le relais pour ceux qui veulent comprendre avant d'acheter, et la page continue pour ceux qui ne regardent jamais de vidéo.</div>
+
+<section id="video" class="alt">
+  <div class="wrap center">
+    <h2>8 minutes pour voir exactement ce que tu vas faire</h2>
+    <p class="lead" style="margin-bottom:38px">Je te montre le programme jour par jour, ce que tu obtiens à la fin, et pourquoi ce n'est pas une formation de plus.</p>
+    <div class="vsl-shell">
+      <div class="vsl">
+        <div class="play"></div>
+        <div class="dur">8:37</div>
+      </div>
+    </div>
+    <p class="vsl-cap">Miniature cliquable : la vidéo ne se charge qu'au clic, la page reste rapide.</p>
+    <div style="margin-top:34px">
+      <a class="btn" href="#offre">Je rejoins l'Atelier</a>
+      <div class="btn-note"><b>47 €</b> · paiement unique · garantie 30 jours</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap center">
+    <h2>Une <span class="mark-i">formation</span> de plus ? Surtout pas.</h2>
+    <div class="vs">
+      <div class="panel old">
+        <h3>La formation classique</h3>
+        <ul>
+          <li><span class="ic no">✕</span>Des heures de vidéo que tu regardes en accéléré.</li>
+          <li><span class="ic no">✕</span>Des PDF que tu n'ouvriras jamais.</li>
+          <li><span class="ic no">✕</span>Tu appliqueras « quand tu auras le temps ».</li>
+          <li><span class="ic no">✕</span>Six mois plus tard : toujours zéro lead.</li>
+        </ul>
+      </div>
+      <div class="vsbadge">VS</div>
+      <div class="panel new">
+        <h3>Le Quizing</h3>
+        <ul>
+          <li><span class="ic ok">✓</span>Une mission par jour. Tu fais, tu ne regardes pas.</li>
+          <li><span class="ic ok">✓</span>Tu bosses sur TON vrai quiz, pas un exercice bidon.</li>
+          <li><span class="ic ok">✓</span>Ton quiz est en ligne dès le 4<sup>e</sup> jour.</li>
+          <li><span class="ic ok">✓</span>Des leads qualifiés qui tombent en automatique.</li>
+        </ul>
+      </div>
+    </div>
+    <div style="margin-top:40px"><a class="btn ghost" href="#methode">Je découvre tous les détails</a></div>
+  </div>
+</section>
+
+<section class="alt" id="methode">
+  <div class="wrap center">
+    <h2>Tu n'es jamais seul devant ton quiz</h2>
+    <p class="lead">Le quiz, c'est toi qui le crées. Mais tu es épaulé à chaque étape par un système qui lit tes vrais chiffres.</p>
+    <div class="grid3">
+      <div class="card hi">
+        <div class="kicker"><span class="dot"></span>Coach IA · 24/7</div>
+        <h3>Il te dit quoi faire, maintenant</h3>
+        <p>Il lit tes vrais chiffres Tiquiz et te donne la prochaine action. Un conseil, pas un cours. Même à 2 h du matin.</p>
+      </div>
+      <div class="card">
+        <div class="kicker">Quiz Doctor</div>
+        <h3>Il traque les fuites</h3>
+        <p>Avant publication, il passe ton quiz au scanner et repère ce qui te fait perdre des leads : capture, questions, images.</p>
+      </div>
+      <div class="card">
+        <div class="kicker">Communauté</div>
+        <h3>Elle te porte</h3>
+        <p>Des créateurs qui avancent en même temps que toi. Tu ne lâches pas à mi-chemin, tu vas au bout.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap center">
+    <h2>7 jours pour des résultats <span class="mark">concrets</span></h2>
+    <div class="days">
+      <div class="day"><div class="n">Jour 1</div><h3>Cadrage</h3><p>Tu sais quel quiz créer et pour qui.</p></div>
+      <div class="day"><div class="n">Jour 2</div><h3>Questions</h3><p>Tes questions écrites, qui qualifient vraiment.</p></div>
+      <div class="day"><div class="n">Jour 3</div><h3>Capture</h3><p>Le réglage qui sauve tes emails.</p></div>
+      <div class="day"><div class="n">Jour 4</div><h3>En ligne</h3><p>Ton quiz est publié et connecté à Systeme.io.</p></div>
+      <div class="day"><div class="n">Jour 5</div><h3>Trafic</h3><p>Du monde dessus, sans payer de pub.</p></div>
+      <div class="day"><div class="n">Jour 6</div><h3>Viralité</h3><p>Tes participants le partagent pour toi.</p></div>
+      <div class="day"><div class="n">Jour 7</div><h3>Ventes</h3><p>Les 7 emails de relance déjà écrits.</p></div>
+      <div class="day"><div class="n">Et après</div><h3>À l'infini</h3><p>Le quiz tourne, tu l'optimises chaque semaine.</p></div>
+    </div>
+  </div>
+</section>
+
+
+<section id="temoignages">
+  <div class="wrap center">
+    <h2>Ils sont déjà dedans</h2>
+    <p class="narrow" style="margin-top:14px">Les premiers membres de l'Atelier, pendant les 7 jours. Messages bruts, rien retouché.</p>
+
+    <div class="tw">
+      <div class="tm"><div class="who"><span class="av">F</span><span class="nm">Fabienne</span></div>
+        <p>« hello, j'ai commencé à regardé tout ça et c'est génialissime !!! Bravo Béné ! »</p></div>
+
+      <div class="tm"><div class="who"><span class="av">V</span><span class="nm">Véronique</span></div>
+        <p>« RESPECT pour tout ton travail Béné. Vraiment. Maintenant, à nous de faire péter les compteurs. »</p></div>
+
+      <div class="tm"><div class="who"><span class="av">E</span><span class="nm">Éric</span></div>
+        <p>« Génial Béné l'atelier du Quiz ! »</p></div>
+
+      <div class="tm"><div class="who"><span class="av">M</span><span class="nm">Maurice</span></div>
+        <p>« Ça va loin. Très loin ce que tu construis. »</p></div>
+
+      <div class="tm"><div class="who"><span class="av">J</span><span class="nm">Jocelyne</span></div>
+        <p>« Youhou !! Merci M'dame ! »</p></div>
+
+      <div class="tm"><div class="who"><span class="av">M</span><span class="nm">Mauli</span></div>
+        <p>« Merci à toi pour le courage d'inventer tout cela. »</p></div>
+
+      <div class="tm big">
+        <div class="who"><span class="av">M</span><span class="nm">Maurice, coach en accompagnement 1 à 1</span></div>
+        <div class="lead">« J'ai pris ce programme pour trois raisons. »</div>
+        <ol>
+          <li>« Sur Tipote j'ai vu mes chiffres et mes stats pour mon quiz en cliquant sur analytics, et c'était pas terrible du tout. Donc je sais que je dois prendre de la graine à ce niveau là pour tout optimiser, autant le faire dans les meilleures conditions. »</li>
+          <li>« J'avais vu une vidéo qui expliquait comment créer une pop up. Je n'ai plus retrouvé ce tuto et je pense que ça peut être une piste à explorer lorsque mon quiz sera optimisé. »</li>
+          <li>« À la fin du questionnaire les personnes sont redirigées vers une page de vente pour un accompagnement haut de gamme en 1 à 1, et je voulais voir avec toi si le quiz s'adaptait à ma stratégie. »</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="tsrc">Messages reçus dans le groupe des membres. Prénoms affichés avec leur accord.</div>
+  </div>
+</section>
+
+<div class="note"><b>Emplacement 2 de la VSL.</b> Pas un second lecteur : un simple lien de rappel « <i>tu préfères que je te l'explique en vidéo ? ↑</i> » qui renvoie en ancre vers la section du haut. Deux lecteurs sur une même page divisent le taux de lecture et alourdissent le chargement.</div>
+
+<section class="alt" id="offre">
+  <div class="wrap center">
+    <h2>Tout ça, pour 47 €. Une fois. À vie.</h2>
+    <div class="offer">
+      <div class="price">47<sup>€</sup></div>
+      <div class="price-sub">paiement unique · accès à vie · aucun abonnement</div>
+      <div class="checks">
+        <div><span class="ic">✓</span>Le programme complet des 7 jours</div>
+        <div><span class="ic">✓</span>La méthode CAPTO, les 5 étapes dans l'ordre</div>
+        <div><span class="ic">✓</span>Le coach IA connecté à tes vrais chiffres</div>
+        <div><span class="ic">✓</span>Le Quiz Doctor avant publication</div>
+        <div><span class="ic">✓</span>Les 7 emails de relance déjà écrits</div>
+        <div><span class="ic">✓</span>Ton quiz connecté à Systeme.io</div>
+        <div><span class="ic">✓</span>La communauté des participants</div>
+        <div><span class="ic">✓</span>Les 5 bonus pour aller plus loin</div>
+      </div>
+      <a class="btn" href="#">Je lance mon quiz aujourd'hui</a>
+      <div class="btn-note">Paiement sécurisé · accès immédiat</div>
+      <div class="seal">Garantie 30 jours · c'est moi qui prends le risque, pas toi</div>
+    </div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap center">
+    <h2>Tu te demandes peut-être</h2>
+    <div class="faq">
+      <details open><summary>Je débute complètement et la technique me fait peur.</summary><p>C'est exactement pour toi que l'Atelier a été construit. Chaque étape technique est montrée écran par écran, et le coach IA répond à tes questions quand tu bloques, à n'importe quelle heure.</p></details>
+      <details><summary>Combien de temps ça va me prendre par jour ?</summary><p>Environ une heure. Certains jours moins, le jour de la mise en ligne un peu plus. Si tu sautes un jour, tu reprends où tu t'es arrêtée, rien n'expire.</p></details>
+      <details><summary>C'est un abonnement ? Il y a des frais cachés ?</summary><p>Non. Tu paies 47 € une fois et tu gardes l'accès à vie. Tu n'auras rien d'autre à payer pour suivre l'Atelier du début à la fin.</p></details>
+      <details><summary>Et si vraiment ça ne marche pas pour moi ?</summary><p>Tu m'écris dans les 30 jours et je te rembourse, sans te demander de justifier quoi que ce soit. Le remboursement part dans la semaine.</p></details>
+    </div>
+  </div>
+</section>
+
+<div class="foot">
+  <div class="wrap">Maquette de travail · L'Atelier du Quiz · tipote.fr</div>
+</div>
+
+</body>
+</html>
