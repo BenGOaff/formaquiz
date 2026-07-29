@@ -250,6 +250,16 @@ export function TiquizFocusCard() {
             Voir mes résultats et le Quiz Doctor
           </a>
         </Button>
+        {/* Bascule manuelle Tiquiz <-> Tipote : le flux de consentement
+            remplace la connexion existante (retour Maurice 29/07). */}
+        <a
+          href={provider === "tipote" ? "/api/integrations/tiquiz/start" : "/api/integrations/tiquiz/start?provider=tipote"}
+          className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+        >
+          {provider === "tipote"
+            ? "Ton quiz est plutôt sur Tiquiz ? Basculer"
+            : "Ton quiz est plutôt sur Tipote ? Basculer"}
+        </a>
       </CardContent>
     </Card>
   );

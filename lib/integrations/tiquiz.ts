@@ -318,12 +318,60 @@ async function autoLinkAt(
   }
 }
 
-/** Auto-connexion par email : Tiquiz d'abord (cas majoritaire des eleves),
- *  sinon Tipote (retour Maurice : quiz construit sur app.tipote.com). */
+/** Compte les quiz du compte lie (via l'API partenaire). null = echec. */
+async function countQuizzesFor(token: string, provider: PartnerProvider): Promise<number | null> {
+  try {
+    const res = await fetch(`${baseFor(provider)}/api/partner/quizzes`, {
+      headers: { "x-partner-secret": SHARED, Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (!json?.ok) return null;
+    return Array.isArray(json.quizzes) ? json.quizzes.length : 0;
+  } catch {
+    return null;
+  }
+}
+
+/** Revoque un token non retenu (best-effort). */
+async function revokeTokenAt(token: string, provider: PartnerProvider): Promise<void> {
+  try {
+    await fetch(`${baseFor(provider)}/api/partner/revoke`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-partner-secret": SHARED },
+      body: JSON.stringify({ token }),
+      cache: "no-store",
+    });
+  } catch {
+    /* best-effort */
+  }
+}
+
+/** Auto-connexion par email. Piege systemique (retour Maurice 29 juil
+ *  2026) : l'offre Atelier CREE un compte Tiquiz a chaque acheteur qui
+ *  n'en a pas, donc un eleve Tipote a souvent AUSSI un compte Tiquiz
+ *  vide. Regle : si les deux comptes existent, celui qui contient des
+ *  quiz gagne (Tipote ne l'emporte que si Tiquiz est vide ET que Tipote
+ *  a au moins un quiz). A egalite ou en cas de doute : Tiquiz,
+ *  l'app par defaut de l'Atelier. */
 async function autoLink(
   email: string,
 ): Promise<{ token: string; tiquizUserId: string | null; email: string | null; provider: PartnerProvider } | null> {
-  return (await autoLinkAt(email, "tiquiz")) ?? (await autoLinkAt(email, "tipote"));
+  const [tq, tp] = [await autoLinkAt(email, "tiquiz"), await autoLinkAt(email, "tipote")];
+  if (tq && !tp) return tq;
+  if (tp && !tq) return tp;
+  if (!tq || !tp) return null;
+
+  const [nTiquiz, nTipote] = await Promise.all([
+    countQuizzesFor(tq.token, "tiquiz"),
+    countQuizzesFor(tp.token, "tipote"),
+  ]);
+  const pickTipote = (nTipote ?? 0) > 0 && (nTiquiz ?? 0) === 0;
+  const winner = pickTipote ? tp : tq;
+  const loser = pickTipote ? tq : tp;
+  void revokeTokenAt(loser.token, loser.provider);
+  return winner;
 }
 
 /**
