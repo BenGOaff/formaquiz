@@ -18,12 +18,14 @@ export async function GET() {
 
   const list = await fetchTiquizQuizList(viewer.userId);
   if (!list) {
-    return NextResponse.json({ ok: true, connected: true, error: true, provider: connection.provider, projects: [], quizzes: [] });
+    return NextResponse.json({ ok: true, connected: true, error: true, provider: connection.provider, email: connection.tiquiz_email, connectedAt: connection.connected_at, projects: [], quizzes: [] });
   }
   return NextResponse.json({
     ok: true,
     connected: true,
     provider: connection.provider,
+    email: connection.tiquiz_email,
+    connectedAt: connection.connected_at,
     projects: list.projects,
     quizzes: list.quizzes,
     selectedScope: connection.selected_scope ?? "",

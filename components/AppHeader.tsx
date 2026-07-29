@@ -183,8 +183,8 @@ export function AppHeader({
                   <MenuLink href="/certificat" icon={Award}>
                     Mon certificat
                   </MenuLink>
-                  <MenuLink href="/avancees" icon={Link2}>
-                    Connexion Tiquiz
+                  <MenuLink href="/profil?tab=connexion" icon={Link2}>
+                    Connexion Tiquiz / Tipote
                   </MenuLink>
                   <button
                     type="button"
