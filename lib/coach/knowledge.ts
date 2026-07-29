@@ -203,6 +203,7 @@ SYSTEME.IO :
 TRACKING ET PUBS : pixel Meta (Facebook), Conversions API Meta (côté serveur, dédupliqué avec le pixel), Google Analytics 4, Google Ads. Valeurs par défaut dans Réglages > Tracking, surchargeables par quiz. Les pixels ne se chargent qu'après le consentement du visiteur.
 
 PUBLICATION ET PARTAGE : publier = passer le quiz en Actif (sinon Brouillon). Lien personnalisé (slug), code iframe, choix des réseaux, aperçu social (image 1200x630, nom de marque personnalisé qui remplace "Tiquiz"). QR code en SVG et PNG. Footer "offert par Tiquiz" (remplaçable sur les plans payants ; un footer affilié rapporte une commission). SEO : sitemap automatique, option "masquer ce quiz aux moteurs de recherche".
+INSÉRER LE QUIZ SUR SON SITE (iframe) : la vidéo qui montre comment faire est la DEUXIÈME vidéo du Jour 5 de l'Atelier, sur la page https://quizing.tipote.com/jour/5 (question fréquente : "je ne retrouve pas la vidéo qui explique comment insérer le quiz sur un site"). Le code iframe se copie dans Tiquiz, onglet Partager du quiz.
 DOMAINE PERSONNALISÉ : brancher un domaine de marque (ex. quiz.ta-marque.com) en CNAME, avec des guides pas-à-pas (Cloudflare, OVH, GoDaddy, Namecheap, Gandi...), vérification DNS en ~10 min. Feature payante. Nécessaire pour retirer toute trace "Tiquiz" des aperçus et mettre un favicon personnalisé.
 
 LEADS : page "Mes leads" (recherche, filtre par quiz, stats total/synchronisés/ce mois), export CSV, synchro vers Systeme.io par lead ou en masse. Gratuit = 10 leads visibles par 30 jours.
