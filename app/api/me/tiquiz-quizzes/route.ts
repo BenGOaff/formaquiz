@@ -14,15 +14,16 @@ export async function GET() {
   if (!viewer.enrolled) return NextResponse.json({ ok: false, reason: "no_access" }, { status: 403 });
 
   const connection = await getTiquizConnection(viewer.userId);
-  if (!connection) return NextResponse.json({ ok: true, connected: false, projects: [], quizzes: [] });
+  if (!connection) return NextResponse.json({ ok: true, connected: false, provider: null, projects: [], quizzes: [] });
 
   const list = await fetchTiquizQuizList(viewer.userId);
   if (!list) {
-    return NextResponse.json({ ok: true, connected: true, error: true, projects: [], quizzes: [] });
+    return NextResponse.json({ ok: true, connected: true, error: true, provider: connection.provider, projects: [], quizzes: [] });
   }
   return NextResponse.json({
     ok: true,
     connected: true,
+    provider: connection.provider,
     projects: list.projects,
     quizzes: list.quizzes,
     selectedScope: connection.selected_scope ?? "",

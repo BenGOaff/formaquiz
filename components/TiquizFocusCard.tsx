@@ -15,8 +15,6 @@ import { Target, ExternalLink, Loader2, Plus, Link2, RefreshCw } from "lucide-re
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-const TIQUIZ_APP_URL = "https://quiz.tipote.com";
-
 type QuizRef = { id: string; title: string; project_id: string | null; mode: string | null };
 type ProjectRef = { id: string; name: string; is_default: boolean };
 
@@ -24,6 +22,10 @@ export function TiquizFocusCard() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(false);
+  // "tiquiz" ou "tipote" : ou vit le compte quiz de l'eleve (pont).
+  // Adapte les libelles et les liens sortants (retour Maurice 29/07 :
+  // un eleve Tipote etait envoye sur le login Tiquiz, impasse totale).
+  const [provider, setProvider] = useState<string>("tiquiz");
   const [projects, setProjects] = useState<ProjectRef[]>([]);
   const [quizzes, setQuizzes] = useState<QuizRef[]>([]);
   const [scope, setScope] = useState("");
@@ -45,6 +47,7 @@ export function TiquizFocusCard() {
         return;
       }
       setConnected(Boolean(data.connected));
+      if (data.provider === "tipote" || data.provider === "tiquiz") setProvider(data.provider);
       if (data.error) {
         // Connecté mais la liste n'a pas pu être récupérée : NE PAS conclure
         // "aucun quiz". On propose de réessayer.
@@ -180,11 +183,11 @@ export function TiquizFocusCard() {
         <CardContent className="flex h-full flex-col gap-3 py-5">
           {Header}
           <p className="text-sm text-muted-foreground">
-            Tu n'as pas encore de quiz. Crée ton premier quiz dans Tiquiz : c'est lui que l'Atelier
-            analysera ici.
+            Tu n'as pas encore de quiz. Crée ton premier quiz dans {provider === "tipote" ? "Tipote" : "Tiquiz"} : c'est lui
+            que l'Atelier analysera ici.
           </p>
           <Button asChild size="sm" className="mt-auto w-fit">
-            <a href={TIQUIZ_APP_URL} target="_blank" rel="noopener noreferrer">
+            <a href="/api/integrations/tiquiz/go?to=create" target="_blank" rel="noopener noreferrer">
               <Plus />
               Créer mon premier quiz
             </a>
