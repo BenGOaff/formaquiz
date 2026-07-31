@@ -71,13 +71,13 @@ Un court diagnostic à l'entrée capte le métier, la niche, la maturité, la mo
 Un coach disponible en permanence, qui connait le programme, le profil de l'élève, son carnet, son avancement, son quiz Tiquiz et ses vrais chiffres. Il répond court et concret, propose des suggestions tapables, et se manifeste de lui-même quand l'élève bloque (une aide en une ligne, jamais de spam). Il ne répond qu'à partir du contenu fourni, il n'invente jamais une méthode, un chiffre ou une URL.
 
 ### La connexion Tiquiz et les résultats réels
-L'élève connecte son compte Tiquiz en 1 clic, en lecture seule. Il voit ses vrais chiffres (leads, vues, complétions, partages), des recommandations fiables (un constat égale une action, rien ne s'affiche tant que ce n'est pas sûr et actionnable), et un Quiz Doctor qui audite la structure de son quiz avant ou après publication, avec une checklist de corrections reliées au bon jour.
+L'élève connecte son compte Tiquiz en 1 clic, en lecture seule. Il voit ses vrais chiffres (leads, vues, complétions, partages), des recommandations fiables (un constat égale une action, rien ne s'affiche tant que ce n'est pas sûr et actionnable), et un Quiz Doctor qui audite la structure de son quiz avant ou après publication, avec une checklist de corrections reliées au bon jour. Si l'élève travaille sur Tipote plutôt que Tiquiz, le pont le détecte : le bouton "Créer mon premier quiz" ouvre l'outil où il a un compte, et s'il a les deux, celui où il a déjà des quiz.
 
 ### La campagne "done-for-you"
 Tiquiz écrit le quiz, L'Atelier du Quiz écrit tout l'autour : séquence de bienvenue, un email par profil de résultat, séquence de vente douce, et kit de lancement (posts, message direct, email de partenaire). Le tout à partir du carnet et des profils réels du quiz, copiable, téléchargeable, avec des modèles Systeme.io à importer en 1 clic. La partie où la plupart des gens abandonnent, faite pour l'élève.
 
 ### Progression honnête et célébration
-Des badges sur de vrais jalons (premier jour, quiz publié, communauté lancée, diplômé, et sur les vrais chiffres : premier lead, 10 leads, 50 leads), une célébration à chaque cap franchi, et un certificat de fin de formation partageable, décroché en validant un examen. Pas de points vides, pas de classements, pas de badges décoratifs.
+Des badges sur de vrais jalons (premier jour, quiz publié, communauté lancée, diplômé, et sur les vrais chiffres : premier lead, 10 leads, 50 leads), une célébration à chaque cap franchi, et un certificat de fin de formation partageable (numéro unique, page publique avec visuel), décroché en terminant les 7 jours du parcours. Pas d'examen, pas de points vides, pas de classements, pas de badges décoratifs.
 
 ### La mise en avant automatique des réussites
 Quand un élève atteint un cap réel, le système prépare le brouillon de son étude de cas et alerte l'admin. Une machine à preuve sociale, alimentée par de vrais résultats.
