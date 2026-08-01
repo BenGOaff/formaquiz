@@ -57,6 +57,10 @@ import {
 } from "@/lib/affiliate";
 import {
   SWIPE_EMAILS,
+  SWIPE_POST_TEXTS,
+  ATELIER_EMAIL_PLAN_7,
+  ATELIER_EMAIL_PLAN_3,
+  ATELIER_POST_PLAN_5,
   SWIPE_POSTS,
   ARTICLE_ANGLES,
   VIDEO_IDEAS,
@@ -645,8 +649,10 @@ export function AffiliationClient({
                 Ta séquence email prête à envoyer
               </span>
               <p className="text-sm text-muted-foreground">
-                6 emails à copier-coller dans ton outil d'emailing. Ton lien affilié est déjà
-                inséré. Rythme conseillé : 1 email par jour sur 6 jours, ou espacé sur 10 à 12 jours.
+                15 emails à copier-coller dans ton outil d&apos;emailing. Ton lien affilié est déjà
+                inséré. Chaque email tient debout tout seul : envoie-les tous, ou n&apos;en garde que
+                quelques-uns. Aucune urgence artificielle, aucune date de fermeture : la campagne
+                reste vraie dans six mois.
               </p>
               <ul className="flex flex-col gap-1.5 text-xs text-muted-foreground">
                 <li className="flex items-start gap-2">
@@ -659,6 +665,13 @@ export function AffiliationClient({
                 <li className="flex items-start gap-2">
                   <ArrowRight className="mt-0.5 size-3.5 shrink-0 text-primary" />
                   <span>3 objets par email : teste le A, garde B et C pour relancer les non-ouvreurs.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <ArrowRight className="mt-0.5 size-3.5 shrink-0 text-primary" />
+                  <span>
+                    Version 7 envois : {ATELIER_EMAIL_PLAN_7.map((n) => `#${n}`).join(" · ")}. Version 3
+                    envois, à trois jours d&apos;intervalle : {ATELIER_EMAIL_PLAN_3.map((n) => `#${n}`).join(" · ")}.
+                  </span>
                 </li>
               </ul>
               {!effectiveId && (
@@ -679,7 +692,7 @@ export function AffiliationClient({
               mail={mail}
               link={link}
               firstName={firstName}
-              override={emailOverrides[String(mail.n)]}
+              override={emailOverrides[mail.key]}
             />
           ))}
         </div>
@@ -746,19 +759,24 @@ export function AffiliationClient({
                 </Button>
               </div>
               <p className="text-sm text-muted-foreground">
-                Des visuels et carrousels aux couleurs de l'Atelier, à publier tels quels. Les
-                légendes sont dans le document Word (bouton ci-dessus), à copier-coller et adapter.
+                15 posts aux couleurs de l&apos;Atelier : le visuel d&apos;un côté, la légende de l&apos;autre,
+                prête à copier. Le lien ne va PAS dans le post (LinkedIn étouffe les publications
+                sortantes) : colle-le en premier commentaire, ou mets-le en bio sur Instagram et
+                Facebook. Si tu ne veux pas tout publier, commence par{" "}
+                {ATELIER_POST_PLAN_5.map((n) => `#${n}`).join(" · ")}.
               </p>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {DEFAULT_POSTS.map((a) => (
-                  <AssetTile
-                    key={a.url}
-                    url={a.url}
-                    title={a.title}
-                    description={a.description}
-                    fileType={a.fileType}
-                  />
-                ))}
+              <div className="flex flex-col gap-3">
+                {SWIPE_POST_TEXTS.map((post) => {
+                  const asset = DEFAULT_POSTS[post.n - 1];
+                  return (
+                    <PostKitCard
+                      key={post.n}
+                      post={post}
+                      assetUrl={asset?.url ?? ""}
+                      link={link}
+                    />
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -975,7 +993,7 @@ function SwipeEmailCard({
     const res = await fetch("/api/me/affiliate-emails", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ n: mail.n, ...payload }),
+      body: JSON.stringify({ key: mail.key, ...payload }),
     });
     if (!res.ok) throw new Error("save failed");
   }
@@ -1035,6 +1053,14 @@ function SwipeEmailCard({
               </li>
             ))}
           </ul>
+        </div>
+
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-dashed border-border px-3 py-1.5">
+          <span className="min-w-0 text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">Pré-en-tête : </span>
+            {mail.preheader}
+          </span>
+          <CopyButton text={mail.preheader} label="" />
         </div>
 
         <div className="flex flex-col gap-2">
@@ -1104,6 +1130,62 @@ function SwipeEmailCard({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/** Un post du kit : son visuel d'un côté, sa légende copiable de l'autre,
+ *  et le lien tracké à part (il se colle en premier commentaire). */
+function PostKitCard({
+  post,
+  assetUrl,
+  link,
+}: {
+  post: (typeof SWIPE_POST_TEXTS)[number];
+  assetUrl: string;
+  link: string;
+}) {
+  const isImage = post.kind === "image";
+  return (
+    <div className="grid gap-4 rounded-xl border border-border p-3 sm:grid-cols-[220px_1fr]">
+      <div className="flex flex-col gap-2">
+        <div className="flex aspect-[4/5] items-center justify-center overflow-hidden rounded-lg bg-muted/40">
+          {isImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={assetUrl} alt={post.title} className="h-full w-full object-contain" />
+          ) : (
+            <div className="flex flex-col items-center gap-1 text-muted-foreground">
+              <ImageIcon className="size-7" />
+              <span className="text-xs">Carrousel</span>
+            </div>
+          )}
+        </div>
+        <Button asChild variant="outline" size="sm">
+          <a href={assetUrl} target="_blank" rel="noopener noreferrer" download>
+            <Download className="size-4" />
+            {isImage ? "Télécharger l'image" : "Le carrousel en PDF"}
+          </a>
+        </Button>
+      </div>
+
+      <div className="flex min-w-0 flex-col gap-2">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs font-semibold uppercase tracking-wide text-primary">
+              Post {post.n}
+            </span>
+            <span className="text-sm font-semibold">{post.title}</span>
+          </div>
+          <CopyButton text={post.caption} label="Copier le post" />
+        </div>
+        <div className="max-h-60 overflow-auto whitespace-pre-wrap rounded-lg border border-border bg-muted/20 p-3 text-sm leading-relaxed">
+          {post.caption}
+        </div>
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-dashed border-border px-3 py-1.5">
+          <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">{link}</span>
+          <CopyButton text={link} label="Lien pour le commentaire" />
+        </div>
+      </div>
+    </div>
   );
 }
 
