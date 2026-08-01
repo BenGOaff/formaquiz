@@ -84,6 +84,7 @@ périmée et n'utilise plus ni l'une ni l'autre. Donc :
 | `lib/affiliateContent/posts.ts` | `app/affiliate/promouvoir/content/atelier-posts-fr.ts` |
 | `lib/affiliateSwipe.ts` (`SWIPE_EMAILS`) | `app/affiliate/promouvoir/content/atelier-emails-fr.ts` |
 | `lib/affiliateGeneratorBrief.ts` | `lib/affiliate/generatorBrief.ts` |
+| `lib/markdownLite.ts` | `lib/affiliate/markdownLite.ts` |
 | `public/affiliate-assets/atelier/posts/` | idem, MÊME chemin public |
 
 Les visuels sont servis au **même chemin public** dans les deux apps :
@@ -107,3 +108,29 @@ ne traverse pas la frontière serveur vers client. Marqué côté client, le
 même composant faisait planter la page en production chez Tipote sur
 "An error occurred in the Server Components render", sans message utile
 et sans que le typecheck ne voie quoi que ce soit.
+
+**Le générateur rend du markdown léger, pas du texte brut.** `toHtml()`
+doit gérer les TITRES (`#`, `##`) et les LISTES (`- `), pas seulement le
+gras : un article demandé sort avec des sous-titres, et sans ça l'affilié
+voit littéralement `## Mon sous-titre` à l'écran et le copie tel quel.
+Le résultat s'affiche MIS EN FORME par défaut ; l'édition du markdown
+brut est un geste volontaire, jamais l'état par défaut, et il n'y a pas
+d'aperçu séparé en dessous (doublon inutile).
+
+**Le format demandé se place EN DERNIER dans le prompt système**, et se
+rappelle en tête du message utilisateur. Coincé au milieu, entre les
+faits produits et les règles de style, il se faisait oublier : un article
+revenait en post. `looksLikeFormat()` sert de garde-fou serveur et fait
+refaire UNE fois un article sans titre ni sous-titres.
+
+## Piège JSX : une expression en fin de ligne mange l'espace
+
+```jsx
+Ce rédacteur ne connaît que {PRODUCT_NAME}
+et ne sait parler que de lui.        {/* -> "L'Atelier du Quizet ne sait" */}
+```
+
+JSX supprime le saut de ligne ET l'espace qui le borde quand la ligne se
+termine par une expression. Vu en prod le 1er août 2026. Écrire
+`{VALEUR} et ...` sur la même ligne, ou terminer par `{" "}`. Ni le
+typecheck ni le lint ne le voient : ça ne se remarque qu'à l'écran.

@@ -13,7 +13,7 @@
 // {AFFILIATE_LINK}, jamais une URL inventée.
 
 import { useState } from "react";
-import { Loader2, Sparkles, Wand2 } from "lucide-react";
+import { Check, Loader2, Pencil, RefreshCw, Sparkles, Wand2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +40,10 @@ export function GeneratorClient({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
+  // Le texte s'affiche MIS EN FORME par défaut. L'éditer est un geste
+  // volontaire : afficher en permanence le markdown brut donnait
+  // l'impression que le générateur rendait du code (retour Béné).
+  const [editing, setEditing] = useState(false);
 
   async function generate() {
     if (audience.trim().length < 3) {
@@ -71,6 +75,7 @@ export function GeneratorClient({
         return;
       }
       setResult(data.text);
+      setEditing(false);
     } catch {
       setError("Problème de connexion. Vérifie ton réseau et réessaie.");
     } finally {
@@ -175,35 +180,66 @@ export function GeneratorClient({
       {result && (
         <Card>
           <CardContent className="flex flex-col gap-3 py-5">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
               <span className="flex items-center gap-2 text-sm font-semibold">
                 <Sparkles className="size-4 text-primary" />
                 {FORMAT_LABEL[format]}
               </span>
               <div className="flex flex-wrap gap-2">
-                <CopyButton text={plain} label="Copier le texte" />
-                <CopyRichButton html={html} label="Copier avec le gras" />
+                <CopyRichButton html={html} label="Copier mis en forme" />
+                <CopyButton text={plain} label="Copier en texte brut" />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setEditing((e) => !e)}
+                >
+                  {editing ? (
+                    <>
+                      <Check className="size-3.5" />
+                      Terminé
+                    </>
+                  ) : (
+                    <>
+                      <Pencil className="size-3.5" />
+                      Modifier
+                    </>
+                  )}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={generate} disabled={loading}>
+                  <RefreshCw className="size-3.5" />
+                  Regénérer
+                </Button>
               </div>
             </div>
 
-            <Textarea
-              value={result}
-              onChange={(e) => setResult(e.target.value)}
-              rows={20}
-              className="text-sm leading-relaxed"
-            />
-            <p className="text-xs text-muted-foreground">
-              Retouche le texte ici avant de copier. Relis-le toujours : c&apos;est toi qui le
-              signes.
-            </p>
+            {editing ? (
+              <>
+                <Textarea
+                  value={result}
+                  onChange={(e) => setResult(e.target.value)}
+                  rows={22}
+                  className="font-mono text-sm leading-relaxed"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Mise en forme : <code className="rounded bg-muted px-1">#</code> pour le titre,{" "}
+                  <code className="rounded bg-muted px-1">##</code> pour un sous-titre,{" "}
+                  <code className="rounded bg-muted px-1">**gras**</code>,{" "}
+                  <code className="rounded bg-muted px-1">-</code> pour une puce. Clique sur
+                  Terminé pour revoir le rendu.
+                </p>
+              </>
+            ) : (
+              <div className="fq-rich rounded-lg border border-border bg-muted/20 px-4 py-3 text-sm leading-relaxed">
+                <div dangerouslySetInnerHTML={{ __html: html }} />
+              </div>
+            )}
 
-            <div className="rounded-lg border border-dashed border-border bg-muted/20 px-3 py-2.5">
-              <p className="mb-1 text-xs font-medium">Aperçu avec ton lien inséré</p>
-              <div
-                className="fq-rich max-h-72 overflow-y-auto text-sm leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: html }}
-              />
-            </div>
+            <p className="text-xs text-muted-foreground">
+              &laquo; Copier mis en forme &raquo; garde les titres, le gras et les listes (pour ton
+              blog, ton outil d&apos;emailing, Google Docs). &laquo; Copier en texte brut &raquo;
+              enlève toute mise en forme, pour LinkedIn et Instagram qui n&apos;en acceptent
+              aucune. Relis avant d&apos;envoyer : c&apos;est toi qui signes.
+            </p>
           </CardContent>
         </Card>
       )}

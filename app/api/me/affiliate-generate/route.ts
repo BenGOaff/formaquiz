@@ -17,7 +17,9 @@ import { buildClaudeMessageBody } from "@/lib/claudeRequest";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import {
   GENERATOR_FORMATS,
+  FORMAT_REMINDER,
   buildSystemPrompt,
+  looksLikeFormat,
   type GeneratorFormat,
 } from "@/lib/affiliateGeneratorBrief";
 
@@ -76,6 +78,10 @@ export async function POST(req: NextRequest) {
   }
 
   const userPrompt = [
+    // Le format est rappelé EN PREMIER dans le message : c'est la
+    // consigne qui se perdait le plus souvent (un article demandé
+    // revenait en post).
+    FORMAT_REMINDER[format as GeneratorFormat],
     `MON AUDIENCE : ${audience.trim()}`,
     angle?.trim()
       ? `ANGLE DEMANDÉ : ${angle.trim()}`
@@ -87,27 +93,24 @@ export async function POST(req: NextRequest) {
     .join("\n");
 
   const model = resolveAnthropicModel(process.env.ANTHROPIC_MODEL, "sonnet");
-  const body = buildClaudeMessageBody({
-    model,
-    max_tokens: format === "article" || format === "script_long" ? 3000 : 1600,
-    temperature: 0.8,
-    system: buildSystemPrompt(format as GeneratorFormat),
-    messages: [{ role: "user", content: userPrompt }],
-  });
+  const system = buildSystemPrompt(format as GeneratorFormat);
+  const maxTokens = format === "article" || format === "script_long" ? 4000 : 1600;
 
-  try {
+  async function callClaude(messages: { role: "user" | "assistant"; content: string }[]) {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        "x-api-key": apiKey,
+        "x-api-key": apiKey as string,
         "anthropic-version": "2023-06-01",
         "content-type": "application/json",
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(
+        buildClaudeMessageBody({ model, max_tokens: maxTokens, temperature: 0.8, system, messages }),
+      ),
     });
     if (!res.ok) {
       console.error("[affiliate-generate] Anthropic", res.status, await res.text().catch(() => ""));
-      return NextResponse.json({ ok: false, reason: "generation_failed" }, { status: 502 });
+      return null;
     }
     const data = await res.json();
     const raw: string = Array.isArray(data?.content)
@@ -116,10 +119,39 @@ export async function POST(req: NextRequest) {
           .map((b: { text?: string }) => b.text ?? "")
           .join("")
       : "";
-
     // Filet de sécurité : même briefé, un modèle peut glisser un tiret
     // cadratin. La règle anti-IA de Béné est absolue sur le contenu visible.
-    const text = sanitizeAiText(raw).replace(/[—–]/g, "-").trim();
+    return sanitizeAiText(raw).replace(/[—–]/g, "-").trim();
+  }
+
+  try {
+    const messages: { role: "user" | "assistant"; content: string }[] = [
+      { role: "user", content: userPrompt },
+    ];
+    let text = await callClaude(messages);
+    if (text === null) {
+      return NextResponse.json({ ok: false, reason: "generation_failed" }, { status: 502 });
+    }
+
+    // GARDE-FOU DE FORMAT : un article sans titre ni sous-titres est un
+    // post déguisé. On ne le sert pas tel quel, on le fait refaire UNE
+    // fois en montrant au modèle ce qu'il vient de produire. Une seule
+    // reprise : au-delà, on rend ce qu'on a plutôt que de faire attendre
+    // l'affilié indéfiniment.
+    if (text && !looksLikeFormat(format as GeneratorFormat, text)) {
+      console.warn("[affiliate-generate] format hors cible, reprise", format);
+      const retry = await callClaude([
+        ...messages,
+        { role: "assistant", content: text },
+        {
+          role: "user",
+          content:
+            "Ce n'est pas le format demandé : il manque le titre en '# ' et les sous-titres en '## ', et c'est trop court pour un article. Réécris-le en ARTICLE DE BLOG complet, en respectant la structure obligatoire à la lettre. Renvoie uniquement l'article.",
+        },
+      ]);
+      if (retry && looksLikeFormat(format as GeneratorFormat, retry)) text = retry;
+    }
+
     if (!text) {
       return NextResponse.json({ ok: false, reason: "generation_failed" }, { status: 502 });
     }
