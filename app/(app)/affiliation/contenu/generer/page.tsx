@@ -52,10 +52,14 @@ export default async function GenererPage() {
         <CardContent className="flex items-start gap-2 py-4 text-sm text-muted-foreground">
           <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" />
           <span>
-            Ce rédacteur ne connaît que {PRODUCT_NAME} et ne sait parler que de lui. Il travaille à
-            partir des faits vérifiés du programme : il n&apos;invente ni prix, ni garantie, ni
-            chiffre, ni témoignage, et ne fabrique pas de fausse urgence. Relis quand même avant
-            d&apos;envoyer : c&apos;est ta signature en bas.
+            {/* Le nom du produit est suivi de {" "} : sans lui, JSX avale le
+                saut de ligne et colle "L'Atelier du Quiz" à "et" (bug vu en
+                prod le 1er août 2026). */}
+            Ce rédacteur ne connaît que {PRODUCT_NAME}{" "}
+            et ne sait parler que de lui. Il travaille à partir des faits vérifiés du programme :
+            il n&apos;invente ni prix, ni garantie, ni chiffre, ni témoignage, et ne fabrique pas
+            de fausse urgence. Relis quand même avant d&apos;envoyer : c&apos;est ta signature en
+            bas.
           </span>
         </CardContent>
       </Card>
