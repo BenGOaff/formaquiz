@@ -6,7 +6,8 @@
 // VRAIS gains (commissions attribuées par les webhooks) + un simulateur, et
 // un kit de promo personnalisé selon le business de l'élève.
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -25,16 +26,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   ArrowRight,
-  Mail,
   Megaphone,
-  FileText,
-  Video,
-  MessageSquare,
-  ImageIcon,
-  Download,
-  Pencil,
-  RotateCcw,
-  Bold,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -55,17 +47,6 @@ import {
   AFFILIATE_ARGUMENTS,
   affiliateIntro,
 } from "@/lib/affiliate";
-import {
-  SWIPE_EMAILS,
-  SWIPE_POSTS,
-  ARTICLE_ANGLES,
-  VIDEO_IDEAS,
-  DEFAULT_ASSETS,
-  DEFAULT_POSTS,
-  POSTS_TEXT_DOC,
-  fillSwipe,
-} from "@/lib/affiliateSwipe";
-import { renderSwipeEmailHtml } from "@/lib/affiliateEmailRender";
 
 const eur = (n: number) =>
   new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(
@@ -118,18 +99,7 @@ const STATUS_CLASS: Record<DisplayStatus, string> = {
   refunded: "bg-muted text-muted-foreground line-through",
 };
 
-type Tab = "lien" | "gains" | "promo" | "emails" | "contenus" | "paiement";
-
-export interface AffiliateAsset {
-  id: string;
-  title: string;
-  description: string | null;
-  kind: string;
-  url: string;
-  file_type: string | null;
-}
-
-export type EmailOverride = { subject?: string | null; bodyHtml?: string | null };
+type Tab = "lien" | "gains" | "promo" | "paiement";
 
 export function AffiliationClient({
   firstName,
@@ -137,16 +107,12 @@ export function AffiliationClient({
   activityType,
   initialAffiliateId,
   gains,
-  assets,
-  emailOverrides,
 }: {
   firstName: string | null;
   niche: string | null;
   activityType: string | null;
   initialAffiliateId: string;
   gains: Gains;
-  assets: AffiliateAsset[];
-  emailOverrides: Record<string, EmailOverride>;
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>(initialAffiliateId ? "gains" : "lien");
@@ -225,15 +191,19 @@ export function AffiliationClient({
         <TabBtn active={tab === "promo"} onClick={() => setTab("promo")} icon={Rocket}>
           Promouvoir
         </TabBtn>
-        <TabBtn active={tab === "emails"} onClick={() => setTab("emails")} icon={Mail}>
-          Emails
-        </TabBtn>
-        <TabBtn active={tab === "contenus"} onClick={() => setTab("contenus")} icon={Megaphone}>
-          Contenus
-        </TabBtn>
         <TabBtn active={tab === "paiement"} onClick={() => setTab("paiement")} icon={CheckCircle2}>
           Paiement
         </TabBtn>
+        {/* Le kit de contenu a son propre espace à dossiers
+            (/affiliation/contenu), aligné sur affiliate.tipote.com : il ne
+            tient plus dans un onglet. Ce bouton y emmène. */}
+        <Link
+          href="/affiliation/contenu"
+          className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+        >
+          <Megaphone className="size-4" />
+          Contenu
+        </Link>
       </div>
 
       {/* ───── Onglet Mon lien ───── */}
@@ -632,194 +602,35 @@ export function AffiliationClient({
               </div>
             </CardContent>
           </Card>
-        </div>
-      )}
 
-      {/* ───── Onglet Emails ───── */}
-      {tab === "emails" && (
-        <div className="flex flex-col gap-6">
-          <Card>
+          {/* Porte d'entrée du kit. Sans cette carte, le seul accès à
+              l'espace Contenu serait le petit lien de la barre d'onglets,
+              et l'affilié qui vient de lire son angle ne saurait pas où
+              trouver de quoi l'appliquer. */}
+          <Card className="border-primary/30 bg-primary/5">
             <CardContent className="flex flex-col gap-3 py-5">
-              <span className="flex items-center gap-2 text-sm font-semibold">
-                <Mail className="size-4 text-primary" />
-                Ta séquence email prête à envoyer
-              </span>
-              <p className="text-sm text-muted-foreground">
-                6 emails à copier-coller dans ton outil d'emailing. Ton lien affilié est déjà
-                inséré. Rythme conseillé : 1 email par jour sur 6 jours, ou espacé sur 10 à 12 jours.
-              </p>
-              <ul className="flex flex-col gap-1.5 text-xs text-muted-foreground">
-                <li className="flex items-start gap-2">
-                  <ArrowRight className="mt-0.5 size-3.5 shrink-0 text-primary" />
-                  <span>
-                    <code className="rounded bg-muted px-1 py-0.5">{"{first_name}"}</code> reste tel
-                    quel : c'est le champ de fusion de TON outil (il met le prénom du destinataire).
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <ArrowRight className="mt-0.5 size-3.5 shrink-0 text-primary" />
-                  <span>3 objets par email : teste le A, garde B et C pour relancer les non-ouvreurs.</span>
-                </li>
-              </ul>
-              {!effectiveId && (
-                <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
-                  <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                  <span>
-                    Ajoute d'abord ton identifiant dans l'onglet Mon lien : sans ça, tes emails
-                    partent avec un lien non tracké et tu ne touches aucune commission.
-                  </span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {SWIPE_EMAILS.map((mail) => (
-            <SwipeEmailCard
-              key={mail.n}
-              mail={mail}
-              link={link}
-              firstName={firstName}
-              override={emailOverrides[String(mail.n)]}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* ───── Onglet Contenus ───── */}
-      {tab === "contenus" && (
-        <div className="flex flex-col gap-6">
-          <Card>
-            <CardContent className="flex flex-col gap-2 py-5">
               <span className="flex items-center gap-2 text-sm font-semibold">
                 <Megaphone className="size-4 text-primary" />
-                Ta bibliothèque de contenus
+                Ton kit de contenu
               </span>
               <p className="text-sm text-muted-foreground">
-                Des visuels à télécharger, des posts réseaux, des angles d'articles et des idées de
-                vidéos, prêts à réutiliser. Ton lien affilié est déjà inséré dans les posts. Adapte
-                le ton à ta voix.
+                Emails de vente, posts et leurs visuels, angles d&apos;articles, logos, et un
+                rédacteur IA qui écrit pour ton audience. Tout est rangé par rayon, ton lien est
+                déjà inséré.
               </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="flex flex-col gap-3 py-5">
-              <span className="flex items-center gap-2 text-sm font-semibold">
-                <ImageIcon className="size-4 text-primary" />
-                Visuels à télécharger
-              </span>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {DEFAULT_ASSETS.map((a) => (
-                  <AssetTile
-                    key={a.url}
-                    url={a.url}
-                    title={a.title}
-                    description={a.description}
-                    fileType={a.fileType}
-                  />
-                ))}
-                {assets.map((a) => (
-                  <AssetTile
-                    key={a.id}
-                    url={a.url}
-                    title={a.title}
-                    description={a.description}
-                    fileType={a.file_type}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="flex flex-col gap-3 py-5">
-              <div className="flex items-start justify-between gap-3">
-                <span className="flex items-center gap-2 text-sm font-semibold">
-                  <ImageIcon className="size-4 text-primary" />
-                  Posts prêts à publier
-                </span>
-                <Button asChild variant="outline" size="sm">
-                  <a href={POSTS_TEXT_DOC.url} target="_blank" rel="noopener noreferrer" download>
-                    <Download className="size-4" />
-                    Textes des posts
-                  </a>
+              <div>
+                <Button asChild>
+                  <Link href="/affiliation/contenu">
+                    Ouvrir mon espace Contenu
+                    <ArrowRight className="size-4" />
+                  </Link>
                 </Button>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Des visuels et carrousels aux couleurs de l'Atelier, à publier tels quels. Les
-                légendes sont dans le document Word (bouton ci-dessus), à copier-coller et adapter.
-              </p>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {DEFAULT_POSTS.map((a) => (
-                  <AssetTile
-                    key={a.url}
-                    url={a.url}
-                    title={a.title}
-                    description={a.description}
-                    fileType={a.fileType}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="flex flex-col gap-3 py-5">
-              <span className="flex items-center gap-2 text-sm font-semibold">
-                <MessageSquare className="size-4 text-primary" />
-                Posts réseaux sociaux (textes)
-              </span>
-              {SWIPE_POSTS.map((post, i) => (
-                <SwipeTextBlock
-                  key={i}
-                  eyebrow={post.platform}
-                  title={post.hook}
-                  text={fillSwipe(post.body, { link, firstName })}
-                />
-              ))}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="flex flex-col gap-3 py-5">
-              <span className="flex items-center gap-2 text-sm font-semibold">
-                <FileText className="size-4 text-primary" />
-                Angles d'articles de blog
-              </span>
-              <ul className="flex flex-col gap-3">
-                {ARTICLE_ANGLES.map((a, i) => (
-                  <li key={i} className="rounded-lg border border-border p-3">
-                    <p className="text-sm font-semibold">{a.title}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">{a.angle}</p>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="flex flex-col gap-3 py-5">
-              <span className="flex items-center gap-2 text-sm font-semibold">
-                <Video className="size-4 text-primary" />
-                Idées de vidéos promo
-              </span>
-              <ul className="flex flex-col gap-3">
-                {VIDEO_IDEAS.map((v, i) => (
-                  <li key={i} className="rounded-lg border border-border p-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                        {v.format}
-                      </span>
-                      <p className="text-sm font-semibold">{v.title}</p>
-                    </div>
-                    <p className="mt-1 text-sm text-muted-foreground">{v.outline}</p>
-                  </li>
-                ))}
-              </ul>
             </CardContent>
           </Card>
         </div>
       )}
+
 
       {/* ───── Onglet Paiement ───── */}
       {tab === "paiement" && (
@@ -876,287 +687,6 @@ function TabBtn({
       <Icon className="size-4" />
       {children}
     </button>
-  );
-}
-
-/** Bouton "copier" générique avec feedback visuel. */
-function CopyButton({ text, label = "Copier" }: { text: string; label?: string }) {
-  const [done, setDone] = useState(false);
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(text);
-      setDone(true);
-      toast.success("Copié !");
-      setTimeout(() => setDone(false), 1800);
-    } catch {
-      toast.error("Impossible de copier. Sélectionne le texte à la main.");
-    }
-  }
-  return (
-    <Button variant="outline" size="sm" onClick={copy} className="shrink-0">
-      {done ? <Check className="size-4" /> : <Copy className="size-4" />}
-      {done ? "Copié" : label}
-    </Button>
-  );
-}
-
-/** Texte brut (repli) depuis du HTML, pour le copier-coller sans HTML. */
-function htmlToPlain(html: string): string {
-  if (typeof document === "undefined") return html;
-  const div = document.createElement("div");
-  div.innerHTML = html;
-  return div.innerText.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
-}
-
-/** Bouton copier qui préserve la mise en forme (text/html + repli text/plain). */
-function CopyRichButton({ html, label = "Copier le mail" }: { html: string; label?: string }) {
-  const [done, setDone] = useState(false);
-  async function copy() {
-    const text = htmlToPlain(html);
-    try {
-      if (typeof window !== "undefined" && "ClipboardItem" in window && navigator.clipboard?.write) {
-        await navigator.clipboard.write([
-          new ClipboardItem({
-            "text/html": new Blob([html], { type: "text/html" }),
-            "text/plain": new Blob([text], { type: "text/plain" }),
-          }),
-        ]);
-      } else {
-        await navigator.clipboard.writeText(text);
-      }
-      setDone(true);
-      toast.success("Copié avec la mise en forme !");
-      setTimeout(() => setDone(false), 1800);
-    } catch {
-      try {
-        await navigator.clipboard.writeText(text);
-        setDone(true);
-        setTimeout(() => setDone(false), 1800);
-      } catch {
-        toast.error("Impossible de copier. Sélectionne le texte à la main.");
-      }
-    }
-  }
-  return (
-    <Button size="sm" onClick={copy} className="shrink-0">
-      {done ? <Check className="size-4" /> : <Copy className="size-4" />}
-      {done ? "Copié" : label}
-    </Button>
-  );
-}
-
-/**
- * Un email de la séquence : objets A/B/C + corps RICHE (vrai gras, tailles,
- * couleurs, interligne), éditable et enregistrable par l'affilié, copiable
- * avec la mise en forme. Aucun markdown affiché.
- */
-function SwipeEmailCard({
-  mail,
-  link,
-  firstName,
-  override,
-}: {
-  mail: (typeof SWIPE_EMAILS)[number];
-  link: string;
-  firstName: string | null;
-  override?: EmailOverride;
-}) {
-  const defaultHtml = useMemo(
-    () => renderSwipeEmailHtml(fillSwipe(mail.body, { link, firstName })),
-    [mail.body, link, firstName],
-  );
-  const [bodyHtml, setBodyHtml] = useState<string>(override?.bodyHtml || defaultHtml);
-  const [customized, setCustomized] = useState<boolean>(!!override?.bodyHtml);
-  const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const editorRef = useRef<HTMLDivElement | null>(null);
-
-  async function patch(payload: { subject?: string | null; bodyHtml?: string | null }) {
-    const res = await fetch("/api/me/affiliate-emails", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ n: mail.n, ...payload }),
-    });
-    if (!res.ok) throw new Error("save failed");
-  }
-
-  async function save() {
-    const html = editorRef.current?.innerHTML ?? bodyHtml;
-    setSaving(true);
-    try {
-      await patch({ bodyHtml: html });
-      setBodyHtml(html);
-      setCustomized(true);
-      setEditing(false);
-      toast.success("Ton email est enregistré.");
-    } catch {
-      toast.error("Enregistrement impossible. Réessaie.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function reset() {
-    setSaving(true);
-    try {
-      await patch({ bodyHtml: null, subject: null });
-      setBodyHtml(defaultHtml);
-      setCustomized(false);
-      setEditing(false);
-      toast.success("Email réinitialisé.");
-    } catch {
-      toast.error("Réinitialisation impossible.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <Card>
-      <CardContent className="flex flex-col gap-3 py-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-xs font-semibold uppercase tracking-wide text-primary">
-              Email {mail.n}
-              {customized ? " · personnalisé" : ""}
-            </span>
-            <span className="text-sm font-semibold">{mail.role}</span>
-          </div>
-          {!editing && <CopyRichButton html={bodyHtml} />}
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-muted-foreground">Objets à tester (A / B / C)</span>
-          <ul className="flex flex-col gap-1">
-            {mail.subjects.map((s, i) => (
-              <li key={i} className="flex items-center justify-between gap-2 rounded-lg bg-muted/40 px-3 py-1.5 text-sm">
-                <span className="min-w-0 truncate">{s}</span>
-                <CopyButton text={s} label="" />
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <span className="text-xs font-medium text-muted-foreground">Corps du mail</span>
-          {editing ? (
-            <>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onMouseDown={(e) => {
-                    // Garde la sélection dans l'éditeur.
-                    e.preventDefault();
-                    document.execCommand("bold");
-                  }}
-                >
-                  <Bold className="size-4" />
-                  Gras
-                </Button>
-                <span className="text-xs text-muted-foreground">
-                  Sélectionne du texte puis clique sur Gras.
-                </span>
-              </div>
-              <div
-                ref={editorRef}
-                contentEditable
-                suppressContentEditableWarning
-                dangerouslySetInnerHTML={{ __html: bodyHtml }}
-                className="max-h-96 min-h-40 overflow-auto rounded-lg border border-input bg-background p-4 text-sm outline-none focus:ring-2 focus:ring-primary/40"
-              />
-              <div className="flex items-center gap-2">
-                <Button size="sm" onClick={save} disabled={saving}>
-                  {saving ? "Enregistrement..." : "Enregistrer"}
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => setEditing(false)} disabled={saving}>
-                  Annuler
-                </Button>
-                {customized && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={reset}
-                    disabled={saving}
-                    className="ml-auto text-muted-foreground"
-                  >
-                    <RotateCcw className="size-3.5" />
-                    Revenir au modèle
-                  </Button>
-                )}
-              </div>
-            </>
-          ) : (
-            <>
-              <div
-                className="max-h-96 overflow-auto rounded-lg border border-border bg-muted/20 p-4"
-                dangerouslySetInnerHTML={{ __html: bodyHtml }}
-              />
-              <div>
-                <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
-                  <Pencil className="size-3.5" />
-                  Personnaliser cet email
-                </Button>
-              </div>
-            </>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-/** Vignette d'un visuel téléchargeable (kit officiel ou upload admin). */
-function AssetTile({
-  url,
-  title,
-  description,
-  fileType,
-}: {
-  url: string;
-  title: string;
-  description?: string | null;
-  fileType?: string | null;
-}) {
-  const isImage = (fileType ?? "").startsWith("image/");
-  return (
-    <div className="flex flex-col gap-2 rounded-lg border border-border p-2">
-      <div className="flex aspect-video items-center justify-center overflow-hidden rounded-md bg-muted/40">
-        {isImage ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt={title} className="h-full w-full object-contain" />
-        ) : (
-          <ImageIcon className="size-7 text-muted-foreground" />
-        )}
-      </div>
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium">{title}</p>
-        {description && <p className="line-clamp-2 text-xs text-muted-foreground">{description}</p>}
-      </div>
-      <Button asChild variant="outline" size="sm">
-        <a href={url} target="_blank" rel="noopener noreferrer" download>
-          <Download className="size-4" />
-          Télécharger
-        </a>
-      </Button>
-    </div>
-  );
-}
-
-/** Bloc de contenu copiable (post réseau) avec en-tête. */
-function SwipeTextBlock({ eyebrow, title, text }: { eyebrow: string; title: string; text: string }) {
-  return (
-    <div className="rounded-lg border border-border p-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex flex-col gap-0.5">
-          <span className="text-xs font-medium uppercase tracking-wide text-primary">{eyebrow}</span>
-          <span className="text-sm font-semibold">{title}</span>
-        </div>
-        <CopyButton text={text} label="Copier" />
-      </div>
-      <pre className="mt-2 whitespace-pre-wrap text-sm text-foreground">{text}</pre>
-    </div>
   );
 }
 

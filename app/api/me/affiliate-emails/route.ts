@@ -7,7 +7,10 @@ import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 const schema = z.object({
-  n: z.number().int().min(1).max(50),
+  // Clé stable du kit (ex. "atelier-03"). L'ancien `n` reste accepté pour
+  // ne pas casser les brouillons enregistrés avant le kit 15 emails.
+  key: z.string().min(1).max(40).regex(/^[a-z0-9-]+$/).optional(),
+  n: z.number().int().min(1).max(50).optional(),
   subject: z.string().max(300).nullable().optional(),
   // HTML produit par l'éditeur WYSIWYG. null = réinitialise cet email.
   bodyHtml: z.string().max(20000).nullable().optional(),
@@ -34,7 +37,10 @@ export async function PATCH(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ ok: false, reason: "bad_body" }, { status: 400 });
   }
-  const { n, subject, bodyHtml } = parsed.data;
+  const { key: rawKey, n, subject, bodyHtml } = parsed.data;
+  if (!rawKey && n === undefined) {
+    return NextResponse.json({ ok: false, reason: "bad_body" }, { status: 400 });
+  }
 
   const { data: row } = await supabase
     .from("profiles")
@@ -45,7 +51,7 @@ export async function PATCH(req: NextRequest) {
     ...(((row as { affiliate_email_overrides?: Record<string, unknown> } | null)?.affiliate_email_overrides) ?? {}),
   } as Record<string, { subject?: string | null; bodyHtml?: string | null }>;
 
-  const key = String(n);
+  const key = rawKey ?? String(n);
   const reset = (subject === null || subject === undefined) && (bodyHtml === null || bodyHtml === undefined);
   if (reset) {
     delete overrides[key];

@@ -63,3 +63,47 @@ sur le VPS de Béné. On ne modifie JAMAIS le code de Tiquiz ni Tipote.
 
 - Réutilise l'infra popquiz auto-hébergée du VPS (serveur tus + nginx),
   namespace applicatif `quizing`. Voir `SETUP.md` section vidéo.
+
+## Kit affilié : DEUX repos, UNE seule vérité (1er août 2026)
+
+L'espace Contenu de l'affilié existe en double, volontairement :
+
+| Où | Chemin |
+|---|---|
+| Atelier (ici) | `/affiliation/contenu` |
+| Tipote | `affiliate.tipote.com/contenus/atelier` |
+
+Un affilié peut promouvoir l'Atelier depuis l'un ou l'autre. S'il trouve
+deux versions différentes du même email, il conclut que l'une est
+périmée et n'utilise plus ni l'une ni l'autre. Donc :
+
+**Les contenus sont des jumeaux, à garder identiques.**
+
+| Ici (formaquiz) | Là-bas (tipote-app) |
+|---|---|
+| `lib/affiliateContent/posts.ts` | `app/affiliate/promouvoir/content/atelier-posts-fr.ts` |
+| `lib/affiliateSwipe.ts` (`SWIPE_EMAILS`) | `app/affiliate/promouvoir/content/atelier-emails-fr.ts` |
+| `lib/affiliateGeneratorBrief.ts` | `lib/affiliate/generatorBrief.ts` |
+| `public/affiliate-assets/atelier/posts/` | idem, MÊME chemin public |
+
+Les visuels sont servis au **même chemin public** dans les deux apps :
+c'est ce qui permet de copier le fichier de contenu sans réécrire une
+seule URL. Ne pas "ranger" ces images ailleurs.
+
+Toute correction d'un fait produit (prix, garantie, contenu du
+programme, chiffre sourcé) doit être portée **dans les deux briefs de
+génération**, sinon deux affiliés du même programme reçoivent deux
+versions des faits.
+
+**Carrousels : jamais en double.** Le kit contient le PDF ET les images
+du même carrousel. On affiche le carrousel qui défile, et on met les
+deux formats en téléchargement dessous (`CarouselViewer`). Les afficher
+côte à côte donnait l'impression de deux visuels différents.
+
+**Frontière serveur / client.** `ContentNav.tsx` (fil d'Ariane + carte de
+dossier) n'est PAS marqué `"use client"`, et ce n'est pas un oubli : les
+pages lui passent une icône, donc une référence de composant React, qui
+ne traverse pas la frontière serveur vers client. Marqué côté client, le
+même composant faisait planter la page en production chez Tipote sur
+"An error occurred in the Server Components render", sans message utile
+et sans que le typecheck ne voie quoi que ce soit.
