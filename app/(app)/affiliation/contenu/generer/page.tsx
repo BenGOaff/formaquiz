@@ -8,12 +8,16 @@ import { ContentBreadcrumb } from "../../components/ContentNav";
 import { getContentContext } from "../context";
 import { GeneratorClient } from "./GeneratorClient";
 import { CONTENT_ROOT, SECTION_LABEL, PRODUCT_NAME } from "@/lib/affiliateContentSpace";
+import { loadBrief } from "@/lib/generatorBriefServer";
 
 export const metadata = { title: "Générer du contenu - Contenu affilié" };
 export const dynamic = "force-dynamic";
 
 export default async function GenererPage() {
   const ctx = await getContentContext();
+  // Brief de la derniere generation : les champs arrivent deja remplis,
+  // sans clignotement (demande Christelle sur Tipote, portee ici).
+  const savedBrief = await loadBrief("affiliate");
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
@@ -64,7 +68,11 @@ export default async function GenererPage() {
         </CardContent>
       </Card>
 
-      <GeneratorClient affiliateLink={ctx.affiliateLink} displayName={ctx.displayName} />
+      <GeneratorClient
+        affiliateLink={ctx.affiliateLink}
+        displayName={ctx.displayName}
+        savedBrief={savedBrief}
+      />
     </div>
   );
 }
