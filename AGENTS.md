@@ -134,3 +134,56 @@ JSX supprime le saut de ligne ET l'espace qui le borde quand la ligne se
 termine par une expression. Vu en prod le 1er août 2026. Écrire
 `{VALEUR} et ...` sur la même ligne, ou terminer par `{" "}`. Ni le
 typecheck ni le lint ne le voient : ça ne se remarque qu'à l'écran.
+
+## Le champ affiché DÉCIDE la colonne écrite (drame Maurice 2 août 2026)
+
+Maurice : "quand je clique sur la question 5 du jour 7, ça me dit :
+impossible de valider le jour, réessaie dans un instant. Ça dure depuis
+hier soir, je pensais que ça se serait résolu le lendemain."
+
+Ça ne pouvait pas se résoudre. DEUX définitions de "question à choix"
+coexistaient et ne disaient pas la même chose :
+
+- l'admin (`QuestionsManager`) : `type !== "action"` ;
+- le viewer (`QuizRunner`) : `type !== "action" && options.length > 0`.
+
+Une question `recall` / `decision` / `self_eval` SANS option tombe entre
+les deux. L'écran de l'élève affiche une zone de texte, il écrit, et
+l'envoi mettait `value_text` à `null` parce que le type n'était pas
+`action`. La réponse partait VIDE en base. Question obligatoire ->
+`/complete` répond `incomplete` pour toujours, et l'élève boucle : il
+retape, ça repart vide, ça re-refuse.
+
+**Règle :** `lib/questionInput.ts` décide, et TOUT l'appelle.
+- `questionInputKind(q)` -> `"choice"` (des options à proposer) ou
+  `"text"` ;
+- `answerPayload(q, draft)` -> la colonne remplie, l'autre à `null` ;
+- `draftIsFilled(q, draft)` -> le bouton Continuer.
+
+Le champ affiché et la colonne écrite ne peuvent plus diverger, quelle
+que soit la façon dont la question a été créée. `tests/logic/
+day-completion.test.mts` le vérifie sur les 4 types x avec/sans options.
+
+**Corollaire côté admin :** une question à choix sans option affiche
+maintenant un avertissement ("l'élève verra une zone de texte libre").
+Créer la question dans un état ambigu sans le savoir, c'est l'origine.
+
+**Deuxième faute, aussi grave :** `/api/days/[day]/complete` refuse pour
+SIX raisons (`bad_day`, `unauth`, `no_day`, `locked`, `incomplete`,
+`db`) et l'écran les affichait TOUTES en "Réessaie dans un instant".
+Maurice a attendu une nuit pour rien. Un refus doit dire ce qui bloque ;
+`incomplete` renvoie la liste des questions manquantes et l'écran
+ramène l'élève sur la première. "Réessaie" est réservé au vrai incident
+réseau.
+
+## Filet de tests logique (2 août 2026)
+
+```bash
+npm run test:logic     # runner natif Node, aucune dependance
+npx tsc --noEmit       # exit 0
+```
+
+Même filet que Tiquiz et Tipote, et pour la même raison : le typecheck
+ne voit rien de ces bugs. Toute règle métier sort dans `lib/` en
+fonction pure, le composant se contente de l'appeler. Les tests portent
+le nom de l'élève et ce qu'il a vu.

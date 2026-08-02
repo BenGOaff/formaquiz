@@ -276,6 +276,16 @@ function QuestionCard({
           {isChoice && (
             <div className="flex flex-col gap-2">
               <span className="text-xs font-medium text-muted-foreground">Options de réponse</span>
+              {/* Sans option, l'ecran de l'eleve affiche une zone de texte :
+                  il faut le DIRE ici, sinon on croit avoir cree une question
+                  a choix et on ne comprend pas ce que l'eleve voit
+                  (drame Maurice, 2 aout 2026). */}
+              {options.filter((o) => o.label.trim()).length === 0 && (
+                <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                  Aucune option : l&apos;élève verra une zone de texte libre.
+                  Ajoute des options si tu veux des boutons à cliquer.
+                </p>
+              )}
               {options.map((o, j) => (
                 <div key={j} className="flex items-center gap-2">
                   <Input

@@ -63,9 +63,15 @@ export async function POST(
         .map((a) => a.question_id as string),
     );
 
-    const missing = requiredIds.some((id) => !answeredOk.has(id));
-    if (missing) {
-      return NextResponse.json({ ok: false, reason: "incomplete" }, { status: 400 });
+    // On renvoie LESQUELLES manquent : l'ecran renvoie l'eleve dessus au
+    // lieu d'un "reessaie dans un instant" qu'aucune attente ne resout
+    // (drame Maurice, 2 aout 2026).
+    const missing = requiredIds.filter((id) => !answeredOk.has(id));
+    if (missing.length > 0) {
+      return NextResponse.json(
+        { ok: false, reason: "incomplete", missing },
+        { status: 400 },
+      );
     }
   }
 
