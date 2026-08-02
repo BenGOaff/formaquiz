@@ -8,6 +8,7 @@
     "start": "next start -p 3002",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "test:logic": "node --test --experimental-strip-types \"tests/logic/*.test.mts\"",
     "check:migrations-pending": "node scripts/check-pending-migrations.mjs",
     "rag:ingest": "node scripts/ingest-coach-rag.mjs"
   },

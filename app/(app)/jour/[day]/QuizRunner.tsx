@@ -12,6 +12,7 @@ import { RichContent } from "@/components/RichContent";
 import { celebrate } from "@/lib/celebrate";
 import { cn } from "@/lib/utils";
 import type { Answer, Question } from "@/lib/types";
+import { questionInputKind, answerPayload, draftIsFilled } from "@/lib/questionInput";
 
 type Draft = { value_text: string; value_choice: string };
 
@@ -54,10 +55,10 @@ export function QuizRunner({
   const q = questions[step];
   const draft = q ? drafts[q.id] : null;
 
-  const isChoice = useMemo(
-    () => !!q && q.type !== "action" && q.options.length > 0,
-    [q],
-  );
+  // Le champ affiche vient de questionInputKind, la MEME fonction que
+  // l'envoi (lib/questionInput.ts). Les deux ne peuvent plus diverger :
+  // c'est ce qui perdait la reponse de Maurice (2 aout 2026).
+  const isChoice = useMemo(() => !!q && questionInputKind(q) === "choice", [q]);
   // Multi-select : l'élève peut cocher plusieurs options (Jour 1 objectifs).
   // Les valeurs choisies sont stockées jointes par des virgules dans
   // value_choice, comme un quiz Tiquiz qui vise plusieurs objectifs.
@@ -67,8 +68,7 @@ export function QuizRunner({
     [draft?.value_choice],
   );
 
-  const hasValue =
-    !!draft && (isChoice ? draft.value_choice.trim() !== "" : draft.value_text.trim() !== "");
+  const hasValue = !!q && draftIsFilled(q, draft);
   const canContinue = !q?.required || hasValue;
 
   function setDraft(questionId: string, patch: Partial<Draft>) {
@@ -91,15 +91,17 @@ export function QuizRunner({
   async function saveAnswer(question: Question): Promise<boolean> {
     const d = drafts[question.id];
     // Rien à sauver si optionnelle et vide.
-    if (!d || (!d.value_text.trim() && !d.value_choice.trim())) return true;
+    if (!d || !draftIsFilled(question, d)) return true;
     try {
       const res = await fetch(`/api/days/${dayNumber}/answer`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           questionId: question.id,
-          value_text: question.type === "action" ? d.value_text : null,
-          value_choice: isChoiceType(question) ? d.value_choice : null,
+          // La colonne ecrite suit le champ AFFICHE, jamais le type seul :
+          // une question sans option affiche une zone de texte, et son
+          // texte doit partir (drame Maurice, 2 aout 2026).
+          ...answerPayload(question, d),
         }),
       });
       if (!res.ok) throw new Error("save failed");
@@ -110,10 +112,6 @@ export function QuizRunner({
       toast.error("Ta réponse n'a pas pu être enregistrée. Réessaie.");
       return false;
     }
-  }
-
-  function isChoiceType(question: Question): boolean {
-    return question.type !== "action" && question.options.length > 0;
   }
 
   async function handleNext() {
@@ -138,10 +136,35 @@ export function QuizRunner({
     setSaving(true);
     try {
       const res = await fetch(`/api/days/${dayNumber}/complete`, { method: "POST" });
-      if (!res.ok) throw new Error("complete failed");
       const data = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        reason?: string;
+        missing?: string[];
         newBadges?: { code: string; label: string }[];
       };
+      // Le serveur refuse pour SIX raisons distinctes, et l'ecran les
+      // affichait toutes en "Reessaie dans un instant" : Maurice a
+      // attendu une nuit pour rien, et personne ne pouvait savoir quoi
+      // corriger. Chaque refus dit maintenant ce qui bloque, et une
+      // question obligatoire sans reponse renvoie l'eleve DESSUS.
+      if (!res.ok) {
+        if (data.reason === "incomplete") {
+          const firstMissing = questions.findIndex((qq) => data.missing?.includes(qq.id));
+          if (firstMissing >= 0) setStep(firstMissing);
+          toast.error(
+            firstMissing >= 0
+              ? `Il manque ta réponse à la question ${firstMissing + 1}. On t'y remmène.`
+              : "Il reste une question obligatoire sans réponse.",
+          );
+        } else if (data.reason === "locked") {
+          toast.error("Termine le jour précédent avant de valider celui-ci.");
+        } else if (data.reason === "unauth") {
+          toast.error("Ta session a expiré. Reconnecte-toi et reprends ici.");
+        } else {
+          toast.error("Impossible de valider le jour. Réessaie dans un instant.");
+        }
+        return;
+      }
       setPhase("result");
       const badges = data.newBadges ?? [];
       // Fete le jalon reel : jour valide. Plus gros si un badge tombe ou si
@@ -152,7 +175,8 @@ export function QuizRunner({
       }
       router.refresh(); // met à jour la progression du dashboard
     } catch {
-      toast.error("Impossible de valider le jour. Réessaie dans un instant.");
+      // Vrai incident reseau : la seule fois ou "reessaie" a du sens.
+      toast.error("La validation n'est pas partie. Vérifie ta connexion et réessaie.");
     } finally {
       setSaving(false);
     }
