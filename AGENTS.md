@@ -223,3 +223,45 @@ Le même mécanisme vit dans Tipote (scopes `content`, `affiliate:tiquiz`,
 générateur de contenu porte la ligne "Génère un contenu de type X", qui
 doit être recalée sur le type courant, sinon un brief gardé après un
 email annonce "email" pendant qu'on écrit un post.
+
+## Le coach commun : UN cerveau, ici (demande Béné 2 août 2026)
+
+"Un coach commun qui peut lire partout et la conversation suit d'une app
+à l'autre. Et si t'as pas l'Atelier, t'as le coach qui te guide quand
+même, avec toutes ses connaissances."
+
+**Le coach vit dans l'Atelier, et nulle part ailleurs.** Tiquiz (et
+demain Tipote) n'ont qu'un widget qui parle à
+`/api/partner/coach`, authentifié par `PARTNER_SHARED_SECRET`. Dupliquer
+le coach dans chaque app donnerait trois bases de connaissances à
+maintenir et trois coachs qui se contredisent. On a déjà donné avec les
+modules jumeaux.
+
+**Deux populations, deux stockages :**
+- ÉLÈVE : ses messages venus de Tiquiz sont écrits dans SON fil
+  (`coach_threads` / `coach_messages`, clé = son user_id Atelier). C'est
+  ce qui fait que la conversation suit vraiment. Pas de quota : le coach
+  fait partie de ce qu'il a payé.
+- NON-ÉLÈVE : pas de compte Atelier, donc fil indexé par email dans
+  `coach_guest_messages` (table interne, RLS sans policy = service_role
+  uniquement). **2 questions par jour.**
+
+**L'orientation quand le quota tombe** vit dans
+`lib/coach/needRouting.ts`, en fonctions pures testées :
+- `classifyCoachNeed(message)` -> `technique` (elle sait quoi faire, elle
+  bute sur l'outil ou une limite de plan -> plan payant Tiquiz) ou
+  `strategie` (elle ne sait pas encore quoi faire -> l'Atelier). **En cas
+  de doute : stratégie.** Vendre un abonnement à quelqu'un qui cherche de
+  la méthode, c'est lui vendre la mauvaise chose ; il revient déçu.
+- `buildCoachUpsell(need, sa)` -> le lien, **avec l'identifiant affilié
+  quand on le connaît** ("je ne veux jamais les léser"). Un `sa` illisible
+  ou absent donne un lien NU : une attribution fausse vole la commission
+  d'un autre affilié.
+- `guestQuota(askedToday)` -> la 2e question reçoit sa réponse ET la
+  proposition. On ne coupe jamais quelqu'un au milieu d'une phrase pour
+  lui vendre quelque chose.
+
+**Le coach ne fait jamais l'article lui-même** : son prompt lui interdit
+de proposer un achat. La proposition est ajoutée par le code, après la
+réponse, une seule fois. Un coach qui vend perd la confiance qu'on lui
+demande d'installer.
