@@ -13,7 +13,7 @@
 // {AFFILIATE_LINK}, jamais une URL inventée.
 
 import { useState } from "react";
-import { Check, Loader2, Pencil, RefreshCw, Sparkles, Wand2 } from "lucide-react";
+import { Check, Eraser, Loader2, Pencil, RefreshCw, Sparkles, Wand2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,18 +25,30 @@ import {
   GENERATOR_FORMATS,
   type GeneratorFormat,
 } from "@/lib/affiliateGeneratorBrief";
+import { briefIsEmpty, type GeneratorBrief } from "@/lib/generatorBrief";
 
 export function GeneratorClient({
   affiliateLink,
   displayName,
+  savedBrief,
 }: {
   affiliateLink: string;
   displayName: string;
+  /** Brief de la derniere generation, repris pour ne pas tout retaper
+   *  (demande Christelle sur Tipote, portee ici). Vide au premier passage. */
+  savedBrief: GeneratorBrief;
 }) {
+  // Le FORMAT n'est jamais repris : c'est precisement ce qui change
+  // quand on ecrit un mail, puis un post, puis un article sur le meme
+  // sujet. Le contexte, lui, est repris.
   const [format, setFormat] = useState<GeneratorFormat>("post");
-  const [audience, setAudience] = useState("");
-  const [angle, setAngle] = useState("");
-  const [tone, setTone] = useState("");
+  const [audience, setAudience] = useState(savedBrief.audience ?? "");
+  const [angle, setAngle] = useState(savedBrief.angle ?? "");
+  const [tone, setTone] = useState(savedBrief.tone ?? "");
+  // Un brief repris est ANNONCE, jamais restaure en douce : un contexte
+  // perime applique en silence donne un texte a cote de la plaque sans
+  // que personne ne le voie.
+  const [restored, setRestored] = useState(!briefIsEmpty(savedBrief));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
@@ -76,11 +88,38 @@ export function GeneratorClient({
       }
       setResult(data.text);
       setEditing(false);
+      // On retient le brief QUI A SERVI, pas les frappes en cours.
+      void saveBrief();
     } catch {
       setError("Problème de connexion. Vérifie ton réseau et réessaie.");
     } finally {
       setLoading(false);
     }
+  }
+
+  async function saveBrief() {
+    try {
+      await fetch("/api/me/brief", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scope: "affiliate", brief: { audience, angle, tone } }),
+      });
+    } catch {
+      // Confort : un brief non enregistre ne merite pas un message
+      // d'erreur par-dessus un texte qui, lui, est bien la.
+    }
+  }
+
+  function clearBrief() {
+    setAudience("");
+    setAngle("");
+    setTone("");
+    setRestored(false);
+    void fetch("/api/me/brief", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scope: "affiliate", brief: {} }),
+    }).catch(() => {});
   }
 
   const resolved = result ? resolveVars(result, { affiliateLink, name: displayName }) : "";
@@ -91,6 +130,18 @@ export function GeneratorClient({
     <div className="flex flex-col gap-6">
       <Card>
         <CardContent className="flex flex-col gap-5 py-5">
+          {restored && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2">
+              <p className="text-sm">
+                Brief repris de ta dernière génération. Modifie ce qui a changé.
+              </p>
+              <Button type="button" size="sm" variant="ghost" onClick={clearBrief}>
+                <Eraser className="mr-1.5 size-3.5" />
+                Repartir de zéro
+              </Button>
+            </div>
+          )}
+
           <div>
             <p className="mb-2 text-sm font-medium">Qu&apos;est-ce que tu veux écrire ?</p>
             <div className="flex flex-wrap gap-2">

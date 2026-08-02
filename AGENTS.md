@@ -187,3 +187,39 @@ Même filet que Tiquiz et Tipote, et pour la même raison : le typecheck
 ne voit rien de ces bugs. Toute règle métier sort dans `lib/` en
 fonction pure, le composant se contente de l'appeler. Les tests portent
 le nom de l'élève et ce qu'il a vu.
+
+## Brief d'écriture persistant (demande Christelle 2 août 2026)
+
+"Je voudrais que les infos complétées pour générer un contenu soient
+persistantes, pour ne pas avoir à tout réécrire quand je veux rédiger un
+mail, un post et un article sur le même thème."
+
+Le FORMAT change, le contexte non. On retient le contexte (audience,
+angle, ton), jamais le format : c'est justement ce qui change.
+
+Stockage : table `generator_briefs (user_id, scope, brief jsonb)`, une
+ligne par générateur. Le scope est une union typée
+(`lib/generatorBrief.ts`), pas une chaîne libre : deux écrans qui
+écriraient "affiliate" et "affiliation" ne partageraient rien, et
+personne ne s'en apercevrait avant un retour client.
+
+**Deux garde-fous, non négociables.** Un contexte périmé appliqué en
+silence produit un texte à côté de la plaque sans que personne ne le
+voie, c'est la famille de bugs qui nous a déjà coûté cher :
+1. un brief repris est ANNONCÉ à l'écran ("Brief repris de ta dernière
+   génération") ;
+2. il se vide en un clic.
+
+**Le brief s'enregistre APRÈS une génération réussie**, pas à la frappe :
+ce qu'on reprend est ce qui a produit un texte, jamais un brouillon
+abandonné.
+
+Toute la chaîne est fail-open (table absente en prod, RLS, réseau) : le
+générateur marche comme avant, sans brief. Un confort ne doit jamais
+empêcher de générer.
+
+Le même mécanisme vit dans Tipote (scopes `content`, `affiliate:tiquiz`,
+`affiliate:atelier`), avec en plus `retargetPromptType()` : le brief du
+générateur de contenu porte la ligne "Génère un contenu de type X", qui
+doit être recalée sur le type courant, sinon un brief gardé après un
+email annonce "email" pendant qu'on écrit un post.
