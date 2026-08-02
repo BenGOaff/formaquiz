@@ -19,8 +19,19 @@
 // quelqu'un qui cherche de la méthode, c'est lui vendre la mauvaise
 // chose, et il revient déçu. L'inverse coûte juste une hésitation.
 //
-// Et la règle absolue sur l'argent : le lien porte TOUJOURS l'identifiant
-// de l'affilié quand on le connaît. "Je ne veux jamais les léser."
+// SUR L'ARGENT, une précision qui compte. Béné : "toujours affilié, je ne
+// veux jamais les léser." Le `sa` attendu ici est celui du PARRAIN, pas
+// celui de la personne à qui on parle.
+//
+// Sans parrain connu, on envoie un lien NU, et c'est volontaire : les
+// inscrits arrivent de Systeme.io, qui a déjà posé son cookie
+// d'affiliation. Un lien nu laisse ce cookie décider, donc l'affilié qui
+// a réellement amené la personne touche sa commission. Coller un `sa`
+// par défaut (celui de la personne elle-même, par exemple) écraserait
+// cette attribution et volerait la commission à cet affilié : ce serait
+// exactement l'inverse de la consigne.
+
+import { ATELIER_SALES_URL, isValidAffiliateId } from "../affiliate.ts";
 
 export type CoachNeed = "technique" | "strategie";
 
@@ -87,9 +98,12 @@ export type CoachUpsell = {
   url: string;
 };
 
-/** Pages de vente canoniques (cf. AGENTS, section URLs canoniques). */
+/** Pages de vente canoniques (cf. AGENTS, section URLs canoniques).
+ *  L'Atelier vient de lib/affiliate.ts : une seule definition, sinon on
+ *  se retrouve un jour avec deux pages de vente differentes selon
+ *  l'ecran, et une qui n'existe plus. */
 export const TIQUIZ_PLANS_URL = "https://www.tipote.fr/tiquiz";
-export const ATELIER_URL = "https://www.tipote.fr/atelier-du-quiz";
+export { ATELIER_SALES_URL as ATELIER_URL } from "../affiliate.ts";
 
 /**
  * Le lien à proposer, identifiant affilié inclus.
@@ -99,12 +113,13 @@ export const ATELIER_URL = "https://www.tipote.fr/atelier-du-quiz";
  * commission à quelqu'un d'autre.
  */
 export function buildCoachUpsell(need: CoachNeed, affiliateSa?: string | null): CoachUpsell {
-  const base = need === "technique" ? TIQUIZ_PLANS_URL : ATELIER_URL;
+  const base = need === "technique" ? TIQUIZ_PLANS_URL : ATELIER_SALES_URL;
   const sa = (affiliateSa ?? "").trim();
-  // Les identifiants Systeme.io sont de la forme sa00078783172001... :
-  // on refuse tout ce qui ne ressemble pas a un identifiant, pour ne
-  // jamais coller un fragment d'URL ou du texte libre dans le lien.
-  const clean = /^[A-Za-z0-9_-]{4,64}$/.test(sa) ? sa : "";
+  // Validation par la MEME regle que l'espace affiliation
+  // (isValidAffiliateId) : un identifiant Systeme.io, rien d'autre.
+  // Sinon on collerait un fragment d'URL ou du texte libre dans un lien
+  // de vente.
+  const clean = isValidAffiliateId(sa) ? sa : "";
   return { need, url: clean ? `${base}?sa=${encodeURIComponent(clean)}` : base };
 }
 

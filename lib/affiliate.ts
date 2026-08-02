@@ -9,7 +9,9 @@
 //     (100% au lancement, passé à 70% en juillet 2026)
 //   - 40% par mois, en récurrent, sur chaque abonnement Tiquiz parrainé
 
-import { resolvePersona, type Persona } from "@/lib/personas";
+// Import relatif avec extension : le runner de tests natif Node ne
+// resout pas l'alias @/ (cf. AGENTS, filet de tests logique).
+import { resolvePersona, type Persona } from "./personas.ts";
 
 // --- Constantes -----------------------------------------------------------
 

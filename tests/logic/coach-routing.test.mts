@@ -69,27 +69,31 @@ describe("Technique ou stratégie : vers quoi on oriente", () => {
   });
 });
 
-describe("Le lien porte TOUJOURS l'affilié quand on le connaît", () => {
+describe("Le lien porte l'affilié quand on connaît le PARRAIN", () => {
   test("technique : plans Tiquiz, avec le sa", () => {
-    const u = buildCoachUpsell("technique", "sa00078783172001");
-    assert.equal(u.url, `${TIQUIZ_PLANS_URL}?sa=sa00078783172001`);
+    const u = buildCoachUpsell("technique", "sa0007878317200141bbe3de2b6644176621db2c6580");
+    assert.equal(u.url, `${TIQUIZ_PLANS_URL}?sa=sa0007878317200141bbe3de2b6644176621db2c6580`);
   });
 
   test("stratégie : l'Atelier, avec le sa", () => {
-    const u = buildCoachUpsell("strategie", "sa00078783172001");
-    assert.equal(u.url, `${ATELIER_URL}?sa=sa00078783172001`);
+    const u = buildCoachUpsell("strategie", "sa0007878317200141bbe3de2b6644176621db2c6580");
+    assert.equal(u.url, `${ATELIER_URL}?sa=sa0007878317200141bbe3de2b6644176621db2c6580`);
   });
 
-  test("affilié inconnu : lien nu, jamais un sa inventé", () => {
-    // Une attribution fausse est pire que pas d'attribution : elle vole
-    // la commission a quelqu'un d'autre.
+  test("parrain inconnu : lien nu, et c'est VOLONTAIRE", () => {
+    // Les inscrits arrivent de Systeme.io, qui a deja pose son cookie
+    // d'affiliation. Un lien nu laisse ce cookie decider, donc l'affilie
+    // qui a reellement amene la personne touche sa commission. Coller un
+    // sa par defaut ecraserait cette attribution.
     assert.equal(buildCoachUpsell("technique", null).url, TIQUIZ_PLANS_URL);
     assert.equal(buildCoachUpsell("technique", "").url, TIQUIZ_PLANS_URL);
     assert.equal(buildCoachUpsell("technique", "   ").url, TIQUIZ_PLANS_URL);
   });
 
   test("une valeur douteuse est refusée, pas collée dans l'URL", () => {
-    for (const junk of ["https://evil.test", "sa 123", "a", "x".repeat(200), "?utm=1"]) {
+    // Meme regle que l'espace affiliation : un identifiant Systeme.io,
+    // rien d'autre. Un "sa" trop court n'en est pas un.
+    for (const junk of ["https://evil.test", "sa 123", "a", "x".repeat(200), "?utm=1", "sa123"]) {
       assert.equal(buildCoachUpsell("strategie", junk).url, ATELIER_URL, junk);
     }
   });
