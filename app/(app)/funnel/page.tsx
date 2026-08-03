@@ -36,8 +36,9 @@ export default async function FunnelPage() {
       <header className="flex flex-col gap-1">
         <h1 className="font-display text-2xl font-bold sm:text-3xl">Ta campagne</h1>
         <p className="text-sm text-muted-foreground">
-          Tiquiz écrit ton quiz. Ici, on écrit tout l&apos;autour : tes emails et ton kit de lancement,
-          à partir de ton carnet. Tu copies dans Systeme.io, tu personnalises, c&apos;est parti.
+          Deux choses, écrites à partir de ton carnet et de ton quiz : les emails que reçoit un
+          visiteur après son résultat, et de quoi faire connaître ton quiz. Tu copies dans
+          Systeme.io, tu personnalises, c&apos;est parti.
         </p>
       </header>
       {/* PALIER 7 EUR : on MONTRE la Campagne au lieu de la cacher (demande
@@ -48,7 +49,7 @@ export default async function FunnelPage() {
       {locked ? (
         <LockedSection
           title="Ta campagne, c'est dans les bonus"
-          description="Tes emails de bienvenue, une sequence complete de 5 emails pour CHAQUE profil de resultat, ta sequence de vente douce, ton kit de lancement et les modeles Systeme.io prets a importer. Ecrits a partir de ton carnet."
+          description="Une sequence de 5 emails pour CHAQUE profil de resultat de ton quiz, et ton kit de lancement pour le faire connaitre. Ecrits a partir de ton carnet, avec ton ton et les mots de ta cible."
           ctaLabel="Debloquer ma campagne"
           ctaUrl={checkoutUrl}
         >

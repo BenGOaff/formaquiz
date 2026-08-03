@@ -100,13 +100,24 @@ export interface FunnelLaunch {
   dm: string;
   partnerEmail: string;
 }
+/**
+ * La campagne, reduite a DEUX choses (demande Bene, 3 aout 2026 : "je
+ * veux JUSTE 5 mails par resultat, pas ce truc j'en ai partout je ne
+ * sais meme pas quoi en faire").
+ *
+ * La sequence de bienvenue et la sequence de vente douce ont ete
+ * RETIREES : elles s'empilaient sur la page sans que personne sache
+ * quand les envoyer, et elles diluaient la seule chose qui compte,
+ * l'email qu'un visiteur recoit apres avoir eu son resultat.
+ *
+ * Ne pas les reintroduire "au cas ou" : c'est exactement le geste qui a
+ * produit l'ecran qu'elle a trouve illisible.
+ */
 export interface FunnelAssets {
-  welcome: FunnelEmail[];
+  /** La sequence post-quiz : 5 emails par profil de resultat. */
   byResult: FunnelResultEmail[];
-  sales: FunnelEmail[];
+  /** Le kit pour promouvoir le quiz : posts, DM, email partenaire. */
   launch: FunnelLaunch;
-  /** Repli si la generation n'a pas pu etre parsee en JSON structure. */
-  raw?: string;
 }
 
 /** Modele Systeme.io a importer en 1 clic (URL de partage). */

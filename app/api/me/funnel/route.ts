@@ -1,16 +1,18 @@
 // app/api/me/funnel/route.ts
-// Campagne done-for-you de l'eleve.
-//   GET : renvoie la campagne stockee.
-//   PUT : persiste la campagne assemblee par le navigateur.
+// Campagne de l'eleve : DEUX choses, la sequence post-quiz et le kit de
+// lancement.
+//   GET : renvoie ce qui est stocke.
+//   PUT : enregistre ce que le navigateur vient de generer, en FUSIONNANT
+//         (regenerer le kit n'efface pas les sequences, et inversement).
 //
 // LE POST A DISPARU, ET C'EST LE CORRECTIF (erreur 524, 3 aout 2026).
-// Il generait toute la campagne dans une seule requete. Cloudflare coupe
-// a ~100 secondes, ecrire une campagne en demande plusieurs minutes :
+// Il generait tout dans une seule requete. Cloudflare coupe a
+// ~100 secondes, ecrire une campagne en demande plusieurs minutes :
 // aucune valeur de timeout ne pouvait rendre ca fiable.
 //
-// La generation vit maintenant dans /core et /sequence, une demande au
-// modele par requete. Le navigateur enchaine les etapes, montre
-// l'avancement, puis appelle ce PUT une fois avec le resultat complet.
+// La generation vit maintenant dans /profiles, /sequence et /launch, une
+// demande au modele par requete. Le navigateur enchaine, montre
+// l'avancement, puis appelle ce PUT.
 import { NextRequest, NextResponse } from "next/server";
 import { getFunnelAssets, saveFunnelAssets } from "@/lib/generate/funnel";
 import { requireFunnelAccess } from "@/lib/generate/funnelGuard";
@@ -36,7 +38,11 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: "bad_json" }, { status: 400 });
   }
 
-  const assets = await saveFunnelAssets(gate.userId, (body as { assets?: unknown })?.assets);
+  // Seules les cles PRESENTES sont ecrasees : le navigateur envoie
+  // `byResult` apres une generation de sequences, `launch` apres une
+  // generation de kit, jamais les deux pour rien.
+  const { byResult, launch } = (body ?? {}) as { byResult?: unknown; launch?: unknown };
+  const assets = await saveFunnelAssets(gate.userId, { byResult, launch });
   if (!assets) {
     return NextResponse.json({ ok: false, reason: "empty" }, { status: 400 });
   }
