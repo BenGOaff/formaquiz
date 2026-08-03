@@ -131,6 +131,60 @@ function extractJson(text: string): unknown | null {
   try {
     return JSON.parse(t);
   } catch {
+    // Reponse coupee : on repare les delimiteurs restes ouverts pour
+    // sauver les emails DEJA complets. Mieux vaut trois emails sur six
+    // qu'un ecran de JSON brut.
+    return tryRepairTruncatedJson(t);
+  }
+}
+
+/**
+ * Repare un JSON tronque en refermant ce qui reste ouvert.
+ *
+ * On remonte jusqu'a la derniere position "sure" (la fin du dernier
+ * element complet), puis on referme les tableaux et objets encore
+ * ouverts. Ce n'est pas un parseur : c'est un filet, et il ne sert que
+ * quand le modele a ete coupe.
+ */
+function tryRepairTruncatedJson(text: string): unknown | null {
+  let inString = false;
+  let escaped = false;
+  const stack: string[] = [];
+  let lastSafe = -1;
+
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (escaped) { escaped = false; continue; }
+    if (c === "\\") { escaped = true; continue; }
+    if (c === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (c === "{" || c === "[") stack.push(c === "{" ? "}" : "]");
+    else if (c === "}" || c === "]") stack.pop();
+    // Une virgule hors chaine termine un element complet : on peut
+    // couper juste avant sans casser ce qui precede.
+    else if (c === ",") lastSafe = i;
+  }
+
+  if (lastSafe < 0) return null;
+  let candidate = text.slice(0, lastSafe);
+  // On recalcule la pile sur le tronçon conservé.
+  const closers: string[] = [];
+  inString = false;
+  escaped = false;
+  for (let i = 0; i < candidate.length; i++) {
+    const c = candidate[i];
+    if (escaped) { escaped = false; continue; }
+    if (c === "\\") { escaped = true; continue; }
+    if (c === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (c === "{") closers.push("}");
+    else if (c === "[") closers.push("]");
+    else if (c === "}" || c === "]") closers.pop();
+  }
+  candidate += closers.reverse().join("");
+  try {
+    return JSON.parse(candidate);
+  } catch {
     return null;
   }
 }
@@ -167,10 +221,16 @@ function normalizeAssets(parsed: unknown, rawText: string): FunnelAssets {
     partnerEmail: clean(launchRaw.partnerEmail),
   };
 
+  // On ne renvoie PLUS le texte brut quand l'analyse echoue. Afficher du
+  // JSON a une creatrice, c'est lui montrer notre panne et lui demander
+  // de la demeler. L'ecran dit maintenant que la generation a echoue et
+  // propose de relancer (cf. FunnelClient). `rawText` reste dans les
+  // logs serveur pour le diagnostic.
   const empty = welcome.length === 0 && byResult.length === 0 && sales.length === 0;
-  return empty
-    ? { welcome, byResult, sales, launch, raw: sanitizeAiText(rawText).trim() }
-    : { welcome, byResult, sales, launch };
+  if (empty) {
+    console.error("[funnel] analyse impossible, extrait :", rawText.slice(0, 400));
+  }
+  return { welcome, byResult, sales, launch };
 }
 
 /** Genere la campagne et la persiste. Renvoie les assets, ou null si echec IA. */
@@ -200,7 +260,15 @@ export async function generateFunnel(userId: string): Promise<FunnelAssets | nul
   const model = resolveAnthropicModel(process.env.ANTHROPIC_MODEL, "sonnet");
   const body = buildClaudeMessageBody({
     model,
-    max_tokens: 4096,
+    // 4096 TRONQUAIT LA REPONSE (retour Bene, 3 aout 2026 : "la campagne
+    // email sort en json .. l'enfer !!").
+    //
+    // La campagne complete, c'est 3 emails de bienvenue + 1 email par
+    // profil + 3 emails de vente + 4 posts + un DM + un email partenaire,
+    // en francais. On depassait donc la limite, la reponse etait coupee
+    // en plein JSON, JSON.parse echouait, et le repli affichait le JSON
+    // BRUT a l'ecran. Elle voyait la panne, pas sa campagne.
+    max_tokens: 16000,
     system: SYSTEM,
     messages: [{ role: "user", content: userPrompt }],
   });

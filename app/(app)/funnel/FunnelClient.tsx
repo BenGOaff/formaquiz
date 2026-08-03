@@ -11,7 +11,7 @@ import {
   Mail,
   Megaphone,
   Users,
-  MessageSquare,
+  ChevronDown,
   Boxes,
   ExternalLink,
   Target,
@@ -46,6 +46,7 @@ export function FunnelClient({
 }) {
   const router = useRouter();
   const [assets, setAssets] = useState<FunnelAssets | null>(initialAssets);
+
   const [busy, setBusy] = useState(false);
   const [intentions, setIntentions] = useState<IntentionMap>(initialIntentions);
 
@@ -118,6 +119,29 @@ export function FunnelClient({
     );
   }
 
+  // Regroupement PAR PROFIL : chaque profil de resultat recoit son
+  // dossier, dans l'ordre ou l'IA les a rendus. Un profil sans email
+  // n'apparait pas plutot que d'afficher un dossier vide.
+  const byProfile = (() => {
+    const map = new Map<string, FunnelResultEmail[]>();
+    for (const e of assets.byResult) {
+      const key = (e.result || "Sans profil").trim();
+      const list = map.get(key) ?? [];
+      list.push(e);
+      map.set(key, list);
+    }
+    return [...map.entries()].map(([profile, emails]) => ({ profile, emails }));
+  })();
+  const launchCount =
+    assets.launch.posts.length +
+    (assets.launch.dm ? 1 : 0) +
+    (assets.launch.partnerEmail ? 1 : 0);
+  const isEmpty =
+    assets.welcome.length === 0 &&
+    assets.byResult.length === 0 &&
+    assets.sales.length === 0 &&
+    launchCount === 0;
+
   return (
     <div className="flex flex-col gap-6">
       {templatesBlock}
@@ -139,136 +163,165 @@ export function FunnelClient({
         </div>
       </div>
 
-      {assets.raw ? (
+      {/* DES DOSSIERS, PAS UN MUR (retour Bene, 3 aout 2026 : "elle doit
+          etre bien presentee : par profil, chaque profil a un dossier qui
+          contient les emails ; par jour, numeroter les emails, quand on
+          clique dessus ca developpe l'email a copier en un clic").
+          Plus de branche `raw` : afficher du JSON brut, c'etait montrer
+          notre panne a la creatrice et lui demander de la demeler. */}
+      {isEmpty ? (
         <Card>
-          <CardContent className="py-5">
-            <CopyBlock label="Ma campagne" text={assets.raw} />
+          <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
+            <p className="text-sm font-medium">La génération n&apos;a pas abouti.</p>
+            <p className="text-sm text-muted-foreground">
+              Ça arrive quand la réponse est trop longue. Relance, ça repart en général du
+              premier coup.
+            </p>
+            <Button onClick={generate} disabled={busy}>
+              <RefreshCw className="mr-2 size-4" />
+              Relancer la génération
+            </Button>
           </CardContent>
         </Card>
       ) : (
         <>
-          <Section icon={Mail} title="Séquence de bienvenue">
+          <Folder icon={Mail} title="Séquence de bienvenue" count={assets.welcome.length} defaultOpen>
             {assets.welcome.map((e, i) => (
-              <EmailCard key={i} email={e} />
+              <EmailRow key={i} n={i + 1} subject={e.subject} body={e.body} />
             ))}
-          </Section>
+          </Folder>
 
-          <Section icon={Users} title="Un email par profil de résultat">
-            {assets.byResult.map((e, i) => (
-              <ResultEmailCard key={i} email={e} />
+          {/* UN DOSSIER PAR PROFIL. Chaque profil de resultat a le sien,
+              meme s'il ne contient qu'un email aujourd'hui : c'est le
+              rangement qu'elle a demande, et il tient quand la sequence
+              par profil s'allongera. */}
+          <section className="flex flex-col gap-3">
+            <h2 className="flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              <Users className="size-4" />
+              Un dossier par profil de résultat
+            </h2>
+            {byProfile.map(({ profile, emails }) => (
+              <Folder key={profile} icon={Target} title={profile} count={emails.length}>
+                {emails.map((e, i) => (
+                  <EmailRow key={i} n={i + 1} subject={e.subject} body={e.body} />
+                ))}
+              </Folder>
             ))}
-          </Section>
+          </section>
 
-          <Section icon={Mail} title="Séquence de vente douce">
+          <Folder icon={Mail} title="Séquence de vente douce" count={assets.sales.length}>
             {assets.sales.map((e, i) => (
-              <EmailCard key={i} email={e} />
+              <EmailRow key={i} n={i + 1} subject={e.subject} body={e.body} />
             ))}
-          </Section>
+          </Folder>
 
-          <Section icon={Megaphone} title="Kit de lancement">
+          <Folder icon={Megaphone} title="Kit de lancement" count={launchCount}>
             {assets.launch.posts.map((p, i) => (
-              <Card key={i}>
-                <CardContent className="flex flex-col gap-2 py-4">
-                  <CopyBlock label={`Post ${i + 1}`} text={p} />
-                </CardContent>
-              </Card>
+              <EmailRow key={`p${i}`} n={i + 1} label="Post" subject={firstLine(p)} body={p} />
             ))}
             {assets.launch.dm && (
-              <Card>
-                <CardContent className="flex flex-col gap-2 py-4">
-                  <CopyBlock label="Script de message direct" text={assets.launch.dm} icon={MessageSquare} />
-                </CardContent>
-              </Card>
+              <EmailRow n={0} label="Message direct" subject="Script de message direct" body={assets.launch.dm} />
             )}
             {assets.launch.partnerEmail && (
-              <Card>
-                <CardContent className="flex flex-col gap-2 py-4">
-                  <CopyBlock label="Email d'échange partenaire" text={assets.launch.partnerEmail} />
-                </CardContent>
-              </Card>
+              <EmailRow n={0} label="Partenaire" subject="Email d'échange partenaire" body={assets.launch.partnerEmail} />
             )}
-          </Section>
+          </Folder>
         </>
       )}
     </div>
   );
 }
 
-function Section({
+/** Premiere ligne non vide : sert de titre repliable a un post. */
+function firstLine(text: string): string {
+  const l = String(text ?? "").split("\n").map((x) => x.trim()).find(Boolean) ?? "";
+  return l.length > 80 ? l.slice(0, 79) + "…" : l;
+}
+
+/**
+ * Un dossier repliable. Ouvert par defaut uniquement pour la premiere
+ * sequence : sinon la page redevient le mur qu'elle voulait eviter.
+ */
+function Folder({
   icon: Icon,
   title,
+  count,
+  defaultOpen = false,
   children,
 }: {
   icon: typeof Mail;
   title: string;
+  count: number;
+  defaultOpen?: boolean;
   children: React.ReactNode;
 }) {
-  return (
-    <section className="flex flex-col gap-3">
-      <h2 className="flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        <Icon className="size-4" />
-        {title}
-      </h2>
-      {children}
-    </section>
-  );
-}
-
-function EmailCard({ email }: { email: FunnelEmail }) {
-  const full = `Objet : ${email.subject}\n\n${email.body}`;
+  const [open, setOpen] = useState(defaultOpen);
+  if (count === 0) return null;
   return (
     <Card>
-      <CardContent className="flex flex-col gap-2 py-4">
-        <div className="flex items-start justify-between gap-2">
-          <p className="text-sm font-semibold">Objet : {email.subject}</p>
-          <CopyButton text={full} />
-        </div>
-        <p className="whitespace-pre-wrap text-sm text-muted-foreground">{email.body}</p>
-      </CardContent>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left"
+      >
+        <Icon className="size-4 shrink-0 text-primary" />
+        <span className="flex-1 font-display text-sm font-semibold">{title}</span>
+        <span className="text-xs text-muted-foreground">{count}</span>
+        <ChevronDown className={`size-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && <div className="flex flex-col gap-2 border-t px-4 py-3">{children}</div>}
     </Card>
   );
 }
 
-function ResultEmailCard({ email }: { email: FunnelResultEmail }) {
-  const full = `Objet : ${email.subject}\n\n${email.body}`;
-  return (
-    <Card>
-      <CardContent className="flex flex-col gap-2 py-4">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-primary">{email.result}</p>
-            <p className="text-sm font-semibold">Objet : {email.subject}</p>
-          </div>
-          <CopyButton text={full} />
-        </div>
-        <p className="whitespace-pre-wrap text-sm text-muted-foreground">{email.body}</p>
-      </CardContent>
-    </Card>
-  );
-}
-
-function CopyBlock({
-  label,
-  text,
-  icon: Icon,
+/**
+ * Un email : numerote, replie par defaut, avec sa copie en un clic.
+ *
+ * Le bouton Copier est DANS l'en-tete, donc accessible sans deplier :
+ * quand on colle sa sequence dans Systeme.io, on veut enchainer les
+ * copies, pas ouvrir puis refermer chaque email.
+ */
+function EmailRow({
+  n,
+  label = "Jour",
+  subject,
+  body,
 }: {
-  label: string;
-  text: string;
-  icon?: typeof Mail;
+  n: number;
+  label?: string;
+  subject: string;
+  body: string;
 }) {
+  const [open, setOpen] = useState(false);
+  const full = `Objet : ${subject}\n\n${body}`;
   return (
-    <>
-      <div className="flex items-center justify-between gap-2">
-        <span className="flex items-center gap-2 text-sm font-semibold">
-          {Icon && <Icon className="size-4 text-primary" />}
-          {label}
-        </span>
-        <CopyButton text={text} />
+    <div className="rounded-lg border">
+      <div className="flex items-center gap-2 px-3 py-2">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          className="flex flex-1 items-center gap-2.5 text-left"
+        >
+          <span className="inline-flex shrink-0 items-center rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+            {n > 0 ? `${label} ${n}` : label}
+          </span>
+          <span className="min-w-0 flex-1 truncate text-sm font-medium">{subject}</span>
+          <ChevronDown className={`size-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
+        </button>
+        <CopyButton text={full} />
       </div>
-      <p className="whitespace-pre-wrap text-sm text-muted-foreground">{text}</p>
-    </>
+      {open && (
+        <p className="whitespace-pre-wrap border-t px-3 py-3 text-sm text-muted-foreground">{body}</p>
+      )}
+    </div>
   );
 }
+
+
+
+
 
 function CopyButton({ text }: { text: string }) {
   return (
