@@ -96,6 +96,19 @@ export async function POST(req: NextRequest) {
   const system = buildSystemPrompt(format as GeneratorFormat);
   const maxTokens = format === "article" || format === "script_long" ? 4000 : 1600;
 
+  // ON REND LA MAIN AVANT CLOUDFLARE, JAMAIS APRÈS.
+  //
+  // Cloudflare coupe toute requête qui dépasse ~100 secondes et rend une
+  // page 524 que nous ne contrôlons pas : l'affilié voit une panne
+  // d'infrastructure au lieu de notre message. Un article long, c'est
+  // 4000 tokens, et la reprise de format en demande 4000 de plus : les
+  // deux bout à bout pouvaient largement dépasser la limite.
+  //
+  // On se donne donc un budget de 85 secondes pour TOUTE la requête, pas
+  // par appel. La reprise n'est tentée que s'il reste de quoi la finir.
+  const deadline = Date.now() + 85_000;
+  const budgetLeft = () => deadline - Date.now();
+
   async function callClaude(messages: { role: "user" | "assistant"; content: string }[]) {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -107,6 +120,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify(
         buildClaudeMessageBody({ model, max_tokens: maxTokens, temperature: 0.8, system, messages }),
       ),
+      signal: AbortSignal.timeout(Math.max(1_000, budgetLeft())),
     });
     if (!res.ok) {
       console.error("[affiliate-generate] Anthropic", res.status, await res.text().catch(() => ""));
@@ -138,7 +152,11 @@ export async function POST(req: NextRequest) {
     // fois en montrant au modèle ce qu'il vient de produire. Une seule
     // reprise : au-delà, on rend ce qu'on a plutôt que de faire attendre
     // l'affilié indéfiniment.
-    if (text && !looksLikeFormat(format as GeneratorFormat, text)) {
+    //
+    // La reprise est SAUTÉE quand le budget de temps ne suffit plus : un
+    // texte hors format vaut mieux qu'une page d'erreur 524 et zéro
+    // texte, et l'affilié a un bouton pour relancer.
+    if (text && !looksLikeFormat(format as GeneratorFormat, text) && budgetLeft() > 20_000) {
       console.warn("[affiliate-generate] format hors cible, reprise", format);
       const retry = await callClaude([
         ...messages,

@@ -358,6 +358,12 @@ async function askClaude(
         "content-type": "application/json",
       },
       body: JSON.stringify(body),
+      // ABANDONNER AVANT CLOUDFLARE, PAS APRÈS. Sa limite est à ~100 s
+      // et elle rend une page d'erreur 524 que nous ne contrôlons pas :
+      // l'élève voit une panne d'infrastructure au lieu de notre message.
+      // À 80 s, c'est NOUS qui répondons, avec une raison exploitable et
+      // un bouton pour relancer l'étape.
+      signal: AbortSignal.timeout(80_000),
     });
     if (!res.ok) {
       console.error("[funnel] appel refusé :", res.status);
@@ -384,11 +390,23 @@ async function askClaude(
   }
 }
 
-/** Genere la campagne et la persiste. Renvoie les assets, ou null si echec IA. */
-export async function generateFunnel(userId: string): Promise<FunnelAssets | null> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return null;
+// ── LA GÉNÉRATION EST DÉCOUPÉE EN ÉTAPES ────────────────────────────
+//
+// POURQUOI (erreur 524, 3 août 2026). Cloudflare coupe toute requête qui
+// dépasse ~100 secondes, et rien ne peut l'en empêcher côté serveur : ni
+// un timeout plus long, ni une réponse plus légère. Écrire une campagne
+// entière demande plusieurs minutes de modèle. Tant que ce travail vivait
+// dans UNE requête, il n'y avait aucune valeur de limite qui marche.
+//
+// La découpe rend la contrainte satisfaisable : chaque appel HTTP porte
+// UNE demande au modèle, donc reste largement sous la minute. Le
+// navigateur enchaîne, et affiche l'avancement au lieu d'un sablier.
+//
+// Effet de bord précieux : un profil qui échoue se relance seul, sans
+// réécrire les quinze autres emails déjà payés.
 
+/** Contexte + profils : la base commune à toutes les étapes. */
+async function loadGenerationContext(userId: string) {
   const { data: profile } = await supabaseAdmin
     .from("profiles")
     .select("full_name, niche, activity_type, maturity, monetization")
@@ -401,60 +419,108 @@ export async function generateFunnel(userId: string): Promise<FunnelAssets | nul
     fetchQuizProfiles(userId),
     getFunnelIntentions(userId),
   ]);
-  const context = buildContextBlock((profile ?? {}) as ProfileRow, carnetToText(carnet));
+  return {
+    context: buildContextBlock((profile ?? {}) as ProfileRow, carnetToText(carnet)),
+    quizProfiles,
+    intentions,
+  };
+}
 
-  // ── Appel 1 : le tronc commun ─────────────────────────────────────
+export interface FunnelCoreStep {
+  welcome: FunnelEmail[];
+  sales: FunnelEmail[];
+  launch: FunnelAssets["launch"];
+  /** Les profils à traiter ensuite : réels, ou déduits par ce même appel. */
+  profiles: { title: string; description: string }[];
+}
+
+/**
+ * ÉTAPE 1 : le tronc commun, et la LISTE des profils à écrire ensuite.
+ *
+ * C'est cet appel qui décide combien d'étapes suivront. Quand le quiz
+ * n'est pas connecté, il déduit les profils lui-même : le navigateur n'a
+ * ensuite qu'un seul chemin à suivre, connecté ou pas.
+ */
+export async function generateFunnelCore(userId: string): Promise<FunnelCoreStep | null> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return null;
+
+  const { context, quizProfiles } = await loadGenerationContext(userId);
   const needProfiles = quizProfiles.length === 0;
   const core = normalizeCore(
-    await askClaude(
-      apiKey,
-      coreSystem(needProfiles),
-      buildCorePrompt(context, quizProfiles),
-      8000,
-    ),
+    await askClaude(apiKey, coreSystem(needProfiles), buildCorePrompt(context, quizProfiles), 8000),
   );
+  if (core.welcome.length === 0 && core.sales.length === 0) return null;
 
-  // ── Appel 2, un par profil, EN PARALLÈLE ──────────────────────────
-  // Le profil vient du quiz réel quand il est connecté, sinon de ce que
-  // l'appel 1 a déduit. Un seul chemin ensuite.
-  const targets: SequenceTarget[] = needProfiles
-    ? core.deduced.map((p, _i, all) => ({
-        title: p.title,
-        description: p.description,
-        siblings: all.filter((o) => o.title !== p.title).map((o) => o.title),
-      }))
-    : quizProfiles.map((p) => ({
-        title: p.title,
-        description: p.description ?? "",
-        ctaText: p.ctaText ?? undefined,
-        ctaUrl: p.ctaUrl ?? undefined,
-        siblings: quizProfiles.filter((o) => o.title !== p.title).map((o) => o.title),
-      }));
-
-  const sequences = await Promise.all(
-    targets.map(async (t) =>
-      normalizeSequence(
-        await askClaude(
-          apiKey,
-          sequenceSystem(),
-          buildSequencePrompt(context, t, intentions),
-          8000,
-        ),
-        t.title,
-      ),
-    ),
-  );
-  // Un profil qui echoue ne fait pas tomber la campagne : les autres
-  // s'affichent, et le bouton Regenerer est a un clic.
-  const byResult: FunnelResultEmail[] = sequences.flat();
-
-  const assets: FunnelAssets = {
+  return {
     welcome: core.welcome,
-    byResult,
     sales: core.sales,
     launch: core.launch,
+    profiles: needProfiles
+      ? core.deduced
+      : quizProfiles.map((p) => ({ title: p.title, description: p.description ?? "" })),
   };
-  if (assets.welcome.length === 0 && byResult.length === 0 && assets.sales.length === 0) {
+}
+
+/**
+ * ÉTAPE 2 (une par profil) : la séquence complète d'UN profil.
+ *
+ * Le CTA et l'intention sont relus ici, côté serveur, à partir du titre
+ * reçu : le navigateur ne transporte que le nom du profil, jamais l'URL
+ * vers laquelle l'email enverra le lecteur.
+ */
+export async function generateFunnelSequence(
+  userId: string,
+  profileTitle: string,
+): Promise<FunnelResultEmail[] | null> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return null;
+
+  const { context, quizProfiles, intentions } = await loadGenerationContext(userId);
+  const known = quizProfiles.find((p) => p.title.trim() === profileTitle.trim());
+  const target: SequenceTarget = {
+    title: profileTitle,
+    description: known?.description ?? "",
+    ctaText: known?.ctaText ?? undefined,
+    ctaUrl: known?.ctaUrl ?? undefined,
+    siblings: quizProfiles.filter((p) => p.title.trim() !== profileTitle.trim()).map((p) => p.title),
+  };
+
+  const emails = normalizeSequence(
+    await askClaude(apiKey, sequenceSystem(), buildSequencePrompt(context, target, intentions), 8000),
+    profileTitle,
+  );
+  return emails.length > 0 ? emails : null;
+}
+
+/**
+ * Persiste la campagne assemblée par le navigateur.
+ *
+ * Le contenu est RENORMALISÉ ici : c'est le navigateur qui l'envoie, donc
+ * on ne lui fait pas confiance sur la forme. Ce qui arrive tordu ressort
+ * propre ou ne ressort pas.
+ */
+export async function saveFunnelAssets(userId: string, raw: unknown): Promise<FunnelAssets | null> {
+  const o = (raw ?? {}) as Record<string, unknown>;
+  const assets: FunnelAssets = {
+    welcome: normalizeEmails(o.welcome),
+    sales: normalizeEmails(o.sales),
+    byResult: Array.isArray(o.byResult)
+      ? (o.byResult as Record<string, unknown>[])
+          .map((x) => ({
+            result: clean(x.result),
+            step:
+              typeof x.step === "number" && x.step >= 1 && x.step <= RESULT_SEQUENCE.length
+                ? Math.trunc(x.step)
+                : null,
+            subject: clean(x.subject),
+            body: clean(x.body),
+          }))
+          .filter((e) => e.subject || e.body)
+      : [],
+    launch: normalizeCore({ launch: o.launch }).launch,
+  };
+  if (assets.welcome.length === 0 && assets.byResult.length === 0 && assets.sales.length === 0) {
     return null;
   }
 
@@ -462,7 +528,6 @@ export async function generateFunnel(userId: string): Promise<FunnelAssets | nul
     { user_id: userId, assets, generated_at: new Date().toISOString() },
     { onConflict: "user_id" },
   );
-
   return assets;
 }
 
