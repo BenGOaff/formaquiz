@@ -49,6 +49,10 @@ export function FunnelClient({
   const [assets, setAssets] = useState<FunnelAssets | null>(initialAssets);
 
   const [busy, setBusy] = useState(false);
+  // Ou en est la generation. Une campagne demande deux bonnes minutes :
+  // sans cette phrase, l'ecran ne se distingue pas d'un ecran fige, et
+  // c'est la qu'on recharge la page en plein milieu.
+  const [step, setStep] = useState("");
   const [intentions, setIntentions] = useState<IntentionMap>(initialIntentions);
 
   async function saveIntentions(next: IntentionMap) {
@@ -69,19 +73,98 @@ export function FunnelClient({
       <IntentionsBlock profiles={profiles} intentions={intentions} onChange={saveIntentions} />
     ) : null;
 
+  /**
+   * LA GÉNÉRATION SE FAIT EN PLUSIEURS REQUÊTES (erreur 524, 3 août).
+   *
+   * Une campagne complète demande plusieurs minutes de rédaction, et
+   * Cloudflare coupe toute requête qui dépasse ~100 secondes. Tant que
+   * tout tenait dans un seul appel, aucun réglage ne pouvait le rendre
+   * fiable : la coupure ne vient pas de notre serveur.
+   *
+   * On enchaîne donc : le tronc commun d'abord (il renvoie AUSSI la
+   * liste des profils), puis un appel par profil, puis un seul
+   * enregistrement. Chaque requête reste courte, et l'élève lit
+   * l'avancement au lieu de regarder un sablier pendant deux minutes.
+   *
+   * Les profils partent EN PARALLÈLE : le temps total est celui du plus
+   * lent, pas leur somme. L'enregistrement vient après, une seule fois,
+   * pour qu'aucune écriture ne se marche dessus.
+   */
   async function generate() {
     setBusy(true);
+    setStep("J'écris ta séquence de bienvenue et ton kit de lancement...");
     try {
-      const res = await fetch("/api/me/funnel", { method: "POST" });
-      const json = await res.json();
-      if (!res.ok || !json.assets) throw new Error("gen failed");
-      setAssets(json.assets as FunnelAssets);
-      toast.success("Ta campagne est prête.");
+      const coreRes = await fetch("/api/me/funnel/core", { method: "POST" });
+      const coreJson = await coreRes.json();
+      if (!coreRes.ok || !coreJson.core) throw new Error("core");
+      const core = coreJson.core as {
+        welcome: FunnelEmail[];
+        sales: FunnelEmail[];
+        launch: FunnelAssets["launch"];
+        profiles: { title: string }[];
+      };
+
+      const titles = core.profiles.map((p) => p.title).filter(Boolean);
+      let done = 0;
+      setStep(
+        titles.length > 0
+          ? `J'écris la séquence de tes ${titles.length} profils...`
+          : "Je termine...",
+      );
+
+      const sequences = await Promise.all(
+        titles.map(async (title) => {
+          try {
+            const res = await fetch("/api/me/funnel/sequence", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ profile: title }),
+            });
+            const json = await res.json();
+            if (!res.ok || !Array.isArray(json.emails)) return [];
+            return json.emails as FunnelResultEmail[];
+          } catch {
+            // Un profil qui echoue ne fait pas tomber la campagne : les
+            // autres s'affichent, et Regenerer est a un clic.
+            return [];
+          } finally {
+            done += 1;
+            setStep(`Profil ${done} sur ${titles.length} écrit...`);
+          }
+        }),
+      );
+
+      const next: FunnelAssets = {
+        welcome: core.welcome,
+        sales: core.sales,
+        launch: core.launch,
+        byResult: sequences.flat(),
+      };
+
+      setStep("J'enregistre ta campagne...");
+      const saveRes = await fetch("/api/me/funnel", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assets: next }),
+      });
+      const saveJson = await saveRes.json();
+      if (!saveRes.ok || !saveJson.assets) throw new Error("save");
+
+      setAssets(saveJson.assets as FunnelAssets);
+      const missing = titles.length - sequences.filter((s) => s.length > 0).length;
+      if (missing > 0) {
+        toast.warning(
+          `Ta campagne est là, mais ${missing} profil${missing > 1 ? "s n'ont" : " n'a"} pas abouti. Relance pour compléter.`,
+        );
+      } else {
+        toast.success("Ta campagne est prête.");
+      }
       router.refresh();
     } catch {
       toast.error("Génération impossible pour le moment. Réessaie dans un instant.");
     } finally {
       setBusy(false);
+      setStep("");
     }
   }
 
@@ -114,6 +197,13 @@ export function FunnelClient({
             <Sparkles />
             {busy ? "Je rédige ta campagne..." : "Générer ma campagne"}
           </Button>
+          {busy && (
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <RefreshCw className="size-4 animate-spin" />
+              {step || "Je démarre..."} Compte deux bonnes minutes, tu peux laisser cet onglet
+              ouvert.
+            </p>
+          )}
         </CardContent>
         </Card>
       </div>
@@ -157,8 +247,17 @@ export function FunnelClient({
       {intentionsBlock}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-muted-foreground">
-          {generatedAt ? `Générée le ${new Date(generatedAt).toLocaleDateString("fr-FR")}.` : ""} Tu
-          peux la régénérer après avoir avancé dans ton carnet.
+          {busy ? (
+            <span className="flex items-center gap-2">
+              <RefreshCw className="size-3 animate-spin" />
+              {step || "Je démarre..."}
+            </span>
+          ) : (
+            <>
+              {generatedAt ? `Générée le ${new Date(generatedAt).toLocaleDateString("fr-FR")}.` : ""}{" "}
+              Tu peux la régénérer après avoir avancé dans ton carnet.
+            </>
+          )}
         </p>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={downloadAll}>
