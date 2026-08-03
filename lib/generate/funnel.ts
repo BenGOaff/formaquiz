@@ -16,13 +16,34 @@ import {
 } from "@/lib/funnelIntentions";
 import type { QuizResultProfile } from "@/lib/quizDoctor";
 import { labelOf, MATURITY_OPTIONS, MONETIZATION_OPTIONS } from "@/lib/businessProfile";
-import type { FunnelAssets, FunnelEmail, FunnelResultEmail } from "@/lib/types";
+import type { FunnelAssets, FunnelResultEmail } from "@/lib/types";
 import { RESULT_SEQUENCE, sequenceGuidance } from "@/lib/funnelSequence";
 
-// LA VOIX, ÉCRITE UNE FOIS. Elle est partagée par les deux appels (le
-// tronc commun et la séquence d'un profil) : dupliquée, elle divergerait
-// au premier ajustement et les deux moitiés de la campagne ne se
-// ressembleraient plus.
+// LA CAMPAGNE, C'EST DEUX CHOSES. PAS SEPT.
+//
+// Bene, 3 aout 2026 : "je veux JUSTE 5 mails par resultat / profil,
+// comme sur le screenshot, en reutilisant le ton de l'user, le theme du
+// quiz, les mots de son persona. Pas ce truc j'en ai partout je ne sais
+// meme pas quoi en faire."
+//
+// Elle avait raison. La page empilait une sequence de bienvenue, une
+// sequence de vente douce, un dossier par profil et un kit de lancement,
+// sans jamais dire quand envoyer quoi. Beaucoup de contenu, aucune
+// decision possible.
+//
+// Il reste DEUX generations, et elles repondent chacune a une question
+// que l'eleve se pose vraiment :
+//
+//   la sequence post-quiz  -> "il a eu son resultat, je lui ecris quoi ?"
+//   le kit de lancement    -> "comment je fais connaitre mon quiz ?"
+//
+// La sequence de bienvenue et la sequence de vente ont ete SUPPRIMEES,
+// pas mises de cote. Les remettre "au cas ou" refabriquerait l'ecran
+// qu'elle a trouve illisible.
+
+// LA VOIX, ÉCRITE UNE FOIS, partagée par les deux générations :
+// dupliquée, elle divergerait au premier ajustement et les deux moitiés
+// ne se ressembleraient plus.
 const VOICE = `Tu es le meilleur copywriter de funnels pour quiz lead-magnet, au service de L'Atelier du Quiz (Béné). Tu écris la séquence email et le kit de lancement qui transforment un quiz en machine à leads qualifiés qui ACHÈTENT.
 
 Tu t'appuies sur des principes solides, appliqués (jamais théoriques) :
@@ -39,30 +60,35 @@ Règles d'écriture STRICTES :
 
 Tu réponds UNIQUEMENT avec un objet JSON valide, sans texte autour.`;
 
+/** Génération 2 : le kit pour faire connaître le quiz. */
+function launchSystem(): string {
+  return `${VOICE}
+
+Tu écris le KIT DE LANCEMENT qui sert à faire connaître SON QUIZ. Rien d'autre : ni email de bienvenue, ni email de vente.
+
+Format exact :
+{"posts": ["...", "..."], "dm": "...", "partnerEmail": "..."}
+
+- posts : 4 publications prêtes à coller, pour annoncer le quiz. Angles DIFFÉRENTS (une accroche par curiosité, une par le problème, une par le résultat qu'on obtient, une plus personnelle). Chacune finit par une invitation à faire le quiz.
+- dm : 1 message privé court à envoyer à quelqu'un de sa liste ou de ses contacts, sans agressivité commerciale.
+- partnerEmail : 1 email à un partenaire ou une consoeur, pour lui proposer de relayer le quiz auprès de son audience.
+
+Tout parle du QUIZ (son thème, sa promesse, ce qu'on y découvre), avec les mots de l'élève et de sa cible.`;
+}
+
 /**
- * Appel 1 : le tronc commun (bienvenue, vente, kit de lancement).
+ * Les profils, quand le quiz n'est pas connecté à l'Atelier.
  *
- * `needProfiles` : quand le quiz de l'élève n'est pas connecté, on n'a
- * aucun profil réel. On demande alors au même appel de DÉDUIRE les
- * profils, et la séquence de chacun est écrite ensuite, exactement comme
- * pour un quiz connecté. Un seul chemin de code pour les deux cas.
+ * Quand il l'est, cette question ne se pose pas : les profils réels sont
+ * lus dans le quiz, sans le moindre appel au modèle.
  */
-function coreSystem(needProfiles: boolean): string {
+function deduceProfilesSystem(): string {
   return `${VOICE}
 
 Format exact :
-{
-  "welcome": [{"subject": "...", "body": "..."}],
-  "sales": [{"subject": "...", "body": "..."}],
-  "launch": {"posts": ["...", "..."], "dm": "...", "partnerEmail": "..."}${
-    needProfiles ? ',\n  "profiles": [{"title": "nom du profil", "description": "une phrase"}]' : ""
-  }
-}
-Quantités : welcome = 3 emails, sales = 3 emails, launch.posts = 4 posts, launch.dm = 1 script, launch.partnerEmail = 1 email.${
-    needProfiles
-      ? `\nprofiles : déduis 3 ou 4 profils de résultat plausibles à partir de son carnet et de sa niche.`
-      : ""
-  }`;
+{"profiles": [{"title": "nom du profil", "description": "une phrase"}]}
+
+Déduis 3 ou 4 profils de résultat plausibles pour le quiz de cet élève, à partir de son carnet et de sa niche. Rien d'autre.`;
 }
 
 /**
@@ -133,21 +159,21 @@ function buildContextBlock(profile: ProfileRow, carnetText: string): string {
     .join("\n");
 }
 
-/** Message utilisateur de l'appel 1 : le tronc commun. */
-function buildCorePrompt(context: string, quizProfiles: QuizResultProfile[]): string {
-  const known =
+/** Message utilisateur du kit de lancement. */
+function buildLaunchPrompt(context: string, quizProfiles: QuizResultProfile[]): string {
+  const quiz =
     quizProfiles.length > 0
-      ? `Les profils de résultat de son quiz (pour que les emails communs y fassent écho) : ${quizProfiles
+      ? `Les profils de résultat de son quiz, pour que tu saches de quoi il parle : ${quizProfiles
           .map((p) => p.title)
           .join(", ")}.`
-      : `Ses profils de résultat ne sont pas connus : déduis-les et renvoie-les dans "profiles".`;
+      : `Son quiz n'est pas encore connecté : appuie-toi sur sa niche et son carnet pour parler de son sujet.`;
 
   return [
     context,
     ``,
-    known,
+    quiz,
     ``,
-    `Écris-lui sa séquence de bienvenue, sa séquence de vente douce et son kit de lancement, au format JSON demandé.`,
+    `Écris-lui son kit de lancement, au format JSON demandé.`,
   ].join("\n");
 }
 
@@ -269,38 +295,18 @@ function clean(s: unknown): string {
   return sanitizeAiText(typeof s === "string" ? s : "").trim();
 }
 
-function normalizeEmails(raw: unknown): FunnelEmail[] {
-  return Array.isArray(raw)
-    ? (raw as Record<string, unknown>[]).map((x) => ({
-        subject: clean(x.subject),
-        body: clean(x.body),
-      }))
-    : [];
+/** Le kit de lancement. */
+function normalizeLaunch(raw: unknown): FunnelAssets["launch"] {
+  const o = (raw ?? {}) as Record<string, unknown>;
+  return {
+    posts: Array.isArray(o.posts) ? o.posts.map(clean).filter(Boolean) : [],
+    dm: clean(o.dm),
+    partnerEmail: clean(o.partnerEmail),
+  };
 }
 
-/** Le tronc commun : bienvenue, vente, kit de lancement. */
-function normalizeCore(parsed: unknown): {
-  welcome: FunnelEmail[];
-  sales: FunnelEmail[];
-  launch: FunnelAssets["launch"];
-  deduced: { title: string; description: string }[];
-} {
-  const o = (parsed ?? {}) as Record<string, unknown>;
-  const launchRaw = (o.launch ?? {}) as Record<string, unknown>;
-  return {
-    welcome: normalizeEmails(o.welcome),
-    sales: normalizeEmails(o.sales),
-    launch: {
-      posts: Array.isArray(launchRaw.posts) ? launchRaw.posts.map(clean).filter(Boolean) : [],
-      dm: clean(launchRaw.dm),
-      partnerEmail: clean(launchRaw.partnerEmail),
-    },
-    deduced: Array.isArray(o.profiles)
-      ? (o.profiles as Record<string, unknown>[])
-          .map((x) => ({ title: clean(x.title), description: clean(x.description) }))
-          .filter((p) => p.title)
-      : [],
-  };
+function launchIsEmpty(l: FunnelAssets["launch"]): boolean {
+  return l.posts.length === 0 && !l.dm && !l.partnerEmail;
 }
 
 /** La séquence d'UN profil, renumérotée sur sa position réelle. */
@@ -426,44 +432,54 @@ async function loadGenerationContext(userId: string) {
   };
 }
 
-export interface FunnelCoreStep {
-  welcome: FunnelEmail[];
-  sales: FunnelEmail[];
-  launch: FunnelAssets["launch"];
-  /** Les profils à traiter ensuite : réels, ou déduits par ce même appel. */
-  profiles: { title: string; description: string }[];
+/**
+ * LES PROFILS À TRAITER : la liste, et rien d'autre.
+ *
+ * Quand le quiz est connecté, elle est LUE dans le quiz : aucun appel au
+ * modèle, donc la réponse est immédiate et les noms sont exactement ceux
+ * que ses visiteurs voient. C'est seulement quand le quiz n'est pas
+ * connecté qu'on demande au modèle de les déduire.
+ */
+export async function listFunnelProfiles(userId: string): Promise<string[] | null> {
+  const { context, quizProfiles } = await loadGenerationContext(userId);
+  if (quizProfiles.length > 0) {
+    return quizProfiles.map((p) => p.title).filter(Boolean);
+  }
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return null;
+  const parsed = (await askClaude(
+    apiKey,
+    deduceProfilesSystem(),
+    `${context}\n\nDéduis ses profils de résultat, au format JSON demandé.`,
+    2000,
+  )) as { profiles?: Record<string, unknown>[] } | null;
+
+  const titles = Array.isArray(parsed?.profiles)
+    ? parsed.profiles.map((x) => clean(x.title)).filter(Boolean)
+    : [];
+  return titles.length > 0 ? titles : null;
 }
 
 /**
- * ÉTAPE 1 : le tronc commun, et la LISTE des profils à écrire ensuite.
+ * LE KIT DE LANCEMENT : posts, DM, email partenaire.
  *
- * C'est cet appel qui décide combien d'étapes suivront. Quand le quiz
- * n'est pas connecté, il déduit les profils lui-même : le navigateur n'a
- * ensuite qu'un seul chemin à suivre, connecté ou pas.
+ * Génération indépendante de la séquence : l'élève lance l'une sans
+ * l'autre, et régénère l'une sans perdre l'autre.
  */
-export async function generateFunnelCore(userId: string): Promise<FunnelCoreStep | null> {
+export async function generateFunnelLaunch(userId: string): Promise<FunnelAssets["launch"] | null> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return null;
 
   const { context, quizProfiles } = await loadGenerationContext(userId);
-  const needProfiles = quizProfiles.length === 0;
-  const core = normalizeCore(
-    await askClaude(apiKey, coreSystem(needProfiles), buildCorePrompt(context, quizProfiles), 8000),
+  const launch = normalizeLaunch(
+    await askClaude(apiKey, launchSystem(), buildLaunchPrompt(context, quizProfiles), 4000),
   );
-  if (core.welcome.length === 0 && core.sales.length === 0) return null;
-
-  return {
-    welcome: core.welcome,
-    sales: core.sales,
-    launch: core.launch,
-    profiles: needProfiles
-      ? core.deduced
-      : quizProfiles.map((p) => ({ title: p.title, description: p.description ?? "" })),
-  };
+  return launchIsEmpty(launch) ? null : launch;
 }
 
 /**
- * ÉTAPE 2 (une par profil) : la séquence complète d'UN profil.
+ * LA SÉQUENCE POST-QUIZ D'UN PROFIL : ses 5 emails.
  *
  * Le CTA et l'intention sont relus ici, côté serveur, à partir du titre
  * reçu : le navigateur ne transporte que le nom du profil, jamais l'URL
@@ -494,33 +510,41 @@ export async function generateFunnelSequence(
 }
 
 /**
- * Persiste la campagne assemblée par le navigateur.
+ * Persiste ce que le navigateur vient de générer, en FUSIONNANT.
  *
- * Le contenu est RENORMALISÉ ici : c'est le navigateur qui l'envoie, donc
- * on ne lui fait pas confiance sur la forme. Ce qui arrive tordu ressort
- * propre ou ne ressort pas.
+ * Les deux générations sont indépendantes : régénérer le kit de
+ * lancement ne doit pas effacer les séquences écrites la veille, et
+ * inversement. On n'écrase donc que la partie fournie ; l'autre est
+ * relue en base et recopiée telle quelle.
+ *
+ * Le contenu est RENORMALISÉ ici : c'est le navigateur qui l'envoie,
+ * donc on ne lui fait pas confiance sur la forme.
  */
-export async function saveFunnelAssets(userId: string, raw: unknown): Promise<FunnelAssets | null> {
-  const o = (raw ?? {}) as Record<string, unknown>;
-  const assets: FunnelAssets = {
-    welcome: normalizeEmails(o.welcome),
-    sales: normalizeEmails(o.sales),
-    byResult: Array.isArray(o.byResult)
-      ? (o.byResult as Record<string, unknown>[])
-          .map((x) => ({
-            result: clean(x.result),
-            step:
-              typeof x.step === "number" && x.step >= 1 && x.step <= RESULT_SEQUENCE.length
-                ? Math.trunc(x.step)
-                : null,
-            subject: clean(x.subject),
-            body: clean(x.body),
-          }))
-          .filter((e) => e.subject || e.body)
-      : [],
-    launch: normalizeCore({ launch: o.launch }).launch,
-  };
-  if (assets.welcome.length === 0 && assets.byResult.length === 0 && assets.sales.length === 0) {
+export async function saveFunnelAssets(
+  userId: string,
+  part: { byResult?: unknown; launch?: unknown },
+): Promise<FunnelAssets | null> {
+  const { assets: current } = await getFunnelAssets(userId);
+
+  const byResult: FunnelResultEmail[] = Array.isArray(part.byResult)
+    ? (part.byResult as Record<string, unknown>[])
+        .map((x) => ({
+          result: clean(x.result),
+          step:
+            typeof x.step === "number" && x.step >= 1 && x.step <= RESULT_SEQUENCE.length
+              ? Math.trunc(x.step)
+              : null,
+          subject: clean(x.subject),
+          body: clean(x.body),
+        }))
+        .filter((e) => e.subject || e.body)
+    : (current?.byResult ?? []);
+
+  const launch =
+    part.launch !== undefined ? normalizeLaunch(part.launch) : (current?.launch ?? normalizeLaunch(null));
+
+  const assets: FunnelAssets = { byResult, launch };
+  if (assets.byResult.length === 0 && launchIsEmpty(assets.launch)) {
     return null;
   }
 
@@ -553,5 +577,17 @@ export async function getFunnelAssets(userId: string): Promise<{
   if (!data || !data.assets || Object.keys(data.assets).length === 0) {
     return { assets: null, generatedAt: null };
   }
-  return { assets: data.assets as FunnelAssets, generatedAt: data.generated_at as string };
+  // REMISE EN FORME À LA LECTURE. Les campagnes générées avant le
+  // 3 août portent encore `welcome` et `sales`, et pouvaient n'avoir
+  // aucun `launch`. On rend toujours la forme actuelle : l'écran n'a
+  // donc jamais à se demander de quelle époque vient la ligne, et les
+  // deux champs disparus sont simplement ignorés.
+  const stored = data.assets as Record<string, unknown>;
+  return {
+    assets: {
+      byResult: Array.isArray(stored.byResult) ? (stored.byResult as FunnelResultEmail[]) : [],
+      launch: normalizeLaunch(stored.launch),
+    },
+    generatedAt: data.generated_at as string,
+  };
 }

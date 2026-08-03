@@ -48,10 +48,10 @@ export function FunnelClient({
   const router = useRouter();
   const [assets, setAssets] = useState<FunnelAssets | null>(initialAssets);
 
-  const [busy, setBusy] = useState(false);
-  // Ou en est la generation. Une campagne demande deux bonnes minutes :
-  // sans cette phrase, l'ecran ne se distingue pas d'un ecran fige, et
-  // c'est la qu'on recharge la page en plein milieu.
+  const [busy, setBusy] = useState<"" | "sequences" | "launch">("");
+  // Ou en est la generation. Ecrire une sequence demande une bonne
+  // minute : sans cette phrase, l'ecran ne se distingue pas d'un ecran
+  // fige, et c'est la qu'on recharge la page en plein milieu.
   const [step, setStep] = useState("");
   const [intentions, setIntentions] = useState<IntentionMap>(initialIntentions);
 
@@ -68,64 +68,54 @@ export function FunnelClient({
     }
   }
 
-  const intentionsBlock =
-    profiles.length > 0 ? (
-      <IntentionsBlock profiles={profiles} intentions={intentions} onChange={saveIntentions} />
-    ) : null;
+  /** Enregistre UNE des deux moitiés. L'autre est conservée côté serveur. */
+  async function persist(part: { byResult?: FunnelResultEmail[]; launch?: FunnelAssets["launch"] }) {
+    const res = await fetch("/api/me/funnel", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(part),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.assets) throw new Error("save");
+    setAssets(json.assets as FunnelAssets);
+  }
 
   /**
-   * LA GÉNÉRATION SE FAIT EN PLUSIEURS REQUÊTES (erreur 524, 3 août).
+   * GÉNÉRATION 1 : la séquence post-quiz de chaque profil.
    *
-   * Une campagne complète demande plusieurs minutes de rédaction, et
-   * Cloudflare coupe toute requête qui dépasse ~100 secondes. Tant que
-   * tout tenait dans un seul appel, aucun réglage ne pouvait le rendre
-   * fiable : la coupure ne vient pas de notre serveur.
-   *
-   * On enchaîne donc : le tronc commun d'abord (il renvoie AUSSI la
-   * liste des profils), puis un appel par profil, puis un seul
-   * enregistrement. Chaque requête reste courte, et l'élève lit
-   * l'avancement au lieu de regarder un sablier pendant deux minutes.
-   *
-   * Les profils partent EN PARALLÈLE : le temps total est celui du plus
-   * lent, pas leur somme. L'enregistrement vient après, une seule fois,
-   * pour qu'aucune écriture ne se marche dessus.
+   * En plusieurs requêtes, et ce n'est pas un détail d'implémentation
+   * (erreur 524, 3 août). Cloudflare coupe toute requête qui dépasse
+   * ~100 secondes ; écrire 5 emails pour 4 profils en demande bien plus.
+   * On demande d'abord la LISTE des profils, puis une requête par
+   * profil, lancées EN PARALLÈLE : le temps total est celui du plus
+   * lent, pas leur somme.
    */
-  async function generate() {
-    setBusy(true);
-    setStep("J'écris ta séquence de bienvenue et ton kit de lancement...");
+  async function generateSequences() {
+    setBusy("sequences");
+    setStep("Je regarde tes profils de résultat...");
     try {
-      const coreRes = await fetch("/api/me/funnel/core", { method: "POST" });
-      const coreJson = await coreRes.json();
-      if (!coreRes.ok || !coreJson.core) throw new Error("core");
-      const core = coreJson.core as {
-        welcome: FunnelEmail[];
-        sales: FunnelEmail[];
-        launch: FunnelAssets["launch"];
-        profiles: { title: string }[];
-      };
+      const res = await fetch("/api/me/funnel/profiles", { method: "POST" });
+      const json = await res.json();
+      const titles: string[] = Array.isArray(json.profiles) ? json.profiles : [];
+      if (!res.ok || titles.length === 0) throw new Error("profiles");
 
-      const titles = core.profiles.map((p) => p.title).filter(Boolean);
       let done = 0;
-      setStep(
-        titles.length > 0
-          ? `J'écris la séquence de tes ${titles.length} profils...`
-          : "Je termine...",
-      );
+      setStep(`J'écris la séquence de tes ${titles.length} profils...`);
 
       const sequences = await Promise.all(
         titles.map(async (title) => {
           try {
-            const res = await fetch("/api/me/funnel/sequence", {
+            const r = await fetch("/api/me/funnel/sequence", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ profile: title }),
             });
-            const json = await res.json();
-            if (!res.ok || !Array.isArray(json.emails)) return [];
-            return json.emails as FunnelResultEmail[];
+            const j = await r.json();
+            if (!r.ok || !Array.isArray(j.emails)) return [];
+            return j.emails as FunnelResultEmail[];
           } catch {
-            // Un profil qui echoue ne fait pas tomber la campagne : les
-            // autres s'affichent, et Regenerer est a un clic.
+            // Un profil qui echoue n'emporte pas les autres : ils
+            // s'affichent, et relancer ne coute qu'un clic.
             return [];
           } finally {
             done += 1;
@@ -134,93 +124,52 @@ export function FunnelClient({
         }),
       );
 
-      const next: FunnelAssets = {
-        welcome: core.welcome,
-        sales: core.sales,
-        launch: core.launch,
-        byResult: sequences.flat(),
-      };
+      setStep("J'enregistre...");
+      await persist({ byResult: sequences.flat() });
 
-      setStep("J'enregistre ta campagne...");
-      const saveRes = await fetch("/api/me/funnel", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assets: next }),
-      });
-      const saveJson = await saveRes.json();
-      if (!saveRes.ok || !saveJson.assets) throw new Error("save");
-
-      setAssets(saveJson.assets as FunnelAssets);
       const missing = titles.length - sequences.filter((s) => s.length > 0).length;
       if (missing > 0) {
         toast.warning(
-          `Ta campagne est là, mais ${missing} profil${missing > 1 ? "s n'ont" : " n'a"} pas abouti. Relance pour compléter.`,
+          `C'est écrit, mais ${missing} profil${missing > 1 ? "s n'ont" : " n'a"} pas abouti. Relance pour compléter.`,
         );
       } else {
-        toast.success("Ta campagne est prête.");
+        toast.success("Tes séquences sont prêtes.");
       }
       router.refresh();
     } catch {
       toast.error("Génération impossible pour le moment. Réessaie dans un instant.");
     } finally {
-      setBusy(false);
+      setBusy("");
       setStep("");
     }
   }
 
-  function downloadAll() {
-    if (!assets) return;
-    download("ma-campagne-quizing.md", toMarkdown(assets));
+  /** GÉNÉRATION 2 : le kit pour faire connaître le quiz. Une requête. */
+  async function generateLaunch() {
+    setBusy("launch");
+    setStep("J'écris tes posts et tes messages...");
+    try {
+      const res = await fetch("/api/me/funnel/launch", { method: "POST" });
+      const json = await res.json();
+      if (!res.ok || !json.launch) throw new Error("launch");
+      await persist({ launch: json.launch as FunnelAssets["launch"] });
+      toast.success("Ton kit de lancement est prêt.");
+      router.refresh();
+    } catch {
+      toast.error("Génération impossible pour le moment. Réessaie dans un instant.");
+    } finally {
+      setBusy("");
+      setStep("");
+    }
   }
 
-  const templatesBlock = templates.length > 0 ? <SioTemplatesBlock templates={templates} /> : null;
-
-  if (!assets) {
-    return (
-      <div className="flex flex-col gap-6">
-        {templatesBlock}
-        {intentionsBlock}
-        <Card>
-        <CardContent className="flex flex-col items-start gap-4 py-8">
-          <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <Megaphone className="size-6" />
-          </div>
-          <div className="flex flex-col gap-1">
-            <h2 className="font-display text-lg font-semibold">Génère ta campagne complète</h2>
-            <p className="text-sm text-muted-foreground">
-              À partir de ton carnet et de ton métier, on t&apos;écrit ta séquence de bienvenue, une
-              séquence complète de 5 emails pour chaque profil de résultat, ta séquence de vente
-              douce et ton kit de lancement (posts, DM, email partenaire). Plus ton carnet est rempli, meilleure est la campagne.
-            </p>
-          </div>
-          <Button size="lg" onClick={generate} disabled={busy}>
-            <Sparkles />
-            {busy ? "Je rédige ta campagne..." : "Générer ma campagne"}
-          </Button>
-          {busy && (
-            <p className="flex items-center gap-2 text-sm text-muted-foreground">
-              <RefreshCw className="size-4 animate-spin" />
-              {step || "Je démarre..."} Compte deux bonnes minutes, tu peux laisser cet onglet
-              ouvert.
-            </p>
-          )}
-        </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Regroupement PAR PROFIL : chaque profil de resultat recoit son
-  // dossier, contenant sa SEQUENCE COMPLETE. Un profil sans email
-  // n'apparait pas plutot que d'afficher un dossier vide.
-  //
-  // Le tri suit `step` (le rang dans la sequence), pas l'ordre de la
-  // reponse, et il vit dans `sortSequence` : la meme fonction sert au
-  // fichier telecharge, sinon l'ecran et le .md finiraient par ne plus
-  // raconter la meme sequence.
+  // Regroupement PAR PROFIL : chaque profil recoit son dossier,
+  // contenant sa sequence complete. Le tri suit `step` via
+  // `sortSequence`, la MEME fonction que le fichier telecharge : sinon
+  // l'ecran et le .md finiraient par ne plus raconter la meme sequence.
   const byProfile = (() => {
     const map = new Map<string, FunnelResultEmail[]>();
-    for (const e of assets.byResult) {
+    for (const e of assets?.byResult ?? []) {
       const key = (e.result || "Sans profil").trim();
       const list = map.get(key) ?? [];
       list.push(e);
@@ -231,122 +180,157 @@ export function FunnelClient({
       emails: sortSequence(emails),
     }));
   })();
-  const launchCount =
-    assets.launch.posts.length +
-    (assets.launch.dm ? 1 : 0) +
-    (assets.launch.partnerEmail ? 1 : 0);
-  const isEmpty =
-    assets.welcome.length === 0 &&
-    assets.byResult.length === 0 &&
-    assets.sales.length === 0 &&
-    launchCount === 0;
+
+  const launch = assets?.launch ?? { posts: [], dm: "", partnerEmail: "" };
+  const launchCount = launch.posts.length + (launch.dm ? 1 : 0) + (launch.partnerEmail ? 1 : 0);
+  const hasSequences = byProfile.length > 0;
+  const hasLaunch = launchCount > 0;
 
   return (
-    <div className="flex flex-col gap-6">
-      {templatesBlock}
-      {intentionsBlock}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-muted-foreground">
-          {busy ? (
-            <span className="flex items-center gap-2">
-              <RefreshCw className="size-3 animate-spin" />
-              {step || "Je démarre..."}
-            </span>
-          ) : (
-            <>
-              {generatedAt ? `Générée le ${new Date(generatedAt).toLocaleDateString("fr-FR")}.` : ""}{" "}
-              Tu peux la régénérer après avoir avancé dans ton carnet.
-            </>
-          )}
-        </p>
-        <div className="flex gap-2">
+    <div className="flex flex-col gap-8">
+      {/* DEUX GENERATIONS, PAS SEPT (retour Bene, 3 aout 2026 : "je veux
+          JUSTE 5 mails par resultat. Pas ce truc j'en ai partout je ne
+          sais meme pas quoi en faire"). La sequence de bienvenue et la
+          sequence de vente douce ont ete retirees : elles s'empilaient
+          sans que personne sache quand les envoyer. */}
+
+      <Block
+        icon={Users}
+        title="La séquence post-quiz de chaque profil"
+        blurb="5 emails par profil de résultat, écrits avec ton ton, le thème de ton quiz et les mots de ta cible. C'est ce que reçoit un visiteur juste après avoir eu son résultat."
+        actionLabel={hasSequences ? "Régénérer les séquences" : "Générer mes séquences"}
+        onGenerate={generateSequences}
+        busy={busy === "sequences"}
+        disabled={busy !== ""}
+        step={step}
+        hint="Compte une bonne minute, tu peux laisser cet onglet ouvert."
+      >
+        {profiles.length > 0 && (
+          <IntentionsBlock profiles={profiles} intentions={intentions} onChange={saveIntentions} />
+        )}
+        {byProfile.map(({ profile, emails }) => (
+          <Folder key={profile} icon={Target} title={profile} count={emails.length}>
+            {emails.map((e, i) => (
+              <EmailRow
+                key={i}
+                n={i + 1}
+                label="Email"
+                note={sequenceBeatTitle(i)}
+                subject={e.subject}
+                body={e.body}
+              />
+            ))}
+          </Folder>
+        ))}
+      </Block>
+
+      <Block
+        icon={Megaphone}
+        title="Ton kit de lancement"
+        blurb="4 publications, un message privé et un email à un partenaire, pour faire connaître ton quiz et le remplir de leads."
+        actionLabel={hasLaunch ? "Régénérer le kit" : "Générer mon kit"}
+        onGenerate={generateLaunch}
+        busy={busy === "launch"}
+        disabled={busy !== ""}
+        step={step}
+        hint="Une trentaine de secondes."
+      >
+        {launch.posts.map((p, i) => (
+          <EmailRow key={`p${i}`} n={i + 1} label="Post" subject={firstLine(p)} body={p} />
+        ))}
+        {launch.dm && (
+          <EmailRow n={0} label="Message direct" subject="Script de message direct" body={launch.dm} />
+        )}
+        {launch.partnerEmail && (
+          <EmailRow
+            n={0}
+            label="Partenaire"
+            subject="Email d'échange partenaire"
+            body={launch.partnerEmail}
+          />
+        )}
+      </Block>
+
+      {(hasSequences || hasLaunch) && (
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-4">
+          <p className="text-xs text-muted-foreground">
+            {generatedAt
+              ? `Dernière génération le ${new Date(generatedAt).toLocaleDateString("fr-FR")}.`
+              : ""}
+          </p>
           <Button variant="outline" size="sm" onClick={downloadAll}>
             <Download />
             Tout télécharger
           </Button>
-          <Button variant="ghost" size="sm" onClick={generate} disabled={busy}>
-            <RefreshCw className={busy ? "animate-spin" : undefined} />
-            {busy ? "..." : "Régénérer"}
-          </Button>
         </div>
-      </div>
-
-      {/* DES DOSSIERS, PAS UN MUR (retour Bene, 3 aout 2026 : "elle doit
-          etre bien presentee : par profil, chaque profil a un dossier qui
-          contient les emails ; par jour, numeroter les emails, quand on
-          clique dessus ca developpe l'email a copier en un clic").
-          Plus de branche `raw` : afficher du JSON brut, c'etait montrer
-          notre panne a la creatrice et lui demander de la demeler. */}
-      {isEmpty ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
-            <p className="text-sm font-medium">La génération n&apos;a pas abouti.</p>
-            <p className="text-sm text-muted-foreground">
-              Ça arrive quand la réponse est trop longue. Relance, ça repart en général du
-              premier coup.
-            </p>
-            <Button onClick={generate} disabled={busy}>
-              <RefreshCw className="mr-2 size-4" />
-              Relancer la génération
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          <Folder icon={Mail} title="Séquence de bienvenue" count={assets.welcome.length} defaultOpen>
-            {assets.welcome.map((e, i) => (
-              <EmailRow key={i} n={i + 1} subject={e.subject} body={e.body} />
-            ))}
-          </Folder>
-
-          {/* UN DOSSIER PAR PROFIL, CONTENANT SA SEQUENCE COMPLETE.
-              Chaque email porte son numero ET le role qu'il joue, lu
-              depuis lib/funnelSequence : les cinq titres ne sont jamais
-              retapes ici, sinon l'ecran finirait par annoncer un temps
-              que le prompt ne demande plus. */}
-          <section className="flex flex-col gap-3">
-            <h2 className="flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              <Users className="size-4" />
-              La séquence de chaque profil de résultat
-            </h2>
-            {byProfile.map(({ profile, emails }) => (
-              <Folder key={profile} icon={Target} title={profile} count={emails.length}>
-                {emails.map((e, i) => (
-                  <EmailRow
-                    key={i}
-                    n={i + 1}
-                    label="Email"
-                    note={sequenceBeatTitle(i)}
-                    subject={e.subject}
-                    body={e.body}
-                  />
-                ))}
-              </Folder>
-            ))}
-          </section>
-
-          <Folder icon={Mail} title="Séquence de vente douce" count={assets.sales.length}>
-            {assets.sales.map((e, i) => (
-              <EmailRow key={i} n={i + 1} subject={e.subject} body={e.body} />
-            ))}
-          </Folder>
-
-          <Folder icon={Megaphone} title="Kit de lancement" count={launchCount}>
-            {assets.launch.posts.map((p, i) => (
-              <EmailRow key={`p${i}`} n={i + 1} label="Post" subject={firstLine(p)} body={p} />
-            ))}
-            {assets.launch.dm && (
-              <EmailRow n={0} label="Message direct" subject="Script de message direct" body={assets.launch.dm} />
-            )}
-            {assets.launch.partnerEmail && (
-              <EmailRow n={0} label="Partenaire" subject="Email d'échange partenaire" body={assets.launch.partnerEmail} />
-            )}
-          </Folder>
-        </>
       )}
+
+      {templates.length > 0 && <SioTemplatesBlock templates={templates} />}
     </div>
   );
+
+  function downloadAll() {
+    if (!assets) return;
+    download("ma-campagne-quizing.md", toMarkdown(assets));
+  }
 }
+
+/**
+ * Une des DEUX generations de la page : son titre, ce qu'elle produit,
+ * son bouton, et ce qu'elle a deja produit.
+ *
+ * Le meme composant sert les deux, pour qu'elles se ressemblent
+ * exactement : deux blocs qui se ressembleraient "presque" donneraient
+ * l'impression que l'un est plus important que l'autre.
+ */
+function Block({
+  icon: Icon,
+  title,
+  blurb,
+  actionLabel,
+  onGenerate,
+  busy,
+  disabled,
+  step,
+  hint,
+  children,
+}: {
+  icon: typeof Mail;
+  title: string;
+  blurb: string;
+  actionLabel: string;
+  onGenerate: () => void;
+  busy: boolean;
+  disabled: boolean;
+  step: string;
+  hint: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2">
+        <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
+          <Icon className="size-5 shrink-0 text-primary" />
+          {title}
+        </h2>
+        <p className="max-w-2xl text-sm text-muted-foreground">{blurb}</p>
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button onClick={onGenerate} disabled={disabled}>
+          {busy ? <RefreshCw className="animate-spin" /> : <Sparkles />}
+          {busy ? "J'écris..." : actionLabel}
+        </Button>
+        {busy && (
+          <span className="text-sm text-muted-foreground">
+            {step || "Je démarre..."} {hint}
+          </span>
+        )}
+      </div>
+      {children}
+    </section>
+  );
+}
+
 
 /** Premiere ligne non vide : sert de titre repliable a un post. */
 function firstLine(text: string): string {
@@ -465,35 +449,38 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
+/** Le fichier telecharge suit EXACTEMENT les deux blocs de l'ecran. */
 function toMarkdown(a: FunnelAssets): string {
-  if (a.raw) return `# Ma campagne L'Atelier du Quiz\n\n${a.raw}\n`;
   const lines: string[] = ["# Ma campagne L'Atelier du Quiz", ""];
   const emailMd = (e: FunnelEmail) => `**Objet :** ${e.subject}\n\n${e.body}\n`;
-  lines.push("## Séquence de bienvenue", "");
-  a.welcome.forEach((e) => lines.push(emailMd(e), "---", ""));
-  // Une SECTION par profil, pas un titre repete a chaque email : depuis
-  // que la sequence fait 5 emails, repeter le nom du profil cinq fois de
-  // suite rendrait le fichier illisible a coller.
-  lines.push("## La séquence de chaque profil de résultat", "");
-  const groups = new Map<string, FunnelResultEmail[]>();
-  a.byResult.forEach((e) => {
-    const key = (e.result || "Sans profil").trim();
-    groups.set(key, [...(groups.get(key) ?? []), e]);
-  });
-  groups.forEach((emails, profile) => {
-    lines.push(`### ${profile}`, "");
-    sortSequence(emails).forEach((e, i) => {
-      const beat = sequenceBeatTitle(i);
-      lines.push(`#### Email ${i + 1}${beat ? ` : ${beat}` : ""}`, emailMd(e), "");
+
+  if (a.byResult.length > 0) {
+    // Une SECTION par profil, pas un titre repete a chaque email : avec
+    // 5 emails par profil, repeter le nom cinq fois de suite rendrait le
+    // fichier illisible a coller.
+    lines.push("## La séquence post-quiz de chaque profil", "");
+    const groups = new Map<string, FunnelResultEmail[]>();
+    a.byResult.forEach((e) => {
+      const key = (e.result || "Sans profil").trim();
+      groups.set(key, [...(groups.get(key) ?? []), e]);
     });
-    lines.push("---", "");
-  });
-  lines.push("## Séquence de vente douce", "");
-  a.sales.forEach((e) => lines.push(emailMd(e), "---", ""));
-  lines.push("## Kit de lancement", "");
-  a.launch.posts.forEach((p, i) => lines.push(`### Post ${i + 1}`, p, ""));
-  if (a.launch.dm) lines.push("### Script de message direct", a.launch.dm, "");
-  if (a.launch.partnerEmail) lines.push("### Email d'échange partenaire", a.launch.partnerEmail, "");
+    groups.forEach((emails, profile) => {
+      lines.push(`### ${profile}`, "");
+      sortSequence(emails).forEach((e, i) => {
+        const beat = sequenceBeatTitle(i);
+        lines.push(`#### Email ${i + 1}${beat ? ` : ${beat}` : ""}`, emailMd(e), "");
+      });
+      lines.push("---", "");
+    });
+  }
+
+  const l = a.launch;
+  if (l.posts.length > 0 || l.dm || l.partnerEmail) {
+    lines.push("## Mon kit de lancement", "");
+    l.posts.forEach((p, i) => lines.push(`### Post ${i + 1}`, p, ""));
+    if (l.dm) lines.push("### Script de message direct", l.dm, "");
+    if (l.partnerEmail) lines.push("### Email d'échange partenaire", l.partnerEmail, "");
+  }
   return lines.join("\n");
 }
 
