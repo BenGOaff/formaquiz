@@ -169,6 +169,15 @@ export interface MaybeGrantArgs {
   origin?: string;
   /** Email du compte Tiquiz à cibler s'il diffère de l'email SIO. */
   tiquizEmail?: string | null;
+  /**
+   * Durée imposée, en jours, HORS opération des 20 places.
+   *
+   * Sert la campagne pub du 3 août 2026 : l'upsell à 47 € offre 15 jours
+   * de Plus, et cette offre n'a rien à voir avec les 20 places à 2 mois.
+   * Quand ce champ est fourni, AUCUNE place n'est réservée ni consommée,
+   * donc les compteurs de l'opération restent justes.
+   */
+  forcedDays?: number | null;
 }
 
 export interface MaybeGrantResult {
@@ -227,8 +236,14 @@ export async function maybeGrantPlusTrial(args: MaybeGrantArgs): Promise<MaybeGr
     // place 2 mois, mais chaque nouvel inscrit reçoit d'office 15 jours
     // de Plus, sans consommer de place (offre illimitée). Même chemin
     // d'octroi, seule la durée change.
-    const placeNumber = await reservePlace(funnel);
-    const trialDays = placeNumber == null ? FALLBACK_TRIAL_DAYS : TRIAL_DAYS;
+    // Durée imposée (campagne pub) : on court-circuite tout le mécanisme
+    // de places. Ne PAS appeler reservePlace ici, sinon la campagne
+    // viderait les 20 places de l'autre opération.
+    const forced = typeof args.forcedDays === "number" && args.forcedDays > 0 && args.forcedDays <= 366
+      ? Math.floor(args.forcedDays)
+      : null;
+    const placeNumber = forced == null ? await reservePlace(funnel) : null;
+    const trialDays = forced ?? (placeNumber == null ? FALLBACK_TRIAL_DAYS : TRIAL_DAYS);
 
     // ── 3. Appeler Tiquiz ──
     const { httpOk, body } = await callTiquizGrant(targetEmail, funnel, trialDays);
