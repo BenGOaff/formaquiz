@@ -12,6 +12,7 @@ import "server-only";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendEmail } from "@/lib/email/resend";
 import { welcomeEmail } from "@/lib/email/templates";
+import { mergeTier, resolveTier, type AtelierTier } from "@/lib/access/tiers";
 
 // URL de base des liens d'action (emails). Lue au RUNTIME via APP_URL :
 // NEXT_PUBLIC_* est inliné au build par Next, ce qui avait gravé un
@@ -53,6 +54,12 @@ export async function grantAccessByEmail(
   email: string,
   source: string,
   contactId?: string | null,
+  /**
+   * Palier acheté. Absent = "plus" (l'Atelier complet), ce qui garde le
+   * comportement historique de tous les appelants existants : l'admin,
+   * l'invitation manuelle et le webhook d'origine.
+   */
+  tier: AtelierTier = "plus",
 ): Promise<GrantResult> {
   let user = await findUserByEmail(email);
   let created = false;
@@ -94,17 +101,50 @@ export async function grantAccessByEmail(
   await supabaseAdmin
     .from("profiles")
     .upsert({ id: user.id, email, updated_at: now }, { onConflict: "id" });
-  await supabaseAdmin.from("enrollments").upsert(
-    {
-      user_id: user.id,
-      status: "active",
-      source,
-      sio_contact_id: contactId ?? null,
-      granted_at: now,
-      revoked_at: null,
-    },
+
+  // LE PALIER NE REDESCEND JAMAIS TOUT SEUL. Systeme.io réessaie et
+  // réordonne : si l'upsell à 47 € arrive AVANT l'achat à 7 € (deux
+  // automatisations, deux files), un upsert naïf rétrograderait un client
+  // qui vient de payer le prix fort. On lit l'existant et on garde le
+  // plus élevé des deux (cf. lib/access/tiers.ts).
+  // `select("tier")` echoue lui aussi si la colonne n'existe pas encore :
+  // on lit la ligne entiere, qui marche dans les deux cas.
+  const { data: existingRow } = await supabaseAdmin
+    .from("enrollments")
+    .select("*")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  // Pas de ligne = premier achat : on pose le palier acheté tel quel.
+  // Ligne existante = on la lit avec resolveTier, donc une colonne encore
+  // absente en prod vaut "plus" et personne ne perd rien.
+  const previousTier = existingRow
+    ? resolveTier((existingRow as { tier?: string | null }).tier)
+    : null;
+  const effectiveTier = mergeTier(previousTier, tier);
+
+  const baseRow = {
+    user_id: user.id,
+    status: "active",
+    source,
+    sio_contact_id: contactId ?? null,
+    granted_at: now,
+    revoked_at: null,
+  };
+  // REPLI SI LA MIGRATION N'EST PAS ENCORE PASSEE EN PROD.
+  // PostgREST rejette l'ecriture entiere quand une colonne est inconnue :
+  // sans ce repli, deployer ce code avant d'appliquer
+  // 20260803_enrollment_tiers.sql couperait l'octroi d'acces de TOUS les
+  // acheteurs, y compris ceux des tunnels actuels. Meme garde-fou que
+  // l'INSERT de /track (cf. AGENTS.md, drame quiz_events.meta) : on tente
+  // la version complete, on retombe sur la version historique.
+  const { error: upsertErr } = await supabaseAdmin.from("enrollments").upsert(
+    { ...baseRow, tier: effectiveTier, tier_source: source, tier_updated_at: now },
     { onConflict: "user_id" },
   );
+  if (upsertErr) {
+    console.warn("[grantAccess] upsert avec palier refuse, repli sans palier:", upsertErr.message);
+    await supabaseAdmin.from("enrollments").upsert(baseRow, { onConflict: "user_id" });
+  }
 
   // Email d'accueil best-effort : un echec d'envoi ne doit pas annuler
   // l'octroi d'acces (l'eleve peut toujours passer par /login).
@@ -138,6 +178,37 @@ export async function resendAccessLinkByEmail(email: string): Promise<GrantResul
   const sent = await sendEmail({ to: email, subject, html });
   if (!sent.ok) return { ok: false, created: false, reason: sent.reason ?? "email_failed" };
   return { ok: true, created: false };
+}
+
+/**
+ * Rétrograde au palier 7 € sans retirer l'accès à l'Atelier.
+ *
+ * Sert au remboursement du SEUL upsell à 47 € : le client garde ce qu'il
+ * a payé (l'Atelier, le coach, le Quiz Doctor) et perd ce qu'on lui a
+ * remboursé (les bonus, les templates, le générateur d'email). Tout
+ * révoquer lui retirerait un produit qu'il n'a pas fait rembourser.
+ *
+ * Idempotent : rétrograder deux fois donne le même état.
+ */
+export async function downgradeToStandardByEmail(
+  email: string,
+  source = "sio_refund_upsell",
+): Promise<{ ok: boolean; reason?: string }> {
+  const user = await findUserByEmail(email);
+  if (!user) return { ok: false, reason: "no_account" };
+  const now = new Date().toISOString();
+  const { error } = await supabaseAdmin
+    .from("enrollments")
+    .update({ tier: "standard", tier_source: source, tier_updated_at: now })
+    .eq("user_id", user.id);
+  if (error) {
+    // Migration pas encore appliquee : on le DIT au lieu de repondre ok.
+    // Un remboursement d'upsell silencieusement ignore laisserait un
+    // client rembourse avec le produit entre les mains.
+    console.error("[grantAccess] retrogradation impossible:", error.message);
+    return { ok: false, reason: "tier_column_missing" };
+  }
+  return { ok: true };
 }
 
 /**
