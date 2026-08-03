@@ -25,6 +25,7 @@ import {
   type IntentionMap,
   type FunnelIntention,
 } from "@/lib/funnelIntentions";
+import { sequenceBeatTitle, sortSequence } from "@/lib/funnelSequence";
 
 interface ProfileOption {
   title: string;
@@ -104,9 +105,9 @@ export function FunnelClient({
           <div className="flex flex-col gap-1">
             <h2 className="font-display text-lg font-semibold">Génère ta campagne complète</h2>
             <p className="text-sm text-muted-foreground">
-              À partir de ton carnet et de ton métier, on t'écrit ta séquence de bienvenue, un email
-              par profil de résultat, ta séquence de vente douce et ton kit de lancement (posts, DM,
-              email partenaire). Plus ton carnet est rempli, meilleure est la campagne.
+              À partir de ton carnet et de ton métier, on t&apos;écrit ta séquence de bienvenue, une
+              séquence complète de 5 emails pour chaque profil de résultat, ta séquence de vente
+              douce et ton kit de lancement (posts, DM, email partenaire). Plus ton carnet est rempli, meilleure est la campagne.
             </p>
           </div>
           <Button size="lg" onClick={generate} disabled={busy}>
@@ -120,8 +121,13 @@ export function FunnelClient({
   }
 
   // Regroupement PAR PROFIL : chaque profil de resultat recoit son
-  // dossier, dans l'ordre ou l'IA les a rendus. Un profil sans email
+  // dossier, contenant sa SEQUENCE COMPLETE. Un profil sans email
   // n'apparait pas plutot que d'afficher un dossier vide.
+  //
+  // Le tri suit `step` (le rang dans la sequence), pas l'ordre de la
+  // reponse, et il vit dans `sortSequence` : la meme fonction sert au
+  // fichier telecharge, sinon l'ecran et le .md finiraient par ne plus
+  // raconter la meme sequence.
   const byProfile = (() => {
     const map = new Map<string, FunnelResultEmail[]>();
     for (const e of assets.byResult) {
@@ -130,7 +136,10 @@ export function FunnelClient({
       list.push(e);
       map.set(key, list);
     }
-    return [...map.entries()].map(([profile, emails]) => ({ profile, emails }));
+    return [...map.entries()].map(([profile, emails]) => ({
+      profile,
+      emails: sortSequence(emails),
+    }));
   })();
   const launchCount =
     assets.launch.posts.length +
@@ -191,19 +200,27 @@ export function FunnelClient({
             ))}
           </Folder>
 
-          {/* UN DOSSIER PAR PROFIL. Chaque profil de resultat a le sien,
-              meme s'il ne contient qu'un email aujourd'hui : c'est le
-              rangement qu'elle a demande, et il tient quand la sequence
-              par profil s'allongera. */}
+          {/* UN DOSSIER PAR PROFIL, CONTENANT SA SEQUENCE COMPLETE.
+              Chaque email porte son numero ET le role qu'il joue, lu
+              depuis lib/funnelSequence : les cinq titres ne sont jamais
+              retapes ici, sinon l'ecran finirait par annoncer un temps
+              que le prompt ne demande plus. */}
           <section className="flex flex-col gap-3">
             <h2 className="flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               <Users className="size-4" />
-              Un dossier par profil de résultat
+              La séquence de chaque profil de résultat
             </h2>
             {byProfile.map(({ profile, emails }) => (
               <Folder key={profile} icon={Target} title={profile} count={emails.length}>
                 {emails.map((e, i) => (
-                  <EmailRow key={i} n={i + 1} subject={e.subject} body={e.body} />
+                  <EmailRow
+                    key={i}
+                    n={i + 1}
+                    label="Email"
+                    note={sequenceBeatTitle(i)}
+                    subject={e.subject}
+                    body={e.body}
+                  />
                 ))}
               </Folder>
             ))}
@@ -285,11 +302,14 @@ function Folder({
 function EmailRow({
   n,
   label = "Jour",
+  note,
   subject,
   body,
 }: {
   n: number;
   label?: string;
+  /** Le role de cet email dans la sequence ("Ce qui le retient"). */
+  note?: string;
   subject: string;
   body: string;
 }) {
@@ -307,7 +327,10 @@ function EmailRow({
           <span className="inline-flex shrink-0 items-center rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
             {n > 0 ? `${label} ${n}` : label}
           </span>
-          <span className="min-w-0 flex-1 truncate text-sm font-medium">{subject}</span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-medium">{subject}</span>
+            {note && <span className="block truncate text-xs text-muted-foreground">{note}</span>}
+          </span>
           <ChevronDown className={`size-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
         <CopyButton text={full} />
@@ -349,8 +372,23 @@ function toMarkdown(a: FunnelAssets): string {
   const emailMd = (e: FunnelEmail) => `**Objet :** ${e.subject}\n\n${e.body}\n`;
   lines.push("## Séquence de bienvenue", "");
   a.welcome.forEach((e) => lines.push(emailMd(e), "---", ""));
-  lines.push("## Un email par profil de résultat", "");
-  a.byResult.forEach((e) => lines.push(`### ${e.result}`, emailMd(e), "---", ""));
+  // Une SECTION par profil, pas un titre repete a chaque email : depuis
+  // que la sequence fait 5 emails, repeter le nom du profil cinq fois de
+  // suite rendrait le fichier illisible a coller.
+  lines.push("## La séquence de chaque profil de résultat", "");
+  const groups = new Map<string, FunnelResultEmail[]>();
+  a.byResult.forEach((e) => {
+    const key = (e.result || "Sans profil").trim();
+    groups.set(key, [...(groups.get(key) ?? []), e]);
+  });
+  groups.forEach((emails, profile) => {
+    lines.push(`### ${profile}`, "");
+    sortSequence(emails).forEach((e, i) => {
+      const beat = sequenceBeatTitle(i);
+      lines.push(`#### Email ${i + 1}${beat ? ` : ${beat}` : ""}`, emailMd(e), "");
+    });
+    lines.push("---", "");
+  });
   lines.push("## Séquence de vente douce", "");
   a.sales.forEach((e) => lines.push(emailMd(e), "---", ""));
   lines.push("## Kit de lancement", "");
@@ -374,11 +412,11 @@ function IntentionsBlock({
       <CardContent className="flex flex-col gap-3 py-5">
         <div className="flex items-center gap-2">
           <Target className="size-5 text-primary" />
-          <h2 className="font-display font-semibold">L'objectif de chaque email</h2>
+          <h2 className="font-display font-semibold">L&apos;objectif de chaque email</h2>
         </div>
         <p className="text-sm text-muted-foreground">
           Par défaut, chaque email suit le bouton (CTA) de ton résultat de quiz. Tu peux imposer une
-          intention pour un profil : l'IA écrira l'email dans ce sens.
+          intention pour un profil : l&apos;IA écrira l&apos;email dans ce sens.
         </p>
         <div className="flex flex-col gap-2">
           {profiles.map((p) => (
@@ -409,7 +447,7 @@ function IntentionsBlock({
           ))}
         </div>
         <p className="text-xs text-muted-foreground">
-          Régénère ta campagne après avoir changé une intention pour l'appliquer.
+          Régénère ta campagne après avoir changé une intention pour l&apos;appliquer.
         </p>
       </CardContent>
     </Card>
@@ -425,7 +463,7 @@ function SioTemplatesBlock({ templates }: { templates: SioTemplate[] }) {
           <h2 className="font-display font-semibold">Modèles à importer en 1 clic</h2>
         </div>
         <p className="text-sm text-muted-foreground">
-          Des modèles Systeme.io prêts à l'emploi (séquences, tunnels). Clique, importe sur ton
+          Des modèles Systeme.io prêts à l&apos;emploi (séquences, tunnels). Clique, importe sur ton
           compte, puis personnalise avec les textes générés ci-dessous.
         </p>
         <div className="flex flex-col gap-2">
