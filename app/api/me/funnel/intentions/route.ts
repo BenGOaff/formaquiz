@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getViewer } from "@/lib/parcours";
+import { canAccessSection } from "@/lib/access/tiers";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { fetchQuizProfiles } from "@/lib/integrations/tiquiz";
 import { getFunnelIntentions } from "@/lib/generate/funnel";
@@ -16,6 +17,12 @@ export async function GET() {
   const viewer = await getViewer();
   if (!viewer) return NextResponse.json({ ok: false, reason: "unauth" }, { status: 401 });
   if (!viewer.enrolled) return NextResponse.json({ ok: false, reason: "no_access" }, { status: 403 });
+  // SERRURE REELLE du palier 47 EUR. Le flou de la page est une vitrine :
+  // il se retire dans l'inspecteur. C'est ICI qu'on refuse, sinon un
+  // acheteur a 7 EUR genererait sa campagne en contournant l'affichage.
+  if (!canAccessSection(viewer.tier, "/funnel")) {
+    return NextResponse.json({ ok: false, reason: "upsell_required" }, { status: 403 });
+  }
 
   const [profiles, intentions] = await Promise.all([
     fetchQuizProfiles(viewer.userId),
@@ -38,6 +45,12 @@ export async function POST(req: NextRequest) {
   const viewer = await getViewer();
   if (!viewer) return NextResponse.json({ ok: false, reason: "unauth" }, { status: 401 });
   if (!viewer.enrolled) return NextResponse.json({ ok: false, reason: "no_access" }, { status: 403 });
+  // SERRURE REELLE du palier 47 EUR. Le flou de la page est une vitrine :
+  // il se retire dans l'inspecteur. C'est ICI qu'on refuse, sinon un
+  // acheteur a 7 EUR genererait sa campagne en contournant l'affichage.
+  if (!canAccessSection(viewer.tier, "/funnel")) {
+    return NextResponse.json({ ok: false, reason: "upsell_required" }, { status: 403 });
+  }
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {

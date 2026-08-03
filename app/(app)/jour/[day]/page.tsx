@@ -14,6 +14,9 @@ import { NoAccess } from "@/components/NoAccess";
 import { BlockerButton } from "@/components/BlockerButton";
 import { Card, CardContent } from "@/components/ui/card";
 import { QuizRunner } from "./QuizRunner";
+import { canAccessBonusDays } from "@/lib/access/tiers";
+import { upsellUrl } from "@/lib/access/upsell";
+import { BonusLocked } from "@/components/BonusLocked";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +57,14 @@ export default async function DayPage({
   const allDays = await getDaysWithProgress(viewer.userId);
   const parcoursDays = allDays.filter((x) => !x.is_bonus);
   let nextDayNumber: number | null = null;
+  // PALIER 7 EUR : un jour BONUS est verrouille, un jour du PARCOURS ne
+  // l'est jamais (c'est le produit vendu 7 EUR). On sert un ecran qui dit
+  // ce que contient ce bonus plutot qu'un 404 : l'eleve doit comprendre
+  // ce qu'il rate, sinon il n'a aucune raison d'acheter.
+  if (d.is_bonus && !canAccessBonusDays(viewer.tier)) {
+    return <BonusLocked title={d.title} subtitle={d.subtitle} ctaUrl={upsellUrl()} />;
+  }
+
   if (!d.is_bonus) {
     const idx = parcoursDays.findIndex((x) => x.day_number === d.day_number);
     nextDayNumber =

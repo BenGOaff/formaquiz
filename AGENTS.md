@@ -265,3 +265,75 @@ modules jumeaux.
 de proposer un achat. La proposition est ajoutée par le code, après la
 réponse, une seule fois. Un coach qui vend perd la confiance qu'on lui
 demande d'installer.
+
+## Campagne pub : les deux paliers de l'Atelier (3 août 2026)
+
+Tunnel en deux temps, avec deux bons de commande :
+
+|  | 7 € "atelier simple" | 47 € "atelier augmenté" |
+|---|---|---|
+| Formation, jours du parcours | oui | oui |
+| Coach, Quiz Doctor, carnet, avancées, certificat, affiliation | oui | oui |
+| Bonus (jours `is_bonus`) | **visibles, verrouillés** | oui |
+| Campagne `/funnel` (templates + générateur d'email) | **visible, verrouillée** | oui |
+| 15 jours de Tiquiz Plus | non | oui |
+
+**Les URL à coller dans Systeme.io** (`<domaine>` = l'Atelier) :
+
+```
+7 €    achat   : /api/systeme-io/webhook/atelier?secret=<SECRET>
+7 €    annulé  : /api/systeme-io/webhook/atelier?secret=<SECRET>&event=cancel
+47 €   achat   : /api/systeme-io/webhook/atelier-plus?secret=<SECRET>
+47 €   annulé  : /api/systeme-io/webhook/atelier-plus?secret=<SECRET>&event=cancel
+```
+
+`/api/systeme-io/webhook` (sans suffixe) reste la route HISTORIQUE, avec
+exactement ses réglages d'avant : les tunnels déjà en production ne
+bougent pas.
+
+**Règle : `lib/access/tiers.ts` décide, personne d'autre.** Trois principes,
+tous les trois motivés par le fait que ce code tourne pendant une campagne
+payante :
+
+1. **Le palier ne redescend jamais tout seul** (`mergeTier`). Systeme.io
+   réessaie et réordonne : si l'upsell arrive AVANT l'achat d'entrée, ou
+   si un webhook double, un écrasement naïf rétrograderait un client qui
+   vient de payer le prix fort.
+2. **L'inconnu donne le palier COMPLET** (`resolveTier`). Colonne absente,
+   migration pas passée, valeur illisible : on ouvre tout. Le défaut SQL
+   vaut `'plus'` pour la même raison. Les élèves d'avant ont payé
+   l'Atelier complet et ne doivent RIEN perdre.
+3. **Ce qui est verrouillé tient en une constante** (`PLUS_ONLY_SECTIONS`
+   pour les sections, `canAccessBonusDays` pour les bonus).
+
+**Les bonus ne sont pas une section d'URL** : ce sont les jours `is_bonus`.
+Un verrou par chemin ne peut pas les couvrir, et verrouiller `/jour` en
+bloc couperait la formation, c'est à dire le produit vendu 7 €.
+
+**Le remboursement de l'upsell RÉTROGRADE, il ne révoque pas.** Rembourser
+47 € ne rembourse pas les 7 € : le client garde l'Atelier et perd les
+bonus. Tout révoquer lui retirerait un produit qu'il n'a pas fait
+rembourser. Le remboursement du 7 €, lui, révoque tout.
+
+**Le flou est une vitrine, jamais une serrure.** `LockedSection` montre le
+contenu réservé (demande Béné : "tu montres bien que c'est là, ça existe"),
+mais un `blur` CSS se retire dans l'inspecteur. La vraie protection est
+dans `/api/me/funnel` et `/api/me/funnel/intentions`, qui refusent le
+palier `standard` en 403. **Ne jamais ajouter une capacité réservée sans
+sa garde côté serveur.**
+
+**L'URL du bon de commande vit dans `ATELIER_UPSELL_URL`**, lue au RUNTIME
+(`lib/access/upsell.ts`), jamais en `NEXT_PUBLIC_*` : celles-ci sont
+inlinées au build, ce qui avait gravé un `localhost:3002` dans les liens
+d'accès en prod. Non renseignée -> flou + cadenas + texte, **et aucun
+bouton** : un bouton mort le jour du lancement coûte plus cher que pas de
+bouton.
+
+**Le repli si la migration n'est pas encore passée est obligatoire.**
+PostgREST rejette l'écriture entière sur une colonne inconnue : sans
+repli, déployer avant la migration couperait l'octroi d'accès de TOUS les
+acheteurs. `grantAccessByEmail` tente avec le palier puis retombe sans ;
+`getViewer` fait `select("*")` et pas `select("status, tier")`. Exception
+assumée : la RÉTROGRADATION ne se replie pas en silence, elle renvoie une
+erreur (un remboursement ignoré laisserait un client remboursé avec le
+produit).

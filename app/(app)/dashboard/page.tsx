@@ -2,6 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Play, Sparkles, Gift, Trophy, Award, ArrowRight } from "lucide-react";
 import { getViewer, getDaysWithProgress } from "@/lib/parcours";
+import { canAccessBonusDays } from "@/lib/access/tiers";
+import { upsellUrl } from "@/lib/access/upsell";
+import { LockedSection } from "@/components/LockedSection";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +34,9 @@ export default async function DashboardPage() {
   const days = await getDaysWithProgress(viewer.userId);
   const parcours = days.filter((d) => !d.is_bonus);
   const bonus = days.filter((d) => d.is_bonus);
+  // Palier 7 EUR : les bonus sont visibles mais verrouilles.
+  const bonusLocked = !canAccessBonusDays(viewer.tier);
+  const checkoutUrl = upsellUrl();
 
   const completed = parcours.filter((d) => d.progress === "completed").length;
   const total = parcours.length;
@@ -129,18 +135,36 @@ export default async function DashboardPage() {
         )}
       </section>
 
-      {/* Section bonus : style distinct, toujours accessible */}
+      {/* Section bonus. Au palier 7 EUR elle reste VISIBLE (demande Bene :
+          "tu montres bien que c'est la, ca existe") : les titres se lisent
+          pour donner envie, mais les cartes ne sont plus cliquables et un
+          panneau porte le cadenas et le bon de commande. */}
       {bonus.length > 0 && (
         <section className="flex flex-col gap-3">
           <h2 className="flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             <Gift className="size-4" />
             Bonus, quand tu veux
           </h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            {bonus.map((d) => (
-              <BonusCard key={d.id} day={d} />
-            ))}
-          </div>
+          {bonusLocked ? (
+            <LockedSection
+              title="Les bonus sont dans l'offre complete"
+              description="Des modules courts a prendre quand tu veux, en plus des 7 jours du parcours."
+              ctaLabel="Debloquer les bonus"
+              ctaUrl={checkoutUrl}
+            >
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                {bonus.map((d) => (
+                  <BonusCard key={d.id} day={d} locked />
+                ))}
+              </div>
+            </LockedSection>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {bonus.map((d) => (
+                <BonusCard key={d.id} day={d} />
+              ))}
+            </div>
+          )}
         </section>
       )}
     </div>
@@ -152,10 +176,17 @@ function dayLabel(d: DayWithProgress): string {
 }
 
 /** Carte bonus : volontairement distincte (pointilles, degrade, cadeau). */
-function BonusCard({ day: d }: { day: DayWithProgress }) {
+function BonusCard({ day: d, locked = false }: { day: DayWithProgress; locked?: boolean }) {
   const done = d.progress === "completed";
+  const Shell = locked
+    ? ({ children }: { children: React.ReactNode }) => <div className="block h-full">{children}</div>
+    : ({ children }: { children: React.ReactNode }) => (
+        <Link href={`/jour/${d.day_number}`} className="block h-full">
+          {children}
+        </Link>
+      );
   return (
-    <Link href={`/jour/${d.day_number}`} className="block h-full">
+    <Shell>
       <div className="group flex h-full flex-col gap-3 rounded-2xl border border-dashed border-primary/40 bg-gradient-to-br from-surface-soft to-card p-4 transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-card-hover">
         <div className="flex items-start justify-between">
           <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary shadow-sm">
@@ -179,6 +210,6 @@ function BonusCard({ day: d }: { day: DayWithProgress }) {
           <Play className="size-4 transition-transform group-hover:translate-x-0.5" />
         </span>
       </div>
-    </Link>
+    </Shell>
   );
 }

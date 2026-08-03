@@ -1,5 +1,6 @@
 // lib/parcours.ts — requêtes serveur du parcours.
 import "server-only";
+import { resolveTier, type AtelierTier } from "@/lib/access/tiers";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import type {
   Answer,
@@ -27,6 +28,12 @@ export interface Viewer {
   email: string | null;
   profile: Profile | null;
   enrolled: boolean;
+  /**
+   * Palier d'acces (campagne pub, 3 aout 2026). "plus" = l'Atelier
+   * complet, "standard" = l'offre a 7 EUR. Toute page qui affiche du
+   * contenu reserve doit le lire, jamais le deviner.
+   */
+  tier: AtelierTier;
 }
 
 /**
@@ -43,8 +50,12 @@ export async function getViewer(): Promise<Viewer | null> {
   const [{ data: profile }, { data: enrollment }] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
     supabase
+      // `select("*")` et pas `select("status, tier")` : si la migration des
+      // paliers n'est pas encore passee en prod, une colonne nommee
+      // explicitement ferait echouer TOUTE la requete, donc l'eleve
+      // passerait pour non inscrit. Cf. lib/access/tiers.ts.
       .from("enrollments")
-      .select("status")
+      .select("*")
       .eq("user_id", user.id)
       .eq("status", "active")
       .maybeSingle(),
@@ -55,6 +66,9 @@ export async function getViewer(): Promise<Viewer | null> {
     email: user.email ?? null,
     profile: (profile as Profile) ?? null,
     enrolled: Boolean(enrollment),
+    // Palier d'acces (campagne pub du 3 aout 2026). Une ligne sans palier
+    // vaut "plus" : les eleves d'avant ont paye l'Atelier complet.
+    tier: resolveTier((enrollment as { tier?: string | null } | null)?.tier),
   };
 }
 
