@@ -337,3 +337,36 @@ acheteurs. `grantAccessByEmail` tente avec le palier puis retombe sans ;
 assumée : la RÉTROGRADATION ne se replie pas en silence, elle renvoie une
 erreur (un remboursement ignoré laisserait un client remboursé avec le
 produit).
+
+## La campagne email : des dossiers, jamais du JSON (retour Béné 3 août 2026)
+
+"La campagne email générée dans l'Atelier du quiz sort en json .. l'enfer !!"
+
+**La cause n'était pas le format de sortie, c'était une TRONCATURE.**
+`max_tokens: 4096` pour 3 emails de bienvenue + 1 par profil + 3 emails
+de vente + 4 posts + un DM + un email partenaire, en français : la
+réponse était coupée en plein JSON, `JSON.parse` échouait, et le code
+retombait sur une branche `raw` qui affichait le JSON BRUT à l'écran.
+Elle voyait notre panne, pas sa campagne.
+
+Trois corrections, dans cet ordre d'importance :
+
+1. **On n'affiche JAMAIS de JSON à une créatrice.** La branche `raw` est
+   supprimée. Quand l'analyse échoue, l'écran dit que la génération n'a
+   pas abouti et propose de relancer ; le texte brut part dans les logs
+   serveur. Montrer un livrable illisible et laisser l'utilisatrice le
+   démêler coûte plus cher que d'admettre l'échec.
+2. **`max_tokens` passe à 16000.** C'était la cause réelle.
+3. **`tryRepairTruncatedJson`** referme les délimiteurs restés ouverts
+   quand le modèle a quand même été coupé : trois emails sur six valent
+   mieux qu'un écran vide. Ce n'est pas un parseur, c'est un filet.
+
+**La présentation, telle qu'elle l'a demandée :** un dossier repliable
+par séquence, **un dossier par profil de résultat**, des emails
+**numérotés** ("Jour 1", "Jour 2"), repliés par défaut, qu'un clic
+développe. Le bouton Copier est dans l'en-tête de chaque email, donc
+accessible SANS déplier : quand on colle sa séquence dans Systeme.io on
+enchaîne les copies, on n'ouvre pas puis referme chaque email.
+
+Seule la première séquence est ouverte au chargement : tout ouvrir
+redonnerait le mur de texte qu'elle voulait éviter.

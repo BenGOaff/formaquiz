@@ -86,6 +86,12 @@ export interface FunnelEmail {
 }
 export interface FunnelResultEmail {
   result: string;
+  /**
+   * Rang dans la séquence du profil (1 à 5), ou null si le modèle ne l'a
+   * pas rendu. L'affichage retombe alors sur l'ordre de la réponse.
+   * Cf. lib/funnelSequence.ts.
+   */
+  step?: number | null;
   subject: string;
   body: string;
 }
