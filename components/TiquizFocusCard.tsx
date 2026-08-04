@@ -30,6 +30,17 @@ export function TiquizFocusCard() {
   const [quizzes, setQuizzes] = useState<QuizRef[]>([]);
   const [scope, setScope] = useState("");
   const [busy, setBusy] = useState(false);
+  // L'ADRESSE DU COMPTE RELIÉ (drame Jocelyne, 4 août 2026).
+  //
+  // Elle a passé six semaines à lire "tu n'as pas encore de quiz" alors
+  // qu'elle en avait trois en ligne, avec 2002 vues. Son Atelier était
+  // relié à un compte Tiquiz créé sous son AUTRE adresse, et vide.
+  //
+  // L'API renvoyait déjà cette adresse. C'est l'écran qui ne l'affichait
+  // nulle part : rien, à aucun moment, ne lui permettait de voir qu'on
+  // regardait le mauvais compte. Elle a même refait la manip de
+  // reconnexion sans pouvoir constater qu'elle retombait au même endroit.
+  const [account, setAccount] = useState("");
   // Distingue "impossible de charger la liste" (API Tiquiz KO / pas déployée)
   // de "vraiment aucun quiz" : sinon on afficherait "crée ton premier quiz"
   // à quelqu'un qui en a plein (drame Gwenn 19 juil 2026).
@@ -47,6 +58,7 @@ export function TiquizFocusCard() {
         return;
       }
       setConnected(Boolean(data.connected));
+      setAccount(typeof data.email === "string" ? data.email : "");
       if (data.provider === "tipote" || data.provider === "tiquiz") setProvider(data.provider);
       if (data.error) {
         // Connecté mais la liste n'a pas pu être récupérée : NE PAS conclure
@@ -109,6 +121,37 @@ export function TiquizFocusCard() {
       setBusy(false);
     }
   }
+
+  /**
+   * Relier un AUTRE compte : on coupe la connexion actuelle (ce qui pose
+   * l'opt-out, donc la liaison automatique ne reprendra pas la main sur
+   * l'ancienne adresse), puis on relance le consentement.
+   *
+   * Navigation DURE et pas `router.push` : la route de démarrage pose un
+   * cookie anti-CSRF et redirige vers un AUTRE domaine.
+   */
+  async function switchAccount() {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/integrations/tiquiz/disconnect", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      // Un refus doit produire quelque chose à l'écran : un échec
+      // silencieux envoie chercher au mauvais endroit.
+      if (!data?.ok) {
+        toast.error("Impossible de délier le compte pour le moment. Réessaie dans un instant.");
+        setBusy(false);
+        return;
+      }
+      window.location.href = `/api/integrations/tiquiz/start${
+        provider === "tipote" ? "?provider=tipote" : ""
+      }`;
+    } catch {
+      toast.error("Impossible de délier le compte pour le moment. Réessaie dans un instant.");
+      setBusy(false);
+    }
+  }
+
+  const providerName = provider === "tipote" ? "Tipote" : "Tiquiz";
 
   const Header = (
     <span className="flex items-center gap-2 font-medium">
@@ -176,22 +219,47 @@ export function TiquizFocusCard() {
     );
   }
 
-  // Connecté mais aucun quiz : inviter à en créer un.
+  // Connecté mais aucun quiz. DEUX SITUATIONS TRÈS DIFFÉRENTES, et on ne
+  // peut pas les distinguer depuis ici : une débutante qui n'a vraiment
+  // rien créé, et quelqu'un qui a plusieurs adresses email et qu'on a
+  // reliée à la mauvaise (drame Jocelyne, 4 août 2026).
+  //
+  // On nomme donc les deux, et on affiche l'adresse reliée : c'est la
+  // seule information qui permet de trancher, et elle était disponible
+  // depuis le début sans jamais être montrée.
   if (quizzes.length === 0) {
     return (
       <Card className="h-full">
         <CardContent className="flex h-full flex-col gap-3 py-5">
           {Header}
+          {account && (
+            <div className="flex flex-col gap-0.5 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                Compte {providerName} relié
+              </span>
+              <strong className="break-all text-sm">{account}</strong>
+            </div>
+          )}
           <p className="text-sm text-muted-foreground">
-            Tu n'as pas encore de quiz. Crée ton premier quiz dans {provider === "tipote" ? "Tipote" : "Tiquiz"} : c'est lui
-            que l'Atelier analysera ici.
+            Ce compte ne contient aucun quiz. Soit c'est le moment d'en créer un, soit tes quiz
+            vivent sur un autre compte {providerName}, sous une autre adresse email.
           </p>
-          <Button asChild size="sm" className="mt-auto w-fit">
-            <a href="/api/integrations/tiquiz/go?to=create" target="_blank" rel="noopener noreferrer">
-              <Plus />
-              Créer mon premier quiz
-            </a>
-          </Button>
+          <div className="mt-auto flex flex-wrap gap-2">
+            <Button asChild size="sm">
+              <a href="/api/integrations/tiquiz/go?to=create" target="_blank" rel="noopener noreferrer">
+                <Plus />
+                Créer mon premier quiz
+              </a>
+            </Button>
+            <Button size="sm" variant="outline" onClick={switchAccount} disabled={busy}>
+              {busy ? <Loader2 className="animate-spin" /> : <Link2 />}
+              Changer de compte
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Avant de changer de compte, connecte-toi à {providerName} avec la bonne adresse dans
+            cet onglet. L'écran d'autorisation te redemandera confirmation.
+          </p>
         </CardContent>
       </Card>
     );
@@ -255,6 +323,15 @@ export function TiquizFocusCard() {
             <option value="__new__">+ Démarrer un nouveau quiz</option>
           </select>
         </div>
+        {/* L'adresse du compte lu, même quand tout va bien. Jocelyne n'a
+            jamais eu ce repère : elle ne pouvait pas soupçonner qu'on
+            regardait ailleurs. Discret ici (rien ne cloche), mis en avant
+            dans la branche "aucun quiz" (là, ça peut clocher). */}
+        {account && (
+          <p className="text-xs text-muted-foreground">
+            Compte {providerName} lu : <span className="break-all">{account}</span>
+          </p>
+        )}
         <Button asChild variant="ghost" size="sm" className="mt-auto w-fit">
           <a href="/avancees">
             <ExternalLink />
