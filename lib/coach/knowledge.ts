@@ -4,6 +4,7 @@
 // Pas de RAG : on borne le contexte (index de tous les jours + le jour
 // courant en entier) pour maitriser le cout et l'hallucination.
 import "server-only";
+import { VALUE_CONTENT_RULES } from "@/lib/prompts/valueContent";
 import {
   ACTIVITY_OPTIONS,
   MATURITY_OPTIONS,
@@ -361,7 +362,7 @@ export function buildCoachSystemPrompt(input: {
 
   // ── Partie STABLE (mise en cache) : persona + regles + faits Tiquiz +
   //    programme + documents de reference admin. ──
-  let cacheablePrefix = `${persona}${SYSTEME_IO_LINK_RULES}${ATELIER_TOOLS_RULES}${TIQUIZ_FACTS}${STATS_READING_RULES}${ESCALADE_RULES}\n\n=== PROGRAMME (vue d'ensemble des jours) ===\n${index}`;
+  let cacheablePrefix = `${persona}${VALUE_CONTENT_RULES}${SYSTEME_IO_LINK_RULES}${ATELIER_TOOLS_RULES}${TIQUIZ_FACTS}${STATS_READING_RULES}${ESCALADE_RULES}\n\n=== PROGRAMME (vue d'ensemble des jours) ===\n${index}`;
 
   // Documents de connaissance charges par l'admin (bornes en taille).
   if (docs && docs.length) {

@@ -19,6 +19,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
+import { VALUE_CONTENT_CRITERIA, VALUE_CONTENT_RULES } from "../../lib/prompts/valueContent.ts";
+
 const SRC = readFileSync(new URL("../../lib/coach/knowledge.ts", import.meta.url), "utf8");
 
 /** Une règle est présente, à la casse près sur l'essentiel. */
@@ -145,4 +147,52 @@ test("le pont ne fabrique rien quand l'app ne répond pas", () => {
   // Un pont muet doit donner "je n'ai pas tes chiffres", jamais un
   // objet à moitié rempli qui ressemblerait à de la donnée.
   assert.ok(/if \(!json\?\.ok \|\| !json\.readout\) return null;/.test(BRIDGE));
+});
+
+// ── Les 5 critères d'un contenu de valeur ────────────────────────────
+//
+// Ils vivent dans un module a part, parce que le generateur de bonus
+// (chantier a venir) juge ses propres propositions sur la meme grille.
+
+const inValue = (needle: string): boolean => VALUE_CONTENT_RULES.includes(needle);
+//
+// Béné, 4 août 2026. Le coach savait dire "ton bonus n'est pas assez
+// fort" sans jamais pouvoir dire POURQUOI. Un modèle sans critère juge
+// au feeling : il approuve ce qui est bien écrit et refuse ce qui est
+// mal formulé, ce qui n'a aucun rapport avec la valeur.
+
+test("le coach a la grille des 5 critères", () => {
+  assert.deepEqual(
+    VALUE_CONTENT_CRITERIA.map((c) => c.name),
+    ["Utile", "Specifique", "Cible", "Applicable", "Unique"],
+  );
+  for (const c of VALUE_CONTENT_CRITERIA) {
+    assert.ok(inValue(`- ${c.name} : ${c.rule}`), `le critère ${c.name} doit sortir dans le prompt`);
+  }
+});
+
+test("les critères sont ceux de Béné, pas une paraphrase", () => {
+  // Le coach doit enseigner la même chose qu'elle, pas une variante qui
+  // sonne pareil.
+  assert.ok(inValue("On peut en tirer un benefice concret"));
+  assert.ok(inValue("Tu es la seule personne a pouvoir l'ecrire comme ca"));
+});
+
+test("la grille sert à JUGER, elle ne se récite pas", () => {
+  // Une grille donnée sans mode d'emploi devient une check-list collée
+  // en fin de réponse, ce qui n'aide personne.
+  assert.ok(inValue("Tu nommes le critère qui MANQUE, un seul"));
+  assert.ok(inValue("Reciter les cinq critères a la fin d'une reponse ne sert a rien"));
+});
+
+test("UNIQUE est traité comme ce que l'IA ne peut pas produire", () => {
+  // C'est le critère qui distingue le contenu d'une créatrice de
+  // celui de n'importe qui d'autre.
+  assert.ok(inValue("le seul qu'une IA ne peut pas produire a la place de l'eleve"));
+  assert.ok(inValue("tu poses la question qui va chercher ce que lui seul a vecu"));
+});
+
+test("le coach reçoit vraiment la grille", () => {
+  // Un module de critères que personne n'injecte ne sert à rien.
+  assert.ok(hasRule("${VALUE_CONTENT_RULES}"), "la grille doit être dans le prompt du coach");
 });

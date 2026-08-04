@@ -1,3 +1,4 @@
+import { CLAIMS_RULES } from "@/lib/prompts/evidence";
 // lib/affiliateGeneratorBrief.ts
 //
 // Ce que le générateur a le droit de dire. Un affilié qui écrit "à la
@@ -94,6 +95,7 @@ export function buildSystemPrompt(format: GeneratorFormat): string {
     SCOPE,
     "FAITS PRODUITS AUTORISÉS (rien d'autre n'existe) :",
     ATELIER_FACTS,
+    CLAIMS_RULES,
     WRITING_RULES,
     "FORMAT DEMANDÉ, à respecter à la lettre. Il prime sur toute habitude :",
     FORMAT_BRIEF[format],
