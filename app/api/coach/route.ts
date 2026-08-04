@@ -16,12 +16,13 @@ import {
   extractEscalation,
   type CoachAnswer,
   type CoachQuizContext,
+  type CoachQuizReadout,
 } from "@/lib/coach/knowledge";
 import { embedQuery } from "@/lib/coach/embedder";
 import { sendEmail } from "@/lib/email/resend";
 import { coachEscalationEmail } from "@/lib/email/templates";
 import { ESCALATION_ALERT_EMAILS } from "@/lib/adminEmails";
-import { getTiquizConnection, fetchQuizAudit } from "@/lib/integrations/tiquiz";
+import { getTiquizConnection, fetchQuizAudit, fetchQuizReadout } from "@/lib/integrations/tiquiz";
 import { computeTiquizInsights } from "@/lib/insights/tiquizInsights";
 import { auditQuiz } from "@/lib/quizDoctor";
 
@@ -244,6 +245,18 @@ export async function POST(req: NextRequest) {
     // Non connecte ou endpoint indisponible : le coach fonctionne sans.
   }
 
+  // LES CHIFFRES DE SON QUIZ. Sans eux, le coach generalisait la methode :
+  // ca sonne juste, ca ne dit rien du quiz de la personne en face, et ca
+  // envoie reparer des choses qui n'ont rien (Jocelyne, 4 aout 2026).
+  // `null` est un cas PLEIN, pas un oubli : le prompt lui fait alors dire
+  // qu'il ne les a pas, au lieu d'en inventer.
+  let quizReadout: CoachQuizReadout | null = null;
+  try {
+    quizReadout = (await fetchQuizReadout(viewer.userId)) as CoachQuizReadout | null;
+  } catch {
+    quizReadout = null;
+  }
+
   const { cacheablePrefix, dynamic } = buildCoachSystemPrompt({
     instruction: settings?.instruction ?? null,
     docs: knowledge ?? [],
@@ -259,6 +272,7 @@ export async function POST(req: NextRequest) {
     progress,
     carnet,
     quizContext,
+    quizReadout,
   });
 
   // Coach proactif : on injecte les signaux REELS du funnel Tiquiz (si

@@ -84,3 +84,65 @@ test("il n'interprète jamais le direct comme une adresse tapée", () => {
   assert.ok(hasRule('"DIRECT" NE VEUT PAS DIRE "ILS ONT TAPÉ TON ADRESSE"'));
   assert.ok(hasRule("utm_source"), "il sait dire comment étiqueter un lien");
 });
+
+// ── Le coach a enfin des chiffres, et il ne les invente plus ─────────
+//
+// Jocelyne, 4 août 2026 : trois semaines à réparer une question qui
+// n'avait rien. En cherchant d'où venaient les conseils, on a trouvé
+// que le coach ne recevait AUCUN chiffre de funnel. Il généralisait la
+// méthode : ça sonne juste, ça ne dit rien du quiz de la personne en
+// face, et ça envoie réparer des choses qui vont bien.
+
+const ROUTE = readFileSync(new URL("../../app/api/coach/route.ts", import.meta.url), "utf8");
+const BRIDGE = readFileSync(new URL("../../lib/integrations/tiquiz.ts", import.meta.url), "utf8");
+
+test("le coach reçoit les chiffres du parcours entier", () => {
+  assert.ok(hasRule("LES CHIFFRES REELS DE SON QUIZ"));
+  assert.ok(hasRule("Cliquent sur commencer"), "les démarrages, invisibles jusqu'ici");
+  assert.ok(hasRule("Laissent leur email"));
+});
+
+test("il reprend le verdict au lieu de le recalculer", () => {
+  // Deux endroits qui relisent les mêmes pourcentages finissent
+  // toujours par dire deux choses différentes. L'écran de stats et le
+  // coach doivent dire la MÊME phrase.
+  assert.ok(hasRule("quizReadout.funnelVerdict"));
+  assert.ok(hasRule("quizReadout.trafficVerdict"));
+  assert.ok(
+    !/readFunnelSignal|buildFullFunnel|biggestLeak/.test(SRC),
+    "le coach ne recalcule aucun verdict de son côté",
+  );
+});
+
+test("sans chiffres, il le DIT et n'invente rien", () => {
+  // C'était la moitié qui manquait : le coach ne savait même pas qu'il
+  // ne savait rien.
+  assert.ok(hasRule("TU N'AS PAS SES CHIFFRES"));
+  assert.ok(hasRule("tu ne cites AUCUN chiffre"));
+  assert.ok(hasRule("tu ne nommes AUCUNE"));
+  assert.ok(
+    hasRule("Inventer un diagnostic plausible est la pire chose"),
+    "la raison doit être dite, pas seulement l'interdiction",
+  );
+});
+
+test("plusieurs quiz : il demande d'en choisir un", () => {
+  // Un funnel qui additionne cinq quiz ne veut rien dire.
+  assert.ok(hasRule("plusieurs quiz"));
+  assert.ok(hasRule("choisir UN quiz"));
+});
+
+test("des vues partielles n'autorisent pas à conclure sur les taux", () => {
+  assert.ok(hasRule("comptage partiel, ne conclus pas sur les taux"));
+});
+
+test("la route va vraiment chercher ces chiffres", () => {
+  assert.ok(/fetchQuizReadout\(/.test(ROUTE));
+  assert.ok(/quizReadout,/.test(ROUTE), "et les passe au prompt");
+});
+
+test("le pont ne fabrique rien quand l'app ne répond pas", () => {
+  // Un pont muet doit donner "je n'ai pas tes chiffres", jamais un
+  // objet à moitié rempli qui ressemblerait à de la donnée.
+  assert.ok(/if \(!json\?\.ok \|\| !json\.readout\) return null;/.test(BRIDGE));
+});

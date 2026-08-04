@@ -8,7 +8,7 @@ import "server-only";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { earnedBadgeCodes, badgeByCode } from "@/lib/gamification";
 import { snapshotFromDays, getDaysWithProgress } from "@/lib/parcours";
-import type { TiquizMetrics } from "@/lib/types";
+import type { TiquizMetrics, TiquizReadout } from "@/lib/types";
 
 const TIQUIZ_BASE = (process.env.TIQUIZ_BASE_URL ?? "https://quiz.tipote.com").trim();
 // Pont Atelier <-> Tipote (retour Maurice, 28 juillet 2026) : les eleves
@@ -263,6 +263,38 @@ async function fetchMetrics(
     }
     return metrics;
   } catch {
+    return null;
+  }
+}
+
+/**
+ * La LECTURE CHIFFREE du quiz selectionne : compteurs du parcours entier
+ * (demarrages compris) et verdicts DEJA REDIGES par l'app qui detient
+ * les donnees.
+ *
+ * On ne recalcule rien ici, et c'est volontaire : deux endroits qui
+ * relisent les memes pourcentages finissent toujours par dire deux
+ * choses differentes. L'ecran de stats que l'eleve regarde et le coach
+ * a qui elle parle doivent dire la MEME phrase (Jocelyne, 4 aout 2026).
+ */
+export async function fetchQuizReadout(userId: string): Promise<TiquizReadout | null> {
+  const conn = await getTiquizConnection(userId);
+  if (!conn?.token || !SHARED) return null;
+  try {
+    const res = await fetch(
+      `${baseFor(conn.provider)}/api/partner/metrics${scopeToQuery(conn.selected_scope)}`,
+      {
+        headers: { "x-partner-secret": SHARED, Authorization: `Bearer ${conn.token}` },
+        cache: "no-store",
+      },
+    );
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (!json?.ok || !json.readout) return null;
+    return json.readout as TiquizReadout;
+  } catch {
+    // Pont indisponible : le coach doit alors dire qu'il n'a pas les
+    // chiffres, PAS en inventer. C'est geré dans le prompt.
     return null;
   }
 }

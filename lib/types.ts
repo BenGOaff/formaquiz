@@ -79,6 +79,32 @@ export interface TiquizMetrics {
   topQuiz: { title: string; leads: number } | null;
 }
 
+/**
+ * Ce que Tiquiz (ou Tipote) rend sur le quiz selectionne : les chiffres
+ * du parcours ENTIER et les verdicts deja rediges.
+ *
+ * Jocelyne, 4 aout 2026 : le coach ne recevait que quatre compteurs
+ * cumules, donc aucune fuite d'entree visible et rien de vrai a dire sur
+ * une question. Il generalisait la methode, ce qui sonne juste et ne dit
+ * rien du quiz de la personne en face.
+ */
+export interface TiquizReadout {
+  /** "quiz" : un seul quiz, les verdicts ont un sens. "account" :
+   *  plusieurs, aucun verdict n'est fabrique. */
+  scope: "quiz" | "account";
+  quizTitle: string | null;
+  counts: {
+    views: number;
+    starts: number;
+    completes: number;
+    leads: number;
+    viewsReliable: boolean;
+    questionCount: number;
+  } | null;
+  funnelVerdict: string | null;
+  trafficVerdict: string | null;
+}
+
 // ── Chantier B : funnel "done-for-you" genere a partir du carnet ──
 export interface FunnelEmail {
   subject: string;

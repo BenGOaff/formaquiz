@@ -54,6 +54,44 @@ export interface CoachQuizContext {
   profiles: { title: string; hasCta: boolean }[];
 }
 
+/**
+ * Les CHIFFRES du quiz de l'élève, tels que Tiquiz (ou Tipote) les rend.
+ *
+ * -- POURQUOI (Jocelyne, 4 août 2026) -------------------------------
+ *
+ * Le coach n'en recevait AUCUN. Le pont ne transmettait que quatre
+ * compteurs cumulés sur tout le compte : pas de démarrages, donc la
+ * fuite d'entrée invisible, et pas de détail par question, donc rien de
+ * vrai à dire sur une question précise.
+ *
+ * Un modèle à qui on demande d'aider sur des stats qu'il ne voit pas ne
+ * répond pas "je ne sais pas" : il généralise la méthode, ça sonne
+ * juste, et l'élève applique. Jocelyne a réparé pendant trois semaines
+ * une question qui n'avait rien.
+ *
+ * Les verdicts arrivent DÉJÀ RÉDIGÉS par l'app qui détient les données,
+ * avec les mêmes fonctions que l'écran de stats que l'élève regarde. Le
+ * coach les reprend, il ne les recalcule pas : deux endroits qui
+ * recalculent la même décision finissent toujours par dire deux choses
+ * différentes.
+ */
+export interface CoachQuizReadout {
+  /** "quiz" : un seul quiz, les verdicts ont un sens. "account" :
+   *  plusieurs, aucun verdict, et le coach doit demander de choisir. */
+  scope: "quiz" | "account";
+  quizTitle: string | null;
+  counts: {
+    views: number;
+    starts: number;
+    completes: number;
+    leads: number;
+    viewsReliable: boolean;
+    questionCount: number;
+  } | null;
+  funnelVerdict: string | null;
+  trafficVerdict: string | null;
+}
+
 /** Budget de caracteres pour les documents de connaissance injectes. */
 const DOCS_CHAR_BUDGET = 14000;
 /** Budget de caracteres pour le carnet de bord injecte (borne le cout). */
@@ -292,6 +330,7 @@ export function buildCoachSystemPrompt(input: {
   progress?: CoachProgress | null;
   carnet?: CoachCarnetDay[];
   quizContext?: CoachQuizContext | null;
+  quizReadout?: CoachQuizReadout | null;
 }): { cacheablePrefix: string; dynamic: string } {
   const {
     instruction,
@@ -308,6 +347,7 @@ export function buildCoachSystemPrompt(input: {
     progress,
     carnet,
     quizContext,
+    quizReadout,
   } = input;
 
   const persona = instruction && instruction.trim() ? instruction.trim() : SYSTEM_PERSONA;
@@ -430,6 +470,49 @@ export function buildCoachSystemPrompt(input: {
       `\n\n=== SON QUIZ TIQUIZ (aide-le à l'améliorer si il le demande) ===\n` +
       lines.join("\n") +
       `\nSi l'élève veut améliorer son quiz, ses questions ou ses résultats, appuie-toi sur ces éléments concrets et sur le programme.`;
+  }
+
+  // ── LES CHIFFRES DE SON QUIZ (Jocelyne, 4 août 2026) ──
+  //
+  // Le bloc le plus important du prompt, et il n'existait pas. Sans
+  // chiffres, le coach généralisait la méthode : ça sonne juste, ça ne
+  // dit rien du quiz de la personne en face, et ça envoie réparer des
+  // choses qui n'ont rien.
+  //
+  // Les verdicts arrivent REDIGES par l'app qui détient les données. Le
+  // coach les reprend tels quels : c'est la seule façon que l'écran de
+  // stats et lui racontent la même histoire.
+  if (quizReadout?.scope === "quiz" && quizReadout.counts) {
+    const c = quizReadout.counts;
+    const lines = [
+      `Quiz analysé : "${quizReadout.quizTitle ?? "sans titre"}" (${c.questionCount} questions).`,
+      `Arrivent sur le quiz : ${c.views}${c.viewsReliable ? "" : " (comptage partiel, ne conclus pas sur les taux)"}`,
+      `Cliquent sur commencer : ${c.starts}`,
+      `Terminent les questions : ${c.completes}`,
+      `Laissent leur email : ${c.leads}`,
+    ];
+    if (quizReadout.funnelVerdict) lines.push("", quizReadout.funnelVerdict);
+    if (quizReadout.trafficVerdict) lines.push("", quizReadout.trafficVerdict);
+    dynamic +=
+      "\n\n=== LES CHIFFRES REELS DE SON QUIZ (source de vérité, non négociable) ===\n" +
+      lines.join("\n") +
+      "\nCes chiffres viennent de son compte. Tu t'appuies DESSUS et sur rien d'autre : " +
+      "aucun pourcentage que tu n'aurais pas là, aucune moyenne inventée, aucune " +
+      "comparaison avec d'autres élèves.";
+  } else {
+    // ON DIT CE QU'ON N'A PAS. C'est la moitié qui manquait : le coach
+    // ne savait même pas qu'il ne savait rien.
+    dynamic +=
+      "\n\n=== TU N'AS PAS SES CHIFFRES ===\n" +
+      (quizReadout?.scope === "account"
+        ? "Son compte contient plusieurs quiz, et un funnel qui les additionne ne veut rien dire. Demande-lui de choisir UN quiz dans le sélecteur de la page d'accueil, puis reprends."
+        : "Son compte n'est pas connecté, ou aucune donnée n'est encore remontée.") +
+      "\nTant que tu ne les as pas : tu ne cites AUCUN chiffre, tu ne nommes AUCUNE " +
+      "question, tu ne dis pas où ça décroche, et tu ne compares pas à une moyenne. " +
+      "Tu le dis franchement, en une phrase, tu expliques comment te les donner, et tu " +
+      "aides sur ce qui ne dépend pas des chiffres (la promesse, la structure, l'offre). " +
+      "Inventer un diagnostic plausible est la pire chose que tu puisses faire : " +
+      "l'élève applique, attend, ne voit rien changer, et perd des semaines.";
   }
 
   // Focus sur le jour en cours (si l'eleve est sur une page jour).
