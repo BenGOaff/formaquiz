@@ -69,3 +69,18 @@ test("aucun tiret cadratin dans ce que le coach a sous les yeux", () => {
   const end = rules.indexOf("`;");
   assert.ok(!/[—–]/.test(rules.slice(0, end)), "ni em-dash ni en-dash dans les règles stats");
 });
+
+// ── La page, ou l'audience ? ─────────────────────────────────────────
+
+test("le coach demande d'où vient le trafic avant d'accuser la page", () => {
+  // Une fuite à l'entrée a deux causes qui donnent le même chiffre.
+  // Conseiller de réécrire une promesse qui va très bien, sur un
+  // trafic hors sujet, ne peut rien produire.
+  assert.ok(hasRule("DEMANDE D'OÙ VIENNENT LES VISITEURS"));
+  assert.ok(hasRule("nomme les DEUX causes"));
+});
+
+test("il n'interprète jamais le direct comme une adresse tapée", () => {
+  assert.ok(hasRule('"DIRECT" NE VEUT PAS DIRE "ILS ONT TAPÉ TON ADRESSE"'));
+  assert.ok(hasRule("utm_source"), "il sait dire comment étiqueter un lien");
+});
