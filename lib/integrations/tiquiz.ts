@@ -441,6 +441,33 @@ export async function ensureAutoConnect(
   const linked = await autoLink(email);
   if (!linked) return false;
 
+  // UN COMPTE VIDE N'EST PAS LE BON COMPTE (drame Jocelyne, 4 aout 2026).
+  //
+  // La liaison automatique matche sur l'email de l'Atelier. Jocelyne en a
+  // deux : jocelyne@j-bacquet.fr cote Atelier, et
+  // jocelynebacquet.auteur@gmail.com cote Tiquiz, ou vivent ses 3 quiz.
+  // Elle avait AUSSI un compte Tiquiz sous son adresse Atelier, cree puis
+  // abandonne, sans aucun quiz. C'est celui-la qu'on a relie tout seul, le
+  // 25 juillet, en ouvrant simplement son tableau de bord.
+  //
+  // Resultat : pendant six semaines, chaque chiffre remontait a zero, et
+  // rien ne l'expliquait. Le coach n'a jamais eu ses stats et ne pouvait
+  // pas le savoir.
+  //
+  // Un compte sans le moindre quiz est le signal le plus clair qu'on s'est
+  // trompe de compte. On ne le relie donc PAS en silence. On ne perd rien
+  // a attendre : sans connexion enregistree, la liaison sera retentee au
+  // prochain passage sur le tableau de bord, et elle aboutira le jour ou
+  // il y aura vraiment un quiz a suivre.
+  //
+  // `null` = on n'a pas pu compter (pont muet). On relie quand meme :
+  // refuser sur une panne reseau priverait quelqu'un de sa connexion.
+  const n = await countQuizzesFor(linked.token, linked.provider);
+  if (n === 0) {
+    void revokeTokenAt(linked.token, linked.provider);
+    return false;
+  }
+
   await saveConnection(userId, linked.token, linked.tiquizUserId, linked.email, linked.provider);
   await syncMetrics(userId);
   return true;

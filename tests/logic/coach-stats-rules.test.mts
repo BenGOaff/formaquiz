@@ -244,3 +244,33 @@ test("le coach lit le MÊME quiz que le reste de l'app", () => {
   const src = readFileSync(new URL("../../lib/integrations/tiquiz.ts", import.meta.url), "utf8");
   assert.ok(/const scope = await resolveScope\(userId, conn\);/.test(src));
 });
+
+// ── La liaison automatique ne relie plus un compte vide ──────────────
+//
+// Vérifié dans le code le 4 août : `ensureAutoConnect` tourne au
+// chargement du tableau de bord, sans action de l'élève, et matche sur
+// l'email du compte ATELIER. Jocelyne en a deux, et celui de l'Atelier
+// correspondait à un compte Tiquiz créé puis abandonné, sans un seul
+// quiz. C'est celui-là qu'on a relié tout seul.
+//
+// Ironie du code : `autoLink` savait DÉJÀ préférer un compte non vide,
+// mais seulement pour arbitrer entre Tiquiz et Tipote. Entre deux
+// comptes du même produit, la question ne se posait jamais.
+
+test("un compte sans aucun quiz n'est jamais relié en silence", () => {
+  const src = readFileSync(new URL("../../lib/integrations/tiquiz.ts", import.meta.url), "utf8");
+  assert.ok(/UN COMPTE VIDE N'EST PAS LE BON COMPTE/.test(src));
+  assert.ok(
+    /const n = await countQuizzesFor\(linked\.token, linked\.provider\);\s*\n\s*if \(n === 0\) \{/.test(src),
+    "le compte est compté AVANT d'être enregistré",
+  );
+  assert.ok(/void revokeTokenAt\(linked\.token, linked\.provider\);/.test(src), "et le jeton inutile est révoqué");
+});
+
+test("une panne réseau ne prive personne de sa connexion", () => {
+  // `countQuizzesFor` rend null quand il n'a pas pu compter. Refuser
+  // dans ce cas serait remplacer un bug par un autre.
+  const src = readFileSync(new URL("../../lib/integrations/tiquiz.ts", import.meta.url), "utf8");
+  assert.ok(/`null` = on n'a pas pu compter/.test(src));
+  assert.ok(!/if \(n === 0 \|\| n === null\)/.test(src), "null ne doit pas bloquer la liaison");
+});
