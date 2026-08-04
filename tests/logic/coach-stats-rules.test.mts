@@ -196,3 +196,51 @@ test("le coach reçoit vraiment la grille", () => {
   // Un module de critères que personne n'injecte ne sert à rien.
   assert.ok(hasRule("${VALUE_CONTENT_RULES}"), "la grille doit être dans le prompt du coach");
 });
+
+// ── Le compte relié n'est pas toujours le bon (Jocelyne, 4 août 2026) ─
+//
+// Son Atelier était connecté à un compte Tiquiz VIDE depuis le 25
+// juillet. La liaison se fait par email, et elle en a deux :
+// jocelyne@j-bacquet.fr côté Atelier, jocelynebacquet.auteur@gmail.com
+// côté Tiquiz, où vivent ses 3 quiz et ses 2002 vues.
+//
+// Pendant six semaines, tout affichait zéro sans que rien ne l'explique.
+// C'est la même famille que le `ok: false` silencieux : l'état anormal
+// existait, personne ne le nommait.
+
+test("un compte connecté sans aucun quiz est expliqué, pas subi", () => {
+  assert.ok(hasRule("AUCUN quiz n'y est trouvé"));
+  assert.ok(
+    hasRule("la liaison se fait par email, et beaucoup de gens ont deux adresses"),
+    "la cause la plus fréquente doit être nommée",
+  );
+  assert.ok(hasRule("se déconnecte puis se reconnecte depuis le bon compte"));
+});
+
+test("il ne confond pas ce cas avec celui de plusieurs quiz", () => {
+  // Dire "choisis un quiz" à quelqu'un dont le compte est vide, c'est
+  // l'envoyer chercher dans un sélecteur qui n'a rien à lui montrer.
+  assert.ok(hasRule("SI TU NE VOIS AUCUN QUIZ"));
+  assert.ok(hasRule("SINON, demande-lui de choisir UN quiz"));
+});
+
+test("la sélection colle au quiz choisi", () => {
+  // Béné : "si un nouveau quiz est créé je veux que la sélection reste
+  // sur le dernier quiz choisi et pas qu'il bascule sur le nouveau".
+  const src = readFileSync(new URL("../../lib/integrations/tiquiz.ts", import.meta.url), "utf8");
+  assert.ok(/LA SELECTION COLLE/.test(src));
+  assert.ok(
+    /if \(current\.quizzes\.some\(\(q\) => q\.id === id\)\) return stored;/.test(src),
+    "un quiz toujours là garde la main, quel que soit ce qui a été créé depuis",
+  );
+  assert.ok(
+    /if \(!current\) return stored;/.test(src),
+    "pont muet : on garde la mémoire plutôt que de re-choisir au hasard",
+  );
+});
+
+test("le coach lit le MÊME quiz que le reste de l'app", () => {
+  // Sinon il commenterait un autre quiz que celui affiché à l'écran.
+  const src = readFileSync(new URL("../../lib/integrations/tiquiz.ts", import.meta.url), "utf8");
+  assert.ok(/const scope = await resolveScope\(userId, conn\);/.test(src));
+});

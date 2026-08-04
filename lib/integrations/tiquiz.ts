@@ -95,7 +95,23 @@ export function scopeToQuery(scope: string | null | undefined): string {
  */
 async function resolveScope(userId: string, conn: TiquizConnection): Promise<string> {
   const stored = String(conn.selected_scope ?? "").trim();
-  if (stored.startsWith("quiz:") || stored.startsWith("project:")) return stored;
+  // LA SELECTION COLLE (demande Bene, 4 aout 2026) : "si un nouveau quiz
+  // est cree je veux que la selection reste sur le dernier quiz choisi et
+  // pas qu'il bascule sur le nouveau".
+  //
+  // Un projet reste tel quel. Un quiz est verifie : s'il a ete SUPPRIME,
+  // garder sa selection donnerait un ecran vide et un coach sans chiffres,
+  // sans que rien ne l'explique. On ne re-choisit donc QUE dans ce cas la,
+  // jamais parce qu'un quiz plus recent est apparu.
+  if (stored.startsWith("project:")) return stored;
+  if (stored.startsWith("quiz:")) {
+    const id = stored.slice("quiz:".length);
+    const current = await fetchTiquizQuizList(userId);
+    // Liste indisponible (pont muet) : on garde la selection. Mieux vaut
+    // la memoire que le hasard.
+    if (!current) return stored;
+    if (current.quizzes.some((q) => q.id === id)) return stored;
+  }
 
   const list = await fetchTiquizQuizList(userId);
   const firstQuiz = list?.quizzes.find((q) => q.mode !== "survey");
@@ -281,13 +297,13 @@ export async function fetchQuizReadout(userId: string): Promise<TiquizReadout | 
   const conn = await getTiquizConnection(userId);
   if (!conn?.token || !SHARED) return null;
   try {
-    const res = await fetch(
-      `${baseFor(conn.provider)}/api/partner/metrics${scopeToQuery(conn.selected_scope)}`,
-      {
-        headers: { "x-partner-secret": SHARED, Authorization: `Bearer ${conn.token}` },
-        cache: "no-store",
-      },
-    );
+    // MEME scope resolu que le reste de l'app : sinon le coach parlerait
+    // d'un autre quiz que l'ecran que l'eleve a sous les yeux.
+    const scope = await resolveScope(userId, conn);
+    const res = await fetch(`${baseFor(conn.provider)}/api/partner/metrics${scopeToQuery(scope)}`, {
+      headers: { "x-partner-secret": SHARED, Authorization: `Bearer ${conn.token}` },
+      cache: "no-store",
+    });
     if (!res.ok) return null;
     const json = await res.json();
     if (!json?.ok || !json.readout) return null;

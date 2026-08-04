@@ -506,7 +506,9 @@ export function buildCoachSystemPrompt(input: {
     dynamic +=
       "\n\n=== TU N'AS PAS SES CHIFFRES ===\n" +
       (quizReadout?.scope === "account"
-        ? "Son compte contient plusieurs quiz, et un funnel qui les additionne ne veut rien dire. Demande-lui de choisir UN quiz dans le sélecteur de la page d'accueil, puis reprends."
+        ? "Son compte Tiquiz est bien connecté, mais AUCUN quiz n'y est trouvé, ou plusieurs le sont sans qu'un seul soit choisi.\n" +
+          "SI TU NE VOIS AUCUN QUIZ ALORS QU'ELLE T'EN PARLE D'UN, dis-lui de vérifier avec QUEL compte Tiquiz l'Atelier est connecté : la liaison se fait par email, et beaucoup de gens ont deux adresses (une pro, une perso). Un compte relié par erreur à une adresse sans quiz donne exactement ça, et ça peut durer des semaines sans que rien ne l'alerte. Elle se déconnecte puis se reconnecte depuis le bon compte, dans les réglages de l'Atelier.\n" +
+          "SINON, demande-lui de choisir UN quiz dans le sélecteur de la page d'accueil : un funnel qui additionne plusieurs quiz ne veut rien dire."
         : "Son compte n'est pas connecté, ou aucune donnée n'est encore remontée.") +
       "\nTant que tu ne les as pas : tu ne cites AUCUN chiffre, tu ne nommes AUCUNE " +
       "question, tu ne dis pas où ça décroche, et tu ne compares pas à une moyenne. " +
