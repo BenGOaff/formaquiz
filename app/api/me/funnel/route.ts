@@ -41,8 +41,23 @@ export async function PUT(req: NextRequest) {
   // Seules les cles PRESENTES sont ecrasees : le navigateur envoie
   // `byResult` apres une generation de sequences, `launch` apres une
   // generation de kit, jamais les deux pour rien.
-  const { byResult, launch } = (body ?? {}) as { byResult?: unknown; launch?: unknown };
-  const assets = await saveFunnelAssets(gate.userId, { byResult, launch });
+  const { byResult, launch, knownProfiles } = (body ?? {}) as {
+    byResult?: unknown;
+    launch?: unknown;
+    // Les profils ACTUELS du quiz. Sert a retirer les sequences d'un
+    // profil renomme ou supprime : sinon l'ancienne trainerait pour
+    // toujours sous un nom que l'eleve ne reconnait plus (meme regle que
+    // la distribution par resultat : la verite, ce sont les profils
+    // actuels).
+    knownProfiles?: unknown;
+  };
+  const assets = await saveFunnelAssets(gate.userId, {
+    byResult,
+    launch,
+    knownProfiles: Array.isArray(knownProfiles)
+      ? knownProfiles.filter((t): t is string => typeof t === "string")
+      : undefined,
+  });
   if (!assets) {
     return NextResponse.json({ ok: false, reason: "empty" }, { status: 400 });
   }
