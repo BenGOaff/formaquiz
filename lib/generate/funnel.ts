@@ -5,6 +5,8 @@ import "server-only";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getCarnet } from "@/lib/carnet";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
+import { isRetryableStatus, MAX_ATTEMPTS, retryDelayMs } from "@/lib/generate/retry";
+import { mergeSequencesByProfile } from "@/lib/generate/mergeSequences";
 import { buildClaudeMessageBody } from "@/lib/claudeRequest";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { resolvePersona, personaLabel, PERSONA_VOCAB } from "@/lib/personas";
@@ -355,24 +357,37 @@ async function askClaude(
     system,
     messages: [{ role: "user", content: userPrompt }],
   });
+  // UN REFUS TEMPORAIRE N'EST PAS UN ÉCHEC (Fabienne, 4 août 2026).
+  // Trois profils demandés en même temps = trois appels de 8000 tokens
+  // en parallèle ; l'API refuse les appels en trop avec un 429, et on
+  // traitait ce refus comme définitif. Résultat : "il ne peut en faire
+  // qu'un ou parfois 2, mais jamais les 3".
+  let res: Response | null = null;
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify(body),
-      // ABANDONNER AVANT CLOUDFLARE, PAS APRÈS. Sa limite est à ~100 s
-      // et elle rend une page d'erreur 524 que nous ne contrôlons pas :
-      // l'élève voit une panne d'infrastructure au lieu de notre message.
-      // À 80 s, c'est NOUS qui répondons, avec une raison exploitable et
-      // un bouton pour relancer l'étape.
-      signal: AbortSignal.timeout(80_000),
-    });
-    if (!res.ok) {
-      console.error("[funnel] appel refusé :", res.status);
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+      res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(body),
+        // ABANDONNER AVANT CLOUDFLARE, PAS APRÈS. Sa limite est à ~100 s
+        // et elle rend une page d'erreur 524 que nous ne contrôlons pas :
+        // l'élève voit une panne d'infrastructure au lieu de notre message.
+        // À 80 s, c'est NOUS qui répondons, avec une raison exploitable et
+        // un bouton pour relancer l'étape.
+        signal: AbortSignal.timeout(80_000),
+      });
+      if (res.ok) break;
+      if (!isRetryableStatus(res.status) || attempt === MAX_ATTEMPTS) break;
+      const wait = retryDelayMs(attempt, res.headers.get("retry-after"));
+      console.warn(`[funnel] ${res.status}, nouvelle tentative dans ${wait} ms`);
+      await new Promise((r) => setTimeout(r, wait));
+    }
+    if (!res || !res.ok) {
+      console.error("[funnel] appel refusé :", res?.status);
       return null;
     }
     const data = await res.json();
@@ -522,22 +537,34 @@ export async function generateFunnelSequence(
  */
 export async function saveFunnelAssets(
   userId: string,
-  part: { byResult?: unknown; launch?: unknown },
+  part: { byResult?: unknown; launch?: unknown; knownProfiles?: readonly string[] },
 ): Promise<FunnelAssets | null> {
   const { assets: current } = await getFunnelAssets(userId);
 
+  // FUSION PAR PROFIL, et c'est la deuxième correction du 4 août 2026.
+  //
+  // Avant, la liste entière était REMPLACÉE. Donc relancer pour
+  // compléter écrivait par-dessus : deux profils réussis au deuxième
+  // essai effaçaient les trois du premier. On disait "relance pour
+  // compléter" alors que relancer DÉTRUISAIT ce qui avait marché, et il
+  // était impossible d'arriver à trois autrement que par un coup de
+  // chance où les trois passaient d'un coup (Fabienne, Béné).
   const byResult: FunnelResultEmail[] = Array.isArray(part.byResult)
-    ? (part.byResult as Record<string, unknown>[])
-        .map((x) => ({
-          result: clean(x.result),
-          step:
-            typeof x.step === "number" && x.step >= 1 && x.step <= RESULT_SEQUENCE.length
-              ? Math.trunc(x.step)
-              : null,
-          subject: clean(x.subject),
-          body: clean(x.body),
-        }))
-        .filter((e) => e.subject || e.body)
+    ? mergeSequencesByProfile(
+        current?.byResult ?? [],
+        (part.byResult as Record<string, unknown>[])
+          .map((x) => ({
+            result: clean(x.result),
+            step:
+              typeof x.step === "number" && x.step >= 1 && x.step <= RESULT_SEQUENCE.length
+                ? Math.trunc(x.step)
+                : null,
+            subject: clean(x.subject),
+            body: clean(x.body),
+          }))
+          .filter((e) => e.subject || e.body),
+        part.knownProfiles,
+      )
     : (current?.byResult ?? []);
 
   const launch =

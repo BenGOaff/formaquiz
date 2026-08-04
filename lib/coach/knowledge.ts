@@ -4,6 +4,7 @@
 // Pas de RAG : on borne le contexte (index de tous les jours + le jour
 // courant en entier) pour maitriser le cout et l'hallucination.
 import "server-only";
+import { VALUE_CONTENT_RULES } from "@/lib/prompts/valueContent";
 import {
   ACTIVITY_OPTIONS,
   MATURITY_OPTIONS,
@@ -52,6 +53,44 @@ export interface CoachQuizContext {
   status: string;
   issues: { title: string; fix: string }[];
   profiles: { title: string; hasCta: boolean }[];
+}
+
+/**
+ * Les CHIFFRES du quiz de l'élève, tels que Tiquiz (ou Tipote) les rend.
+ *
+ * -- POURQUOI (Jocelyne, 4 août 2026) -------------------------------
+ *
+ * Le coach n'en recevait AUCUN. Le pont ne transmettait que quatre
+ * compteurs cumulés sur tout le compte : pas de démarrages, donc la
+ * fuite d'entrée invisible, et pas de détail par question, donc rien de
+ * vrai à dire sur une question précise.
+ *
+ * Un modèle à qui on demande d'aider sur des stats qu'il ne voit pas ne
+ * répond pas "je ne sais pas" : il généralise la méthode, ça sonne
+ * juste, et l'élève applique. Jocelyne a réparé pendant trois semaines
+ * une question qui n'avait rien.
+ *
+ * Les verdicts arrivent DÉJÀ RÉDIGÉS par l'app qui détient les données,
+ * avec les mêmes fonctions que l'écran de stats que l'élève regarde. Le
+ * coach les reprend, il ne les recalcule pas : deux endroits qui
+ * recalculent la même décision finissent toujours par dire deux choses
+ * différentes.
+ */
+export interface CoachQuizReadout {
+  /** "quiz" : un seul quiz, les verdicts ont un sens. "account" :
+   *  plusieurs, aucun verdict, et le coach doit demander de choisir. */
+  scope: "quiz" | "account";
+  quizTitle: string | null;
+  counts: {
+    views: number;
+    starts: number;
+    completes: number;
+    leads: number;
+    viewsReliable: boolean;
+    questionCount: number;
+  } | null;
+  funnelVerdict: string | null;
+  trafficVerdict: string | null;
 }
 
 /** Budget de caracteres pour les documents de connaissance injectes. */
@@ -155,6 +194,8 @@ const STATS_READING_RULES = `
 - Perdre des gens en cours de quiz est NORMAL et SAIN. Ceux qui s'arrêtent sont d'abord des visiteurs non qualifiés : le quiz fait son travail en les filtrant. Aucun quiz ne vise 100% de complétion, et un abandon n'est pas une faute de l'élève. Commence toujours par là quand quelqu'un s'inquiète d'un taux de complétion.
 - LE QUIZ COMMENCE À L'ÉCRAN D'ACCUEIL, PAS À LA QUESTION 1. Regarde le parcours entier dans cet ordre : combien arrivent sur le quiz, combien cliquent sur commencer, combien voient chaque question, combien laissent leur email. Chez la plupart des créatrices, la plus grosse fuite est la toute première marche : la moitié des visiteurs repartent de l'écran d'accueil sans voir une seule question. Si l'élève ne te parle que de ses questions, demande-lui d'abord ces deux chiffres là : ses vues, et son nombre de démarrages.
 - LA FUITE SE COMPTE EN PERSONNES, PAS EN POURCENTAGE. Une étape de fin de parcours porte sur beaucoup moins de monde : un départ y pèse lourd en pourcentage et ne coûte presque rien en réalité. Compare toujours en nombre de personnes avant de dire par quoi commencer.
+- ET AVANT DE CONCLURE QUE LA PAGE DÉÇOIT, DEMANDE D'OÙ VIENNENT LES VISITEURS. Une fuite à l'entrée a deux causes possibles qui donnent exactement le même chiffre : l'écran d'accueil déçoit, ou ce ne sont pas les bonnes personnes qui arrivent dessus. Tiquiz affiche la répartition par source dans les stats du quiz. Tant que l'élève ne l'a pas regardée, nomme les DEUX causes au lieu d'en choisir une : conseiller de réécrire une promesse qui va très bien, sur un trafic hors sujet, ne peut rien produire, et l'élève en conclura que tes conseils ne servent à rien.
+- "DIRECT" NE VEUT PAS DIRE "ILS ONT TAPÉ TON ADRESSE". La plupart des applications mobiles (Instagram, TikTok, messageries, mail), les QR codes et les liens dans un PDF ne transmettent pas la provenance. Une grosse part de direct est donc le cas NORMAL de quelqu'un qui publie sur les réseaux, pas un mystère ni un signe de mauvais trafic. Pour distinguer ses publications, l'élève peut étiqueter ses liens : ajouter ?utm_source=instagram à la fin de son lien de quiz, et une étiquette différente par endroit où il le publie.
 - UNE FUITE À L'ENTRÉE NE SE CORRIGE PAS DANS LES QUESTIONS. Elle se joue sur la promesse (titre, sous-titre), sur ce qu'on gagne à répondre, sur la durée annoncée, sur la visibilité du bouton, sur le temps de chargement, et surtout sur l'accord entre ce qui a été promis là où le lien est publié et ce que le visiteur trouve en arrivant. Ne fais jamais retoucher une question pour réparer ça.
 - SEUIL DE LECTURE : il faut une vingtaine de visiteurs sur une même question avant qu'un écart veuille dire autre chose que le hasard. Sur 8 personnes, une seule qui s'arrête pèse déjà 12%. Tant que l'élève est sous ce seuil, tu ne lui fais RIEN modifier : tu lui dis clairement qu'il n'y a pas assez de monde pour conclure, et tu l'orientes vers l'amont, amener plus de visiteurs sur le quiz.
 - LA QUESTION QUI PERD LES GENS EST CELLE QU'ILS ONT VUE EN DERNIER, pas la suivante. Quelqu'un qui abandonne entre la question 6 et la question 7 a vu la 6 et jamais la 7 : il ne peut pas avoir été rebuté par un texte qu'il n'a pas lu. Si l'élève te parle d'une chute "à la question 7", fais-lui regarder la 6.
@@ -290,6 +331,7 @@ export function buildCoachSystemPrompt(input: {
   progress?: CoachProgress | null;
   carnet?: CoachCarnetDay[];
   quizContext?: CoachQuizContext | null;
+  quizReadout?: CoachQuizReadout | null;
 }): { cacheablePrefix: string; dynamic: string } {
   const {
     instruction,
@@ -306,6 +348,7 @@ export function buildCoachSystemPrompt(input: {
     progress,
     carnet,
     quizContext,
+    quizReadout,
   } = input;
 
   const persona = instruction && instruction.trim() ? instruction.trim() : SYSTEM_PERSONA;
@@ -319,7 +362,7 @@ export function buildCoachSystemPrompt(input: {
 
   // ── Partie STABLE (mise en cache) : persona + regles + faits Tiquiz +
   //    programme + documents de reference admin. ──
-  let cacheablePrefix = `${persona}${SYSTEME_IO_LINK_RULES}${ATELIER_TOOLS_RULES}${TIQUIZ_FACTS}${STATS_READING_RULES}${ESCALADE_RULES}\n\n=== PROGRAMME (vue d'ensemble des jours) ===\n${index}`;
+  let cacheablePrefix = `${persona}${VALUE_CONTENT_RULES}${SYSTEME_IO_LINK_RULES}${ATELIER_TOOLS_RULES}${TIQUIZ_FACTS}${STATS_READING_RULES}${ESCALADE_RULES}\n\n=== PROGRAMME (vue d'ensemble des jours) ===\n${index}`;
 
   // Documents de connaissance charges par l'admin (bornes en taille).
   if (docs && docs.length) {
@@ -428,6 +471,51 @@ export function buildCoachSystemPrompt(input: {
       `\n\n=== SON QUIZ TIQUIZ (aide-le à l'améliorer si il le demande) ===\n` +
       lines.join("\n") +
       `\nSi l'élève veut améliorer son quiz, ses questions ou ses résultats, appuie-toi sur ces éléments concrets et sur le programme.`;
+  }
+
+  // ── LES CHIFFRES DE SON QUIZ (Jocelyne, 4 août 2026) ──
+  //
+  // Le bloc le plus important du prompt, et il n'existait pas. Sans
+  // chiffres, le coach généralisait la méthode : ça sonne juste, ça ne
+  // dit rien du quiz de la personne en face, et ça envoie réparer des
+  // choses qui n'ont rien.
+  //
+  // Les verdicts arrivent REDIGES par l'app qui détient les données. Le
+  // coach les reprend tels quels : c'est la seule façon que l'écran de
+  // stats et lui racontent la même histoire.
+  if (quizReadout?.scope === "quiz" && quizReadout.counts) {
+    const c = quizReadout.counts;
+    const lines = [
+      `Quiz analysé : "${quizReadout.quizTitle ?? "sans titre"}" (${c.questionCount} questions).`,
+      `Arrivent sur le quiz : ${c.views}${c.viewsReliable ? "" : " (comptage partiel, ne conclus pas sur les taux)"}`,
+      `Cliquent sur commencer : ${c.starts}`,
+      `Terminent les questions : ${c.completes}`,
+      `Laissent leur email : ${c.leads}`,
+    ];
+    if (quizReadout.funnelVerdict) lines.push("", quizReadout.funnelVerdict);
+    if (quizReadout.trafficVerdict) lines.push("", quizReadout.trafficVerdict);
+    dynamic +=
+      "\n\n=== LES CHIFFRES REELS DE SON QUIZ (source de vérité, non négociable) ===\n" +
+      lines.join("\n") +
+      "\nCes chiffres viennent de son compte. Tu t'appuies DESSUS et sur rien d'autre : " +
+      "aucun pourcentage que tu n'aurais pas là, aucune moyenne inventée, aucune " +
+      "comparaison avec d'autres élèves.";
+  } else {
+    // ON DIT CE QU'ON N'A PAS. C'est la moitié qui manquait : le coach
+    // ne savait même pas qu'il ne savait rien.
+    dynamic +=
+      "\n\n=== TU N'AS PAS SES CHIFFRES ===\n" +
+      (quizReadout?.scope === "account"
+        ? "Son compte Tiquiz est bien connecté, mais AUCUN quiz n'y est trouvé, ou plusieurs le sont sans qu'un seul soit choisi.\n" +
+          "SI TU NE VOIS AUCUN QUIZ ALORS QU'ELLE T'EN PARLE D'UN, dis-lui de vérifier avec QUEL compte Tiquiz l'Atelier est connecté : la liaison se fait par email, et beaucoup de gens ont deux adresses (une pro, une perso). Un compte relié par erreur à une adresse sans quiz donne exactement ça, et ça peut durer des semaines sans que rien ne l'alerte. Elle se déconnecte puis se reconnecte depuis le bon compte, dans les réglages de l'Atelier.\n" +
+          "SINON, demande-lui de choisir UN quiz dans le sélecteur de la page d'accueil : un funnel qui additionne plusieurs quiz ne veut rien dire."
+        : "Son compte n'est pas connecté, ou aucune donnée n'est encore remontée.") +
+      "\nTant que tu ne les as pas : tu ne cites AUCUN chiffre, tu ne nommes AUCUNE " +
+      "question, tu ne dis pas où ça décroche, et tu ne compares pas à une moyenne. " +
+      "Tu le dis franchement, en une phrase, tu expliques comment te les donner, et tu " +
+      "aides sur ce qui ne dépend pas des chiffres (la promesse, la structure, l'offre). " +
+      "Inventer un diagnostic plausible est la pire chose que tu puisses faire : " +
+      "l'élève applique, attend, ne voit rien changer, et perd des semaines.";
   }
 
   // Focus sur le jour en cours (si l'eleve est sur une page jour).

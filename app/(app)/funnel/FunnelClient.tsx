@@ -69,7 +69,11 @@ export function FunnelClient({
   }
 
   /** Enregistre UNE des deux moitiés. L'autre est conservée côté serveur. */
-  async function persist(part: { byResult?: FunnelResultEmail[]; launch?: FunnelAssets["launch"] }) {
+  async function persist(part: {
+    byResult?: FunnelResultEmail[];
+    launch?: FunnelAssets["launch"];
+    knownProfiles?: string[];
+  }) {
     const res = await fetch("/api/me/funnel", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -99,38 +103,52 @@ export function FunnelClient({
       const titles: string[] = Array.isArray(json.profiles) ? json.profiles : [];
       if (!res.ok || titles.length === 0) throw new Error("profiles");
 
-      let done = 0;
       setStep(`J'écris la séquence de tes ${titles.length} profils...`);
 
-      const sequences = await Promise.all(
-        titles.map(async (title) => {
-          try {
-            const r = await fetch("/api/me/funnel/sequence", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ profile: title }),
-            });
-            const j = await r.json();
-            if (!r.ok || !Array.isArray(j.emails)) return [];
-            return j.emails as FunnelResultEmail[];
-          } catch {
-            // Un profil qui echoue n'emporte pas les autres : ils
-            // s'affichent, et relancer ne coute qu'un clic.
-            return [];
-          } finally {
-            done += 1;
-            setStep(`Profil ${done} sur ${titles.length} écrit...`);
-          }
-        }),
-      );
+      // UN PROFIL À LA FOIS, et c'est la correction du 4 août 2026.
+      //
+      // Fabienne : "j'ai créé mes 3 tags, les 3 campagnes et les 3
+      // workflows, et quand je demande à générer les mails il ne peut en
+      // faire qu'un ou parfois 2, mais jamais les 3." Le "parfois 2" est
+      // toute l'information : un bug de code donnerait toujours le même
+      // nombre. Ici les trois demandes partaient EN MÊME TEMPS
+      // (`Promise.all`), chacune pour 8000 tokens, et l'API refusait les
+      // appels en trop. Les profils refusés ressortaient vides, en
+      // silence.
+      //
+      // En série, c'est plus long, et c'est le bon compromis : personne
+      // ne préfère recevoir une campagne sur trois plus vite.
+      const sequences: FunnelResultEmail[][] = [];
+      for (const [i, title] of titles.entries()) {
+        setStep(`J'écris le profil ${i + 1} sur ${titles.length}, "${title}"...`);
+        try {
+          const r = await fetch("/api/me/funnel/sequence", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ profile: title }),
+          });
+          const j = await r.json();
+          sequences.push(!r.ok || !Array.isArray(j.emails) ? [] : (j.emails as FunnelResultEmail[]));
+        } catch {
+          // Un profil qui échoue n'emporte pas les autres : ils
+          // s'affichent, et relancer ne coûte qu'un clic.
+          sequences.push([]);
+        }
+      }
 
       setStep("J'enregistre...");
-      await persist({ byResult: sequences.flat() });
+      // On envoie AUSSI la liste des profils actuels : le serveur garde
+      // les sequences des profils qu'on n'a pas reussi a ecrire cette
+      // fois, et retire celles d'un profil disparu.
+      await persist({ byResult: sequences.flat(), knownProfiles: titles });
 
-      const missing = titles.length - sequences.filter((s) => s.length > 0).length;
-      if (missing > 0) {
+      // On NOMME ce qui manque. "2 profils n'ont pas abouti" oblige à
+      // aller comparer soi-même pour savoir lesquels relancer.
+      const missingTitles = titles.filter((_, i) => (sequences[i]?.length ?? 0) === 0);
+      if (missingTitles.length > 0) {
         toast.warning(
-          `C'est écrit, mais ${missing} profil${missing > 1 ? "s n'ont" : " n'a"} pas abouti. Relance pour compléter.`,
+          `C'est écrit, sauf ${missingTitles.map((t) => `"${t}"`).join(" et ")}. ` +
+            `Relance pour compléter : ce qui est déjà écrit est gardé.`,
         );
       } else {
         toast.success("Tes séquences sont prêtes.");

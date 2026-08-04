@@ -8,7 +8,7 @@ import "server-only";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { earnedBadgeCodes, badgeByCode } from "@/lib/gamification";
 import { snapshotFromDays, getDaysWithProgress } from "@/lib/parcours";
-import type { TiquizMetrics } from "@/lib/types";
+import type { TiquizMetrics, TiquizReadout } from "@/lib/types";
 
 const TIQUIZ_BASE = (process.env.TIQUIZ_BASE_URL ?? "https://quiz.tipote.com").trim();
 // Pont Atelier <-> Tipote (retour Maurice, 28 juillet 2026) : les eleves
@@ -95,7 +95,23 @@ export function scopeToQuery(scope: string | null | undefined): string {
  */
 async function resolveScope(userId: string, conn: TiquizConnection): Promise<string> {
   const stored = String(conn.selected_scope ?? "").trim();
-  if (stored.startsWith("quiz:") || stored.startsWith("project:")) return stored;
+  // LA SELECTION COLLE (demande Bene, 4 aout 2026) : "si un nouveau quiz
+  // est cree je veux que la selection reste sur le dernier quiz choisi et
+  // pas qu'il bascule sur le nouveau".
+  //
+  // Un projet reste tel quel. Un quiz est verifie : s'il a ete SUPPRIME,
+  // garder sa selection donnerait un ecran vide et un coach sans chiffres,
+  // sans que rien ne l'explique. On ne re-choisit donc QUE dans ce cas la,
+  // jamais parce qu'un quiz plus recent est apparu.
+  if (stored.startsWith("project:")) return stored;
+  if (stored.startsWith("quiz:")) {
+    const id = stored.slice("quiz:".length);
+    const current = await fetchTiquizQuizList(userId);
+    // Liste indisponible (pont muet) : on garde la selection. Mieux vaut
+    // la memoire que le hasard.
+    if (!current) return stored;
+    if (current.quizzes.some((q) => q.id === id)) return stored;
+  }
 
   const list = await fetchTiquizQuizList(userId);
   const firstQuiz = list?.quizzes.find((q) => q.mode !== "survey");
@@ -267,6 +283,38 @@ async function fetchMetrics(
   }
 }
 
+/**
+ * La LECTURE CHIFFREE du quiz selectionne : compteurs du parcours entier
+ * (demarrages compris) et verdicts DEJA REDIGES par l'app qui detient
+ * les donnees.
+ *
+ * On ne recalcule rien ici, et c'est volontaire : deux endroits qui
+ * relisent les memes pourcentages finissent toujours par dire deux
+ * choses differentes. L'ecran de stats que l'eleve regarde et le coach
+ * a qui elle parle doivent dire la MEME phrase (Jocelyne, 4 aout 2026).
+ */
+export async function fetchQuizReadout(userId: string): Promise<TiquizReadout | null> {
+  const conn = await getTiquizConnection(userId);
+  if (!conn?.token || !SHARED) return null;
+  try {
+    // MEME scope resolu que le reste de l'app : sinon le coach parlerait
+    // d'un autre quiz que l'ecran que l'eleve a sous les yeux.
+    const scope = await resolveScope(userId, conn);
+    const res = await fetch(`${baseFor(conn.provider)}/api/partner/metrics${scopeToQuery(scope)}`, {
+      headers: { "x-partner-secret": SHARED, Authorization: `Bearer ${conn.token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (!json?.ok || !json.readout) return null;
+    return json.readout as TiquizReadout;
+  } catch {
+    // Pont indisponible : le coach doit alors dire qu'il n'a pas les
+    // chiffres, PAS en inventer. C'est geré dans le prompt.
+    return null;
+  }
+}
+
 export async function saveConnection(
   userId: string,
   token: string,
@@ -392,6 +440,33 @@ export async function ensureAutoConnect(
 
   const linked = await autoLink(email);
   if (!linked) return false;
+
+  // UN COMPTE VIDE N'EST PAS LE BON COMPTE (drame Jocelyne, 4 aout 2026).
+  //
+  // La liaison automatique matche sur l'email de l'Atelier. Jocelyne en a
+  // deux : jocelyne@j-bacquet.fr cote Atelier, et
+  // jocelynebacquet.auteur@gmail.com cote Tiquiz, ou vivent ses 3 quiz.
+  // Elle avait AUSSI un compte Tiquiz sous son adresse Atelier, cree puis
+  // abandonne, sans aucun quiz. C'est celui-la qu'on a relie tout seul, le
+  // 25 juillet, en ouvrant simplement son tableau de bord.
+  //
+  // Resultat : pendant six semaines, chaque chiffre remontait a zero, et
+  // rien ne l'expliquait. Le coach n'a jamais eu ses stats et ne pouvait
+  // pas le savoir.
+  //
+  // Un compte sans le moindre quiz est le signal le plus clair qu'on s'est
+  // trompe de compte. On ne le relie donc PAS en silence. On ne perd rien
+  // a attendre : sans connexion enregistree, la liaison sera retentee au
+  // prochain passage sur le tableau de bord, et elle aboutira le jour ou
+  // il y aura vraiment un quiz a suivre.
+  //
+  // `null` = on n'a pas pu compter (pont muet). On relie quand meme :
+  // refuser sur une panne reseau priverait quelqu'un de sa connexion.
+  const n = await countQuizzesFor(linked.token, linked.provider);
+  if (n === 0) {
+    void revokeTokenAt(linked.token, linked.provider);
+    return false;
+  }
 
   await saveConnection(userId, linked.token, linked.tiquizUserId, linked.email, linked.provider);
   await syncMetrics(userId);
