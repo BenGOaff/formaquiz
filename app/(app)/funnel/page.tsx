@@ -1,4 +1,3 @@
-import { isAdminEmail } from "@/lib/adminEmails";
 import { redirect } from "next/navigation";
 import { getViewer } from "@/lib/parcours";
 import { getFunnelAssets, getFunnelIntentions } from "@/lib/generate/funnel";
@@ -20,7 +19,6 @@ export default async function FunnelPage() {
   const locked = !canAccessSection(viewer.tier, "/funnel");
   // L'onglet du generateur de bonus n'existe que pour elle, le temps
   // du test (cf. app/(app)/labo-bonus).
-  const isAdmin = isAdminEmail(viewer.email);
   const checkoutUrl = upsellUrl();
 
   const [{ assets, generatedAt }, templates, profiles, intentions] = await Promise.all([
@@ -69,7 +67,6 @@ export default async function FunnelPage() {
             templates={templates}
             profiles={profileOptions}
             initialIntentions={intentions}
-            isAdmin={isAdmin}
           />
         </LockedSection>
       ) : (
@@ -79,7 +76,6 @@ export default async function FunnelPage() {
           templates={templates}
           profiles={profileOptions}
           initialIntentions={intentions}
-          isAdmin={isAdmin}
         />
       )}
     </div>

@@ -228,12 +228,42 @@ Remplace "raison courte" par 3 à 8 mots décrivant le motif (par exemple : "inf
 // Outils de l'espace : le coach ORIENTE vers le bon outil au lieu de tout
 // faire lui-meme (retours Bene 25 juillet 2026). Injecte hors SYSTEM_PERSONA
 // pour s'appliquer aussi avec une instruction admin personnalisee.
+/**
+ * LE GÉNÉRATEUR DE BONUS POST-QUIZ, POUR LE COACH.
+ *
+ * Béné, 5 août 2026 : "il faut aussi informer le coach pour qu'il puisse
+ * proposer cette nouvelle option si l'user ne sait pas quel bonus offrir
+ * et qu'il sache comment les guider, où trouver ça, ce que ça propose."
+ *
+ * Trois choses, et les trois comptent autant :
+ * 1. OÙ c'est (une nouveauté qu'on ne sait pas trouver n'existe pas) ;
+ * 2. CE QUE ça produit, pour qu'il ne promette ni plus ni moins ;
+ * 3. QUAND le proposer, pour qu'il ne le sorte pas à quelqu'un qui n'a
+ *    pas encore de quiz en ligne.
+ *
+ * Les critères de valeur sont les MÊMES que ceux du générateur
+ * (`lib/prompts/bonus.ts`) : si le coach conseillait autre chose que ce
+ * que l'outil produit, l'élève recevrait deux avis contradictoires dans
+ * le même espace.
+ */
+const BONUS_GENERATOR_RULES = `- NE SAIT PAS QUEL BONUS OFFRIR, ou veut un cadeau plus fort que son PDF actuel : il existe un GÉNÉRATEUR DE BONUS POST-QUIZ. Page "Bonus" du menu, onglet "Bonus post-quiz". Propose-le spontanément quand l'élève bloque sur "quoi offrir", "mon lead magnet ne donne rien", "personne ne partage mon quiz", ou quand il cherche quoi mettre derrière l'étape de partage.
+  CE QU'IL FAUT AVANT : son compte Tiquiz doit être connecté à l'Atelier, et il doit avoir un quiz. L'outil reprend tout seul le thème du quiz, son ton (tutoiement ou vouvoiement), ses profils de résultat et son tag de partage. S'il n'a pas encore de quiz, l'outil refuse et le dit : dans ce cas, renvoie-le d'abord vers la création du quiz.
+  CE QU'IL SAISIT, ET C'EST TOUT : la promesse de son offre payante en une phrase, le format de cette offre, son prix, le moment de remise (à la fin du quiz, ou après un partage), et s'il veut UN bonus commun ou UN PAR PROFIL.
+  CE QUE ÇA REND : d'abord 3 pistes différentes, avec une recommandation motivée, il en choisit une. Puis trois dossiers : le guide de création (pour lui), le contenu du bonus (pour son visiteur, prêt à copier), et de quoi en parler (titre, punchline, 5 puces promesses pour sa campagne et ses posts, plus l'email de livraison). Tout s'édite avant export, et s'exporte en PDF.
+  CE QUE ÇA NE FAIT PAS : ça ne publie rien et ça ne branche rien tout seul. C'est lui qui fabrique le fichier ou la page, et qui règle l'automatisation Systeme.io.
+- QUAND IL TE DEMANDE QUOI OFFRIR, avant de l'envoyer sur l'outil, aide-le à cadrer avec ces cinq critères, qui sont exactement ceux du générateur : UTILE (un bénéfice concret, pas "mieux comprendre"), SPÉCIFIQUE (une méthode, un outil, pas un conseil qui vaut pour n'importe quel métier), CIBLÉ (écrit pour la personne qui vient d'obtenir CE résultat), APPLICABLE (une action à faire aujourd'hui), UNIQUE (ses mots, ses exemples : si un concurrent pouvait publier le même en changeant le logo, ce n'est pas le sien).
+  Et le piège à nommer : un bonus PERSONNALISÉ (qui change selon le profil obtenu) est le plus fort qui existe, mais un bonus SUR MESURE (qui demande à l'élève de lire ou de répondre une fois par visiteur) s'écroule au quarantième. Un quiz qui marche ramène des centaines de personnes : c'est une réussite qui se transforme en dette.
+- LE BONUS ARRIVE PAR EMAIL, jamais collé dans la page de résultat (elle mène déjà à son offre). Le chemin est toujours le même : le fichier vit sur un drive (partage réglé sur "tout le monde avec le lien", en lecture) ou sur une page de son tunnel, et c'est un TAG Systeme.io qui déclenche l'email de livraison. Un outil interactif (calculateur, générateur) ne se monte pas dans un tableur : le guide lui donne un prompt tout prêt à coller dans Claude ou ChatGPT, et la page produite se colle dans un bloc de code d'une page Systeme.io.
+
+`;
+
 const ATELIER_TOOLS_RULES = `
 
 === OUTILS DE L'ESPACE (oriente l'élève vers le bon outil) ===
 Une partie de ton rôle est d'ORIENTER l'élève vers l'outil de l'espace qui fait le travail, pas de tout rédiger toi-même.
 - Lier / connecter son compte Tiquiz à l'Atelier : OUI, c'est possible. Sur l'accueil, il y a le bouton "Connecter mon compte Tiquiz". Une fois connecté, l'Atelier suit ici le quiz qu'il construit dans Tiquiz (progression, badges). Si l'élève demande si on peut lier l'Atelier et Tiquiz, réponds que oui et indique-lui ce bouton sur l'accueil.
-- Écrire ses emails (email de bienvenue, séquence de bienvenue, un email par profil de résultat, séquence de vente, kit de lancement) : ne les rédige PAS toi-même. Envoie l'élève sur la page "Campagne" (bouton "Générer ma campagne"), qui écrit tout ça à partir de son carnet et de son métier. Rappelle-lui au passage de bien remplir son carnet pour un meilleur résultat.`;
+- Écrire ses emails (un email par profil de résultat, séquence post-quiz, posts de promotion du quiz, modèles) : ne les rédige PAS toi-même. Envoie l'élève sur la page "Bonus" du menu (elle s'appelait "Campagne" avant le 5 août 2026), onglet "Emails" ou "Promo du quiz", qui écrit tout ça à partir de son carnet et de son métier. Rappelle-lui au passage de bien remplir son carnet pour un meilleur résultat.
+${BONUS_GENERATOR_RULES}`;
 
 // Fonctionnement de Tiquiz : faits verifies (extraits de l'app Tiquiz) pour
 // que le coach reponde seul aux questions d'outil au lieu d'escalader

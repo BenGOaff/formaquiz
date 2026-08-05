@@ -41,16 +41,12 @@ export function FunnelClient({
   templates = [],
   profiles = [],
   initialIntentions = {},
-  isAdmin = false,
 }: {
   initialAssets: FunnelAssets | null;
   generatedAt: string | null;
   templates?: SioTemplate[];
   profiles?: ProfileOption[];
   initialIntentions?: IntentionMap;
-  /** Le generateur de bonus est en test : son onglet n'existe que pour
-   *  Bene, le temps qu'elle verifie la sortie sur de vrais cas. */
-  isAdmin?: boolean;
 }) {
   // ONGLETS (demande Bene, 5 aout 2026 : "systeme d'onglets comme les
   // reglages pour trouver plus facilement"). Les trois blocs
@@ -228,14 +224,12 @@ export function FunnelClient({
         <TabButton active={tab === "modeles"} onClick={() => setTab("modeles")} icon={Download}>
           Modèles
         </TabButton>
-        {/* En test, et visible d'elle seule : le generateur de bonus
-            vit sur une page non listee tant que sa sortie n'a pas ete
-            verifiee sur de vrais cas. */}
-        {isAdmin && (
-          <TabLink href="/labo-bonus" icon={Sparkles}>
-            Bonus post-quiz
-          </TabLink>
-        )}
+        {/* OUVERT A TOUT LE MONDE depuis le 5 aout 2026, apres le test
+            de Bene sur de vrais cas. C'etait une page non listee, gatee
+            sur l'admin, le temps de verifier la sortie. */}
+        <TabLink href="/labo-bonus" icon={Sparkles}>
+          Bonus post-quiz
+        </TabLink>
       </TabBar>
 
       {/* DEUX GENERATIONS, PAS SEPT (retour Bene, 3 aout 2026 : "je veux
