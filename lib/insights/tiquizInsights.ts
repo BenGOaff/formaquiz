@@ -56,10 +56,18 @@ export function computeTiquizInsights(metrics: TiquizMetrics | null): TiquizInsi
         tone: "info",
         title:
           views === 0
-            ? "Ton quiz n'a pas encore de visiteurs."
+            // "Ton quiz n'a pas encore de visiteurs" est une affirmation
+            // sur une chose qu'on ne sait pas : si l'Atelier interroge le
+            // mauvais compte, elle est fausse, et c'est exactement ce que
+            // Jocelyne a lu pendant six semaines avec 2002 vues ailleurs
+            // (cf. lib/tiquizAccount.ts). On decrit ce qu'on observe,
+            // sans conclure a sa place.
+            ? "Aucune visite enregistrée sur le compte relié."
             : "Pas encore assez de visiteurs pour analyser tes réglages.",
         action:
-          "On se concentre sur la diffusion : lien en bio, signature email, et surtout la page de remerciement de ton freebie actuel.",
+          views === 0
+            ? "Deux choses à vérifier avant d'en conclure quoi que ce soit : que c'est bien le compte où vivent tes quiz (l'adresse est affichée juste au dessus), et que ton quiz est publié. Si les deux sont bons, on se concentre sur la diffusion : lien en bio, signature email, et surtout la page de remerciement de ton freebie actuel."
+            : "On se concentre sur la diffusion : lien en bio, signature email, et surtout la page de remerciement de ton freebie actuel.",
         dayNumber: 5,
       },
     ];

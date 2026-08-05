@@ -7,9 +7,22 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { LinkedAccountNotice } from "@/components/LinkedAccountNotice";
 import type { QuizAudit, QuizIssue } from "@/lib/quizDoctor";
 
-export function QuizDoctor({ connected }: { connected: boolean }) {
+export function QuizDoctor({
+  connected,
+  provider = "tiquiz",
+  providerName = "Tiquiz",
+  account = null,
+}: {
+  connected: boolean;
+  provider?: string;
+  providerName?: string;
+  /** L'adresse du compte relié. Sans elle, "aucun quiz détecté" est une
+   *  accusation qu'on ne peut pas verifier (cf. lib/tiquizAccount.ts). */
+  account?: string | null;
+}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [quizzes, setQuizzes] = useState<QuizAudit[]>([]);
@@ -77,10 +90,24 @@ export function QuizDoctor({ connected }: { connected: boolean }) {
           </CardContent>
         </Card>
       ) : quizzes.length === 0 ? (
+        // Ce bloc annoncait qu'aucun quiz n'existait sur le compte, et
+        // enchainait sur "cree et publie ton quiz (Jour 4)". C'est ce
+        // que Jocelyne a lu pendant six semaines avec trois quiz en
+        // ligne sur son autre adresse. On ne peut pas savoir laquelle
+        // des deux situations c'est, donc on nomme les deux et on
+        // montre l'adresse qu'on interroge (cf. lib/tiquizAccount.ts).
         <Card>
-          <CardContent className="py-6 text-center text-sm text-muted-foreground">
-            Aucun quiz détecté sur ton compte Tiquiz. Crée et publie ton quiz (Jour 4), reviens
-            ici, on l'auditera.
+          <CardContent className="flex flex-col gap-3 py-5 text-sm text-muted-foreground">
+            <LinkedAccountNotice
+              reason="no-quiz"
+              provider={provider}
+              providerName={providerName}
+              email={account}
+            />
+            <p>
+              Si c'est bien le bon compte, alors c'est le moment : crée et publie ton quiz
+              (Jour 4), reviens ici, on l'auditera.
+            </p>
           </CardContent>
         </Card>
       ) : (

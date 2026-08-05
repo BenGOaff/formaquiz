@@ -16,6 +16,8 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { TiquizMetrics } from "@/lib/types";
+import { readAccountSilence } from "@/lib/tiquizAccount";
+import { LinkedAccountNotice } from "@/components/LinkedAccountNotice";
 
 const STALE_MS = 15 * 60 * 1000;
 
@@ -24,11 +26,19 @@ export function TiquizPanel({
   metrics,
   lastSyncedAt,
   connectedEmail = null,
+  provider = "tiquiz",
+  providerName = "Tiquiz",
+  quizCount = null,
 }: {
   connected: boolean;
   metrics: TiquizMetrics | null;
   lastSyncedAt: string | null;
   connectedEmail?: string | null;
+  provider?: string;
+  providerName?: string;
+  /** Nombre de quiz sur le compte relie. `null` = inconnu, et on ne
+   *  conclut alors RIEN (cf. lib/tiquizAccount.ts). */
+  quizCount?: number | null;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -107,6 +117,11 @@ export function TiquizPanel({
   }
 
   const m = metrics ?? { leads: 0, views: 0, completes: 0, shares: 0, topQuiz: null };
+  const silence = readAccountSilence({
+    connected,
+    quizCount,
+    views: metrics ? Number(m.views) : null,
+  });
   const tiles = [
     { label: "Leads", value: m.leads, icon: Users },
     { label: "Vues", value: m.views, icon: Eye },
@@ -127,6 +142,19 @@ export function TiquizPanel({
             {busy ? "..." : "Actualiser"}
           </Button>
         </div>
+
+        {/* QUATRE TUILES A ZERO NE SONT PAS UNE REPONSE. C'est ce que
+            Jocelyne a regarde pendant six semaines, sur un compte qui
+            n'etait pas le sien. Quand le compte relie est muet, on dit
+            lequel on interroge, et on nomme les deux explications. */}
+        {silence && (
+          <LinkedAccountNotice
+            reason={silence}
+            provider={provider}
+            providerName={providerName}
+            email={connectedEmail}
+          />
+        )}
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {tiles.map((t) => (
