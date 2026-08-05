@@ -190,9 +190,24 @@ test("la production se fait en trois blocs séparés", () => {
 });
 
 test("le contenu s'adapte au format, il ne devient pas de la prose", () => {
-  const p = buildProductionSystemPrompt(brief(), "content");
+  // Un swipe file donne ses modeles, un plan donne ses etapes datees :
+  // le contenu ne se rabat pas sur des paragraphes quel que soit le
+  // format demande.
+  const p = buildProductionSystemPrompt(brief(), "content", undefined, "swipe file");
   assert.match(p, /ADAPTE-TOI AU FORMAT/);
-  assert.match(p, /la formule exacte/);
+  assert.match(p, /swipe file/);
+});
+
+test("pour un outil, le contenu ecrit les MOTS et le guide la mecanique", () => {
+  // Deux blocs qui decrivent tous les deux la formule finissent par ne
+  // plus decrire la meme : le contenu ecrit ce que la page AFFICHE, le
+  // prompt du guide dit comment elle CALCULE.
+  const contenu = buildProductionSystemPrompt(brief(), "content", undefined, "calculateur");
+  assert.match(contenu, /PAGE INTERACTIVE/);
+  assert.match(contenu, /Aucun code, aucun prompt, aucune formule ici/);
+
+  const guide = buildProductionSystemPrompt(brief(), "guide", undefined, "calculateur");
+  assert.match(guide, /la formule exacte/);
 });
 
 test("la route ne renvoie jamais de texte brut illisible", () => {
@@ -331,4 +346,71 @@ test("une carte dit où on en est sans qu'on l'ouvre", () => {
   );
   assert.match(client, /folderStatus\(/);
   assert.match(client, /À générer/);
+});
+
+// ── Un outil se fait coder par l'IA, pas monter dans un tableur ──────
+//
+// Béné, 5 août 2026, devant un guide qui lui proposait Google Sheets,
+// une formule par champ, la feuille publiée en page web, "entre 2 h 45
+// et 3 heures pour les quatre profils", puis un service payant :
+//
+//   "On peut plutôt demander à Claude ou GPT de coder ça en donnant le
+//    prompt exact à utiliser à l'user, on lui dit de l'héberger sur une
+//    page de blog ou de tunnel sur Systeme.io et d'envoyer le lien dans
+//    le premier email ?? 1000000 fois plus simple et moderne !!"
+
+test("un calculateur ne renvoie plus vers un tableur", () => {
+  const p = buildProductionSystemPrompt(brief(), "guide", undefined, "calculateur");
+  assert.match(p, /INTERDIT de proposer un tableur/);
+  assert.match(p, /Claude ou ChatGPT/);
+});
+
+test("le prompt est donne TOUT PRET, dans un bloc de code", () => {
+  // Un prompt qu'il faut reconstituer en recopiant six paragraphes n'est
+  // pas un prompt, c'est un exercice.
+  const p = buildProductionSystemPrompt(brief(), "guide", undefined, "calculateur");
+  assert.match(p, /## Le prompt a copier dans Claude ou ChatGPT/);
+  assert.match(p, /BLOC DE CODE markdown/);
+  assert.match(p, /AUCUNE decision a prendre/);
+});
+
+test("la page produite doit tenir dans un bloc de code de page", () => {
+  // Un seul fichier, aucune dependance externe : c'est la condition pour
+  // que ca marche colle dans une page de tunnel.
+  const p = buildProductionSystemPrompt(brief(), "guide", undefined, "calculateur");
+  assert.match(p, /UN SEUL fichier HTML autonome/);
+  assert.match(p, /AUCUNE bibliotheque externe/);
+  assert.match(p, /aucune donnee envoyee nulle part/);
+});
+
+test("un outil se livre par une page, un document par un drive", () => {
+  const page = buildProductionSystemPrompt(brief(), "guide", undefined, "calculateur");
+  assert.match(page, /page de blog, ou une page de tunnel/);
+  assert.doesNotMatch(page, /heberge sur un drive/);
+
+  const doc = buildProductionSystemPrompt(brief(), "guide", undefined, "checklist");
+  assert.match(doc, /heberge sur un drive/);
+  assert.doesNotMatch(doc, /INTERDIT de proposer un tableur/);
+});
+
+test("dans les trois formes, c'est le TAG qui declenche l'email", () => {
+  // C'est ce que le tout premier guide avait rate, et ca ne doit pas se
+  // reperdre en changeant la premiere etape.
+  for (const f of ["calculateur", "checklist", "atelier live"]) {
+    const p = buildProductionSystemPrompt(brief(), "guide", undefined, f);
+    assert.match(p, /Tag ajoute a un contact/, f);
+    assert.match(p, /N'ECRIS JAMAIS qu'il faut coller le lien dans les resultats/, f);
+  }
+});
+
+test("un bonus decline ne fait pas coder quatre pages", () => {
+  const p = buildProductionSystemPrompt(brief({ variant: "per_result" }), "guide", 0, "calculateur");
+  assert.match(p, /UN SEUL PROMPT, pas quatre/);
+});
+
+test("la route transmet le format choisi", () => {
+  // Sans lui, la regle de forme ne sert a rien : le guide retombe sur le
+  // document quel que soit l'outil choisi.
+  const src = readFileSync(new URL("../../app/api/me/bonus/route.ts", import.meta.url), "utf8");
+  assert.match(src, /input\.chosen\.format/);
 });

@@ -35,6 +35,13 @@ export type DocBlock =
    *  pouvoir le poser dans une pastille au lieu de le laisser dans le
    *  texte. */
   | { kind: "steps"; items: { label: string; text: string }[] }
+  /** Un bloc de code, rendu tel quel et copiable d'un bouton.
+   *
+   *  Il existe pour le PROMPT à donner à Claude ou ChatGPT (retour Béné,
+   *  5 août 2026). Un prompt qu'on doit reconstituer en recopiant six
+   *  paragraphes n'est pas un prompt, c'est un exercice : il lui faut son
+   *  cadre, sa police à chasse fixe et son bouton Copier. */
+  | { kind: "code"; text: string }
   /** Un sous-titre `###` : il ouvre un bloc a lui, avec son contenu. */
   | { kind: "sub"; title: string; blocks: DocBlock[] };
 
@@ -76,6 +83,10 @@ export function parseBonusDoc(markdown: string): BonusDoc {
   let current: DocBlock[] = lead;
   let sub: DocBlock[] | null = null;
   let buffer: string[] = [];
+  // Dans une clôture ```, on ne parse plus RIEN : un prompt contient des
+  // tirets, des dièses et des chiffres, qui deviendraient sinon des
+  // listes, des titres et des étapes.
+  let code: string[] | null = null;
 
   const target = () => sub ?? current;
 
@@ -88,6 +99,23 @@ export function parseBonusDoc(markdown: string): BonusDoc {
 
   for (const raw of lines) {
     const line = raw.trimEnd();
+
+    if (line.trimStart().startsWith("```")) {
+      if (code === null) {
+        flush();
+        code = [];
+      } else {
+        const text = code.join("\n").replace(/^\n+|\n+$/g, "");
+        if (text) target().push({ kind: "code", text });
+        code = null;
+      }
+      continue;
+    }
+    if (code !== null) {
+      // Verbatim : l'indentation d'un prompt fait partie du prompt.
+      code.push(raw.replace(/\r/g, ""));
+      continue;
+    }
 
     // Les filets horizontaux sont du bruit : les sections sont déjà
     // séparées visuellement, et un "---" affiché littéralement est ce
@@ -124,6 +152,12 @@ export function parseBonusDoc(markdown: string): BonusDoc {
       continue;
     }
     buffer.push(line.trim());
+  }
+  // Une clôture jamais refermée (le modèle oublie le ``` final) ne doit
+  // pas avaler la fin du document en silence.
+  if (code !== null) {
+    const text = code.join("\n").replace(/^\n+|\n+$/g, "");
+    if (text) target().push({ kind: "code", text });
   }
   flush();
 
@@ -180,6 +214,7 @@ function pushBlocks(blocks: DocBlock[], out: string[], indent: string) {
     if (b.kind === "para") out.push(indent + b.text);
     if (b.kind === "list") for (const it of b.items) out.push(`${indent}- ${it}`);
     if (b.kind === "steps") for (const it of b.items) out.push(`${indent}${it.label}. ${it.text}`);
+    if (b.kind === "code") out.push(b.text);
     if (b.kind === "sub") {
       out.push("", indent + b.title);
       pushBlocks(b.blocks, out, indent);

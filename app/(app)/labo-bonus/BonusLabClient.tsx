@@ -46,8 +46,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BonusDocument } from "@/components/BonusDocument";
+import { RichTextEditor } from "@/components/admin/RichTextEditor";
 import { failureCopy } from "@/lib/aiFailure";
 import { hasStructure, parseBonusDoc } from "@/lib/bonus/document";
+import { editorHtmlToMarkdown, markdownToEditorHtml } from "@/lib/bonus/markdownHtml";
 import { buildPrintableHtml } from "@/lib/bonus/printable";
 import {
   BLOCK_LABEL,
@@ -554,13 +556,18 @@ export function BonusLabClient({
       </div>
 
       {/* UN TEXTE GENERE EST UN BROUILLON, PAS UN LIVRABLE : elle
-          corrige sur place, et l'export reprend sa version. */}
+          corrige sur place, et l'export reprend sa version.
+          "On tombe sur le markdown au lieu d'un bel editeur alors qu'on
+          l'a partout cet editeur" (Bene, 5 aout 2026). C'est le MEME
+          editeur que l'admin des jours. Le document reste stocke en
+          markdown, `lib/bonus/markdownHtml.ts` fait le pont : le rendu et
+          le PDF ne changent pas d'un pixel. */}
       {value && isEditing && (
-        <textarea
-          value={value}
-          onChange={(e) => setBlocks((b) => ({ ...b, [key]: e.target.value }))}
-          rows={22}
-          className="w-full rounded-lg border bg-background px-3 py-2 font-mono text-xs leading-relaxed"
+        <RichTextEditor
+          key={key}
+          value={markdownToEditorHtml(value)}
+          onChange={(html) => setBlocks((b) => ({ ...b, [key]: editorHtmlToMarkdown(html) }))}
+          figures={false}
         />
       )}
       {value && !isEditing && <Rendered markdown={value} />}

@@ -41,6 +41,10 @@
 // et son écran est gaté sur `virality_enabled`. Une version par profil
 // passe donc forcément par les tags Systeme.io.
 
+// Import RELATIF avec l'extension : le runner de tests de ce repo ne
+// resout pas l'alias `@/`.
+import { bonusShape, type BonusShape } from "../bonus/shape.ts";
+
 /** Les formats proposables. Liste fermée : un modèle à qui on laisse
  *  inventer un format propose "un ebook complet" à la troisième piste. */
 export const BONUS_FORMATS = [
@@ -302,7 +306,37 @@ const PROMISE_BULLETS = [
  * fichier vit sur un drive, et c'est un TAG Systeme.io qui déclenche
  * l'email de livraison.
  */
-function deliveryFacts(b: BonusBrief): string {
+/**
+ * LE PROMPT QU'ON DONNE À LA CRÉATRICE, POUR QU'ELLE LE DONNE À L'IA.
+ *
+ * Béné, 5 août 2026 : "on peut plutôt demander à Claude ou GPT de coder
+ * ça en donnant le prompt exact à utiliser à l'user, on lui dit de
+ * l'héberger sur une page de blog ou de tunnel sur Systeme.io et
+ * d'envoyer le lien dans le premier email ?? 1000000 fois plus simple et
+ * moderne !!"
+ *
+ * Ce qu'elle venait de lire : Google Sheets, une formule par champ, la
+ * feuille publiée en page web, "entre 2 h 45 et 3 heures pour les quatre
+ * profils", et un service payant en repli. Elle a raison sur les deux
+ * plans : ce temps là n'a plus de raison d'être, et une feuille de calcul
+ * publiée n'est pas un livrable.
+ *
+ * Les contraintes techniques ci-dessous ne sont pas décoratives. Un
+ * fichier unique sans dépendance, c'est ce qui se colle dans un bloc de
+ * code d'une page de tunnel. Tout calculé dans le navigateur, c'est ce
+ * qui évite d'expliquer le RGPD à quelqu'un qui voulait juste offrir un
+ * calculateur.
+ */
+const AI_BUILT_PAGE = [
+  "COMMENT ELLE FABRIQUE CET OUTIL : elle ne le code pas, et elle ne le monte pas dans un tableur. Elle le fait ECRIRE par Claude ou ChatGPT, et TU LUI DONNES LE PROMPT TOUT PRET.",
+  "INTERDIT de proposer un tableur (Google Sheets, Excel), un service de calculateur en ligne, ou un outil no-code payant. C'est le conseil d'avant : des heures de formules pour un rendu qui ressemble a une feuille de calcul.",
+  "Le prompt que tu ecris est COMPLET et se copie tel quel : il contient les champs exacts, la formule exacte, les tranches d'interpretation et le texte affiche pour chaque tranche, le texte du bouton final et l'adresse de l'offre. Celui qui le colle ne doit avoir AUCUNE decision a prendre, sauf sa couleur et son lien.",
+  "Le prompt exige de l'IA : UN SEUL fichier HTML autonome, CSS et JavaScript a l'interieur, AUCUNE bibliotheque externe (il finira dans un bloc de code d'une page, ou rien ne se telecharge de l'exterieur) ; lisible sur telephone d'abord ; TOUT calcule dans le navigateur, aucune donnee envoyee nulle part ; une couleur principale posee en variable CSS en haut du fichier, pour qu'elle la change en une ligne.",
+  "Tu ecris ce prompt DANS UN BLOC DE CODE markdown (trois backticks avant, trois backticks apres), et rien d'autre dans ce bloc. C'est ce qui lui donne son bouton Copier.",
+  "Le temps annonce est le temps REEL de cette methode : coller le prompt, relire, ajuster une fois. Quinze a trente minutes, pas trois heures.",
+].join("\n");
+
+function deliveryFacts(b: BonusBrief, shape: BonusShape): string {
   const tag =
     b.trigger === "share"
       ? b.shareTagName
@@ -312,11 +346,23 @@ function deliveryFacts(b: BonusBrief): string {
         ? "le tag Systeme.io du profil obtenu (un tag par profil, defini sur chaque resultat)"
         : "le tag de capture du quiz";
 
+  // LA PREMIERE ETAPE DEPEND DE CE QU'ON A FABRIQUE, LES TROIS AUTRES
+  // JAMAIS. Un PDF vit sur un drive, un outil vit sur une page, un acces
+  // n'a rien a heberger ; mais dans les trois cas c'est le TAG qui
+  // declenche l'email, et c'est ca que le premier guide avait rate.
+  const hosting: Record<BonusShape, string> = {
+    document:
+      "1. Le fichier est heberge sur un drive (Google Drive, Notion, ou l'espace Systeme.io). ATTENTION : le partage du fichier doit etre regle sur \"tout le monde avec le lien\", en LECTURE. Un lien restreint donne une page d'erreur au visiteur, et la creatrice ne le verra jamais puisque, elle, y a acces.",
+    page: "1. Le fichier HTML produit par l'IA est colle dans un bloc de code d'une page Systeme.io : une page de blog, ou une page de tunnel. Elle publie la page et copie son adresse. Rien a installer, rien a heberger ailleurs, et l'adresse est sur son domaine.",
+    acces:
+      "1. Il n'y a pas de fichier a heberger : ce bonus est un acces. Elle prepare l'adresse qui l'ouvre (le lien de l'atelier, le flux prive, la page d'inscription au challenge) et verifie qu'elle fonctionne depuis une fenetre de navigation privee.",
+  };
+
   return [
     "LA LIVRAISON, ET ELLE EST NON NEGOCIABLE. Voici le seul chemin exact, a decrire tel quel :",
-    "1. Le fichier est heberge sur un drive (Google Drive, Notion, ou l'espace Systeme.io). ATTENTION : le partage du fichier doit etre regle sur \"tout le monde avec le lien\", en LECTURE. Un lien restreint donne une page d'erreur au visiteur, et la creatrice ne le verra jamais puisque, elle, y a acces.",
+    hosting[shape],
     `2. Dans Systeme.io, une automatisation "Tag ajoute a un contact" ecoute ${tag}.`,
-    "3. Cette automatisation envoie l'email de livraison, qui contient le lien du fichier.",
+    "3. Cette automatisation envoie l'email de livraison, qui contient le lien.",
     "4. Plus aucune action manuelle ensuite. Le tag part tout seul, l'email part tout seul.",
     "N'ECRIS JAMAIS qu'il faut coller le lien dans les resultats du quiz ni le remettre a la main : ce n'est pas comme ca que ca marche.",
   ].join("\n");
@@ -336,7 +382,12 @@ export function buildProductionSystemPrompt(
   b: BonusBrief,
   block: ProductionBlock,
   profileIndex?: number,
+  /** Le format de la piste choisie. Il decide de la FORME du bonus, donc
+   *  de la facon dont il se fabrique et dont il se livre. Absent, on
+   *  retombe sur le document, la forme la plus courante. */
+  chosenFormat = "",
 ): string {
+  const shape = bonusShape(chosenFormat);
   const out = [
     PERSONA,
     toneLine(b),
@@ -352,22 +403,42 @@ export function buildProductionSystemPrompt(
   ];
 
   if (block === "guide") {
+    // LE TROISIEME TITRE CHANGE AVEC LA FORME. Pour un outil, la
+    // question n'est plus "avec quel logiciel" mais "quel prompt je
+    // colle" : c'est tout le sens du retour du 5 aout.
+    const thirdTitle =
+      shape === "page"
+        ? "## Le prompt a copier dans Claude ou ChatGPT"
+        : shape === "acces"
+          ? "## Ce que tu prepares, et en combien de temps"
+          : "## Avec quel outil, et en combien de temps";
+
+    const thirdBody =
+      shape === "page"
+        ? AI_BUILT_PAGE
+        : shape === "acces"
+          ? "Sous le troisieme : ce qu'elle doit preparer (la date, le support, l'adresse d'acces), le temps reel, et ce qui doit exister AVANT le premier inscrit."
+          : b.variant === "per_result"
+            ? "Sous le troisieme : l'outil, le temps reel, ET ce qui change d'une version a l'autre contre ce qui reste commun, pour ne produire le tronc commun qu'une seule fois."
+            : "Sous le troisieme : l'outil le plus simple et le temps reel, honnetement.";
+
     out.push(
       "",
       "BLOC DEMANDE : LE GUIDE DE CREATION. Il s'adresse a la CREATRICE, pas au visiteur.",
       "Structure imposee, avec ces titres exacts :",
       "## Ce que tu vas produire",
       "## La structure, section par section",
-      "## Avec quel outil, et en combien de temps",
+      thirdTitle,
       "## Comment il arrive chez ton visiteur",
       "Sous le premier titre : une phrase, pas plus.",
       "Sous le deuxieme : la structure du bonus, une sous-section par partie, avec ce qu'elle contient et pourquoi.",
-      b.variant === "per_result"
-        ? "Sous le troisieme : l'outil, le temps reel, ET ce qui change d'une version a l'autre contre ce qui reste commun, pour ne produire le tronc commun qu'une seule fois."
-        : "Sous le troisieme : l'outil le plus simple et le temps reel, honnetement.",
+      thirdBody,
+      shape === "page" && b.variant === "per_result"
+        ? "UN SEUL PROMPT, pas quatre. La page est la meme pour tous les profils : le prompt demande a l'IA de prevoir une variable en haut du fichier pour le texte qui change d'un profil a l'autre, et le guide dit quoi y mettre pour chacun. Faire coder quatre pages presque identiques est exactement le genre de corvee qu'on vient de supprimer."
+        : "",
       "Sous le quatrieme : la livraison, exactement comme decrite ci-dessous.",
       "",
-      deliveryFacts(b),
+      deliveryFacts(b, shape),
     );
   }
 
@@ -376,7 +447,13 @@ export function buildProductionSystemPrompt(
       "",
       "BLOC DEMANDE : LE CONTENU DU BONUS, pret a copier-coller. Il s'adresse au VISITEUR.",
       "- Titre, puis chaque section entierement redigee. JAMAIS de \"ici tu peux ajouter...\" ni de crochets a remplir.",
-      "- ADAPTE-TOI AU FORMAT. Un texte se redige. Un calculateur, un generateur ou un GPT ne se redige pas : donne alors les champs a remplir, la formule exacte, les tranches d'interpretation et le texte affiche pour chaque tranche. Un swipe file donne les modeles eux-memes.",
+      shape === "page"
+        ? // La MECANIQUE de l'outil vit dans le prompt du guide. Ici on
+          // ecrit les MOTS, et seulement les mots : deux blocs qui
+          // decrivent tous les deux la formule finissent par ne plus
+          // decrire la meme.
+          "- CE BONUS EST UNE PAGE INTERACTIVE, et tu n'ecris PAS son fonctionnement (il vit dans le prompt du guide). Tu ecris les TEXTES QU'ELLE AFFICHE : l'accroche, le libelle et l'aide de chaque champ a remplir, le texte affiche pour chaque tranche de resultat, et le texte du bouton final. Aucun code, aucun prompt, aucune formule ici."
+        : "- ADAPTE-TOI AU FORMAT. Un texte se redige. Un swipe file donne les modeles eux-memes. Un plan donne les etapes datees.",
       "- Termine par l'appel a l'action vers l'offre, presente comme la suite logique de ce qui precede, jamais comme une publicite.",
     );
     if (b.variant === "per_result") {

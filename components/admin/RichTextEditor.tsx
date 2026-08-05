@@ -32,6 +32,7 @@ export function RichTextEditor({
   onChange,
   placeholder,
   videoSlots = 0,
+  figures = true,
 }: {
   value: string;
   onChange: (html: string) => void;
@@ -40,6 +41,12 @@ export function RichTextEditor({
    *  Ne l'active que sur les champs dont le rendu résout ces shortcodes
    *  (aujourd'hui : le contenu du jour). */
   videoSlots?: number;
+  /** Le sélecteur de schémas insère un shortcode `[[figure:...]]` que
+   *  SEUL le rendu du parcours sait résoudre. Ailleurs (le générateur de
+   *  bonus), il proposerait d'insérer quelque chose qui ressortirait en
+   *  texte brut chez le visiteur : on le retire. Défaut `true`, donc
+   *  aucun appel existant ne change. */
+  figures?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -156,6 +163,7 @@ export function RichTextEditor({
             </div>
           </>
         )}
+        {figures && (<>
         <span className="mx-1 h-5 w-px bg-border" />
         <div className="flex items-center gap-1">
           <ImagePlus className="size-4 text-muted-foreground" />
@@ -178,6 +186,7 @@ export function RichTextEditor({
             ))}
           </select>
         </div>
+        </>)}
       </div>
 
       <div
