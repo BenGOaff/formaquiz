@@ -48,6 +48,9 @@ function block(b: DocBlock, n: number): string {
       )
       .join("")}</div>`;
   }
+  // Le prompt garde ses retours a la ligne et sa police a chasse fixe :
+  // imprime en paragraphe, il n'est plus copiable a l'oeil.
+  if (b.kind === "code") return `<pre class="code">${esc(b.text)}</pre>`;
   return `<div class="sub a${n}"><p class="subtitle">${esc(b.title)}</p>${b.blocks
     .map((x) => block(x, n))
     .join("")}</div>`;
@@ -124,6 +127,12 @@ export function buildPrintableHtml(
   .badge {
     flex: 0 0 auto; background: ${accent}1a; color: ${accent};
     border-radius: 4px; padding: 0.6mm 2mm; font-size: 8.5pt; font-weight: 600;
+  }
+  .code {
+    white-space: pre-wrap; word-break: break-word;
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 8.5pt; line-height: 1.45; background: #f5f5fa;
+    border: 1px solid #e3e3ee; border-radius: 6px; padding: 3mm; margin: 0 0 2.5mm;
   }
   .sub { border-left: 2px solid ${accent}40; padding-left: 3mm; margin: 0 0 2.5mm; }
   .subtitle { font-size: 9pt; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #6a6a80; margin: 0 0 1.5mm; }

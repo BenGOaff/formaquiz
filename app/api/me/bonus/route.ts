@@ -300,7 +300,11 @@ export async function POST(req: NextRequest) {
   // 4000 sans que personne n'ait trouve ses textes courts.
   const maxTokens = input.block === "content" ? 4500 : 2500;
   const out = await callClaude(
-    buildProductionSystemPrompt(brief, input.block, input.profileIndex),
+    // Le format de la piste decide de la FORME du bonus (un document, une
+    // page codee par l'IA, un acces), donc de la facon dont le guide dit
+    // de le fabriquer et de le livrer. Sans lui, le guide retombait sur
+    // "monte un tableau dans Google Sheets" (retour Bene, 5 aout 2026).
+    buildProductionSystemPrompt(brief, input.block, input.profileIndex, input.chosen.format),
     user,
     maxTokens,
   );

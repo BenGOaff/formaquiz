@@ -1,3 +1,5 @@
+"use client";
+
 // components/BonusDocument.tsx
 //
 // LE RENDU D'UN DOCUMENT GÉNÉRÉ.
@@ -20,6 +22,9 @@
 // fichier ne fait que peindre : il ne relit jamais le markdown et
 // n'invente aucune couleur. C'est ce qui garantit que le PDF, qui lit
 // les mêmes deux modules, ressemble à l'écran.
+
+import { Copy } from "lucide-react";
+import { toast } from "sonner";
 
 import type { BonusDoc, DocBlock } from "@/lib/bonus/document";
 import { sectionAccent, type SectionAccent } from "@/lib/bonus/accents";
@@ -110,6 +115,13 @@ function Block({ block, accent }: { block: DocBlock; accent: SectionAccent }) {
     );
   }
 
+  // LE PROMPT A COLLER DANS CLAUDE OU CHATGPT (retour Béné, 5 août
+  // 2026). Il a son cadre et son bouton : un prompt qu'on doit
+  // reconstituer en recopiant six paragraphes n'est pas un prompt.
+  if (block.kind === "code") {
+    return <CodeBlock text={block.text} />;
+  }
+
   return (
     <div className={`flex flex-col gap-2 border-l-2 pl-3 ${accent.rule}`}>
       <p className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -118,6 +130,36 @@ function Block({ block, accent }: { block: DocBlock; accent: SectionAccent }) {
       {block.blocks.map((b, i) => (
         <Block key={i} block={b} accent={accent} />
       ))}
+    </div>
+  );
+}
+
+/**
+ * Un bloc à copier tel quel.
+ *
+ * Le bouton est ici et pas à côté du document : ce qu'elle veut copier,
+ * c'est le prompt, pas le chapitre qui l'entoure. `whitespace-pre-wrap`
+ * garde les retours à la ligne du prompt, qui en font partie.
+ */
+function CodeBlock({ text }: { text: string }) {
+  return (
+    <div className="relative rounded-lg border border-border bg-surface-soft">
+      <button
+        type="button"
+        onClick={() => {
+          navigator.clipboard.writeText(text).then(
+            () => toast.success("Prompt copié. Colle-le dans Claude ou ChatGPT."),
+            () => toast.error("La copie a échoué. Sélectionne le texte et copie-le à la main."),
+          );
+        }}
+        className="absolute right-2 top-2 flex items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1 text-xs font-medium hover:bg-surface-soft"
+      >
+        <Copy className="size-3.5" />
+        Copier
+      </button>
+      <pre className="overflow-x-auto whitespace-pre-wrap break-words px-4 py-4 pr-20 font-mono text-[12.5px] leading-relaxed">
+        {text}
+      </pre>
     </div>
   );
 }

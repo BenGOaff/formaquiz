@@ -216,3 +216,64 @@ test("le PDF porte les MEMES couleurs que l'ecran", () => {
   }
   assert.match(html, /class="cover"/, "le titre a son bandeau de marque");
 });
+
+// ── Le prompt à copier vit dans son propre bloc (5 août 2026) ────────
+
+const AVEC_PROMPT = `## Le prompt a copier dans Claude ou ChatGPT
+
+Colle ce prompt tel quel.
+
+\`\`\`
+Tu es developpeur front. Ecris UN SEUL fichier HTML autonome.
+
+## Les champs
+- Visiteurs par mois
+- Prix moyen
+
+1. Calcule visiteurs * 0,05 * prix
+2. Affiche le resultat en euros
+\`\`\`
+
+Relis, puis publie la page.`;
+
+test("un bloc de code n'est pas decoupe en titres, listes et etapes", () => {
+  // Un prompt contient des dieses, des tirets et des chiffres. Parses
+  // comme du markdown, il ressortait en morceaux, donc incopiable.
+  const doc = parseBonusDoc(AVEC_PROMPT);
+  const code = doc.sections[0].blocks.find((b) => b.kind === "code");
+  assert.ok(code && code.kind === "code");
+  assert.match(code.text, /^Tu es developpeur front/);
+  assert.match(code.text, /## Les champs/, "les dieses restent DANS le prompt");
+  assert.match(code.text, /- Visiteurs par mois/, "les tirets aussi");
+  assert.equal(doc.sections.length, 1, "aucune section fabriquee depuis le prompt");
+});
+
+test("les retours a la ligne du prompt sont conserves", () => {
+  const doc = parseBonusDoc(AVEC_PROMPT);
+  const code = doc.sections[0].blocks.find((b) => b.kind === "code");
+  assert.ok(code && code.kind === "code");
+  assert.ok(code.text.includes("\n"), "un prompt sur une seule ligne est illisible");
+});
+
+test("une cloture jamais refermee n'avale pas la fin du document", () => {
+  // Le modele oublie regulierement le ``` final.
+  const doc = parseBonusDoc("## T\n```\nligne de prompt\nautre ligne");
+  const code = doc.sections[0].blocks.find((b) => b.kind === "code");
+  assert.ok(code && code.kind === "code");
+  assert.match(code.text, /autre ligne/);
+});
+
+test("le PDF garde le prompt en bloc, pas en paragraphe", () => {
+  const html = buildPrintableHtml(parseBonusDoc(AVEC_PROMPT), { title: "T" });
+  assert.match(html, /<pre class="code">/);
+  assert.match(html, /white-space: pre-wrap/);
+  assert.doesNotMatch(html, /<script/);
+});
+
+test("le prompt a son bouton Copier a l'ecran", () => {
+  // C'est tout l'interet : elle le colle dans Claude ou ChatGPT.
+  const src = readFileSync(new URL("../../components/BonusDocument.tsx", import.meta.url), "utf8");
+  assert.match(src, /kind === "code"/);
+  assert.match(src, /whitespace-pre-wrap/);
+  assert.match(src, /clipboard\.writeText/);
+});
