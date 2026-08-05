@@ -34,7 +34,7 @@ export default async function CertificatPage() {
   if (!allDone) {
     const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
     return (
-      <div className="mx-auto flex max-w-xl flex-col gap-6">
+      <div className="flex flex-col gap-6">
         <header className="flex flex-col gap-2 text-center">
           <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
             <Lock className="size-7" />

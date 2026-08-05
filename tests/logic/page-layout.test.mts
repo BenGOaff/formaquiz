@@ -47,6 +47,29 @@ test("la page Bonus ne se bride plus toute seule", () => {
   assert.doesNotMatch(firstClass, /mx-auto/);
 });
 
+test("AUCUNE page de l'espace membre ne se bride toute seule", () => {
+  // "Oui il faut mettre la même largeur partout même pour les réglages"
+  // (Béné, 5 août 2026). Carnet, Profil et Certificat portaient chacun
+  // leur propre borne : trois largeurs différentes sur quatre écrans,
+  // et l'impression que l'un est plus important que l'autre.
+  const dir = fileURLToPath(new URL("../../app/(app)/", import.meta.url));
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    let src: string;
+    try {
+      src = readFileSync(`${dir}${entry.name}/page.tsx`, "utf8");
+    } catch {
+      continue;
+    }
+    // La RACINE du rendu, pas le fichier : une carte centrée à
+    // l'intérieur d'un écran reste legitime.
+    const root = src.slice(src.indexOf("return ("));
+    const firstClass = root.match(/className="([^"]*)"/)?.[1] ?? "";
+    assert.doesNotMatch(firstClass, /max-w-/, `${entry.name} se bride`);
+    assert.doesNotMatch(firstClass, /mx-auto/, `${entry.name} se centre`);
+  }
+});
+
 test("le labo bonus se cale sur le même gabarit", () => {
   const page = read("../../app/(app)/labo-bonus/page.tsx");
   const client = read("../../app/(app)/labo-bonus/BonusLabClient.tsx");

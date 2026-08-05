@@ -1,53 +1,45 @@
 // lib/prompts/bonus.ts
 //
-// LE BONUS POST-QUIZ. Prompt écrit par Béné (4 août 2026), porté ici
-// avec les corrections décidées ensemble le 5.
+// LE BONUS POST-QUIZ. Prompt écrit par Béné (4 août 2026), corrigé le 5
+// après son premier vrai test.
 //
 // -- CE QUI COMPTE LE PLUS POUR ELLE ----------------------------------
 //
 // Les 5 critères d'un contenu de valeur (utile, spécifique, ciblé,
-// applicable, unique). Ils existaient déjà dans son prompt, en fin de
-// document, sous forme de liste à cocher décorative : on disait au
-// modèle qu'ils comptaient sans jamais lui faire vérifier quoi que ce
-// soit.
+// applicable, unique). Ils sont un CONTRÔLE, exécuté avant de montrer
+// quoi que ce soit, et un critère de REMPLACEMENT : une piste qui en
+// rate un est refaite, pas commentée.
 //
-// Ici ils sont un CONTRÔLE, exécuté avant de montrer quoi que ce soit,
-// et un critère de REMPLACEMENT : une piste qui en rate un est refaite,
-// pas commentée. C'est la même leçon que le verdict du funnel calculé
-// avant l'appel : la retenue ne s'obtient pas en la demandant.
+// -- LES TROIS CORRECTIONS DU PREMIER TEST ----------------------------
 //
-// -- L'AUDIT PERSONNALISÉ, ET LA CORRECTION DE BÉNÉ -------------------
+// 1. ON NE REDEMANDE PLUS CE QU'ON SAIT DÉJÀ. "On ne réutilise pas assez
+//    les données du quiz : pourquoi ne pas prendre le quiz suivi par
+//    l'Atelier et récupérer toutes ces infos automatiquement ?" Elle a
+//    raison, et "mon audience" / "ma niche" n'étaient même pas
+//    différenciables. Le thème, le ton (tu/vous), les profils de
+//    résultat et le tag de partage viennent du quiz. Il ne reste que ce
+//    que le quiz ne sait pas : l'OFFRE.
 //
-// J'avais proposé d'interdire les formats qui coûtent son temps à la
-// créatrice (audit personnalisé, atelier live). Elle a répondu : "sauf
-// si on arrive à créer un système qui analyse finement les réponses pour
-// délivrer le bon bonus ?"
+// 2. UN BONUS PAR PROFIL, ÉCRIT UN PROFIL À LA FOIS. Le premier contenu
+//    généré traitait les quatre profils dans un seul document ("si ta
+//    fuite c'est le trafic... si c'est la capture..."). C'est l'inverse
+//    exact de la promesse : le visiteur reçoit un catalogue où il doit
+//    trouver sa section, au lieu d'un texte qui parle de lui. Et ça rate
+//    trois des cinq critères d'un coup (ciblé, applicable, unique).
 //
-// Elle a raison, et ma règle était trop grosse. Ce qui coûte cher n'est
-// pas la PERSONNALISATION, c'est la présence d'un humain dans la boucle.
-// Un audit construit à partir des réponses au quiz, de son profil et de
-// ses scores par axe part tout seul, autant de fois qu'il y a de
-// visiteurs. Un audit qu'elle relit un par un s'arrête au quarantième.
-//
-// La règle porte donc sur la BOUCLE, pas sur le format : personnalisé
-// oui, sur mesure non. Et Tiquiz sait déjà faire la première moitié
-// (variables {prenom} / {score_axe}, tag Systeme.io par profil, URL de
-// bouton par profil).
+// 3. LA LIVRAISON, LA VRAIE. Le guide décrivait "crée 4 résultats et
+//    mets le lien du PDF dans chacun". Non : le PDF part sur un drive
+//    (lien accessible à tous en lecture), et l'email de livraison est
+//    déclenché par le TAG de Systeme.io. Pour un bonus de partage,
+//    c'est le tag de partage du quiz ; pour un bonus de fin de quiz,
+//    c'est le tag du profil obtenu.
 //
 // -- OÙ LE BONUS ATTERRIT VRAIMENT ------------------------------------
 //
-// Vérifié dans le code de Tiquiz le 5 août, parce que le prompt d'origine
-// faisait produire des versions par profil qui n'ont nulle part où aller :
-//
-//   - les colonnes `bonus_*` vivent sur `quizzes`, PAS sur
-//     `quiz_results` : il n'existe qu'UN bonus par quiz ;
-//   - l'écran bonus du viewer est gaté sur `virality_enabled` : dans
-//     Tiquiz aujourd'hui, ce bonus-là est la récompense du PARTAGE ;
-//   - une version par profil se livre donc autrement : par le tag
-//     Systeme.io du résultat, ou par l'URL de bouton propre au résultat.
-//
-// Le modèle doit le dire à la créatrice AVANT de produire quatre
-// versions, sinon elle les reçoit et cherche une case qui n'existe pas.
+// Vérifié dans le code de Tiquiz : les colonnes `bonus_*` vivent sur
+// `quizzes`, pas sur `quiz_results`. Il n'existe qu'UN bonus par quiz,
+// et son écran est gaté sur `virality_enabled`. Une version par profil
+// passe donc forcément par les tags Systeme.io.
 
 /** Les formats proposables. Liste fermée : un modèle à qui on laisse
  *  inventer un format propose "un ebook complet" à la troisième piste. */
@@ -83,23 +75,55 @@ export const TRIGGER_LABEL: Record<BonusTrigger, string> = {
 /** Une version unique, ou une par profil de résultat. */
 export type BonusVariant = "single" | "per_result";
 
+/** Le format de l'offre payante vers laquelle le bonus mène. */
+export const OFFER_KINDS = [
+  "formation en ligne",
+  "accompagnement ou coaching",
+  "prestation de service",
+  "outil ou logiciel",
+  "produit physique",
+  "abonnement",
+  "programme de groupe",
+] as const;
+export type OfferKind = (typeof OFFER_KINDS)[number];
+
 /**
- * LES 5 CRITÈRES, EN CONTRÔLE.
+ * Ce que le générateur reçoit.
  *
- * "Le plus important à mes yeux c'est ça" (Béné, 5 août 2026).
+ * `quiz*` vient du quiz suivi, la créatrice ne le saisit pas.
+ * `offer*` est la seule chose qu'elle écrit : le quiz ne sait rien de
+ * son offre payante.
  */
+export type BonusBrief = {
+  /** La promesse principale de l'offre, en une phrase. */
+  offerPromise: string;
+  offerKind: OfferKind;
+  /** Texte libre : "97 euros", "à partir de 1200 euros", "sur devis". */
+  offerPrice: string;
+  trigger: BonusTrigger;
+  variant: BonusVariant;
+
+  // ── Repris du quiz suivi ──
+  quizTitle: string;
+  quizIntro: string;
+  /** "tu" ou "vous". */
+  addressForm: string;
+  /** Les profils, titre et description. */
+  profiles: { title: string; description: string }[];
+  /** Le tag Systeme.io du partage, quand il existe. */
+  shareTagName: string;
+};
+
 const VALUE_CRITERIA = [
   "LES 5 CRITERES D'UN CONTENU DE VALEUR. Tu les VERIFIES avant de montrer quoi que ce soit, en silence, et tu REMPLACES ce qui en rate un au lieu de le commenter.",
-  "1. UTILE : on peut en tirer un benefice concret. Pas "  +
-    "\"mieux comprendre\", pas \"prendre du recul\".",
+  "1. UTILE : on peut en tirer un benefice concret. Pas \"mieux comprendre\", pas \"prendre du recul\".",
   "2. SPECIFIQUE : une strategie, un outil, une methode. Si la phrase pourrait servir a n'importe quel autre metier, elle est a jeter.",
-  "3. CIBLE : tu t'adresses a UNE seule audience, la sienne, avec ses situations a elle.",
+  "3. CIBLE : tu t'adresses a UNE seule personne, celle qui vient d'obtenir CE resultat. Jamais a plusieurs profils dans le meme document.",
   "4. APPLICABLE : le lecteur repart avec une action a mettre en place aujourd'hui, pas avec une intention.",
-  "5. UNIQUE : ecrit avec son ton, sa niche, ses exemples. Si un concurrent pouvait publier le meme texte en changeant le logo, ce n'est pas le sien.",
-  "Le 5e est le plus dur et c'est celui qui compte le plus : il s'obtient en reprenant SES mots, SES exemples, la situation exacte que son quiz vient de reveler, jamais en ajoutant des adjectifs.",
+  "5. UNIQUE : ecrit avec le ton du quiz, ses mots, ses exemples. Si un concurrent pouvait publier le meme texte en changeant le logo, ce n'est pas le sien.",
+  "Le 5e est le plus dur et c'est celui qui compte le plus : il s'obtient en reprenant LES MOTS DU QUIZ et la situation exacte que le resultat vient de nommer, jamais en ajoutant des adjectifs.",
 ].join("\n");
 
-/** Les 4 piliers, eux aussi en contrôle plutôt qu'en décor. */
 const FOUR_PILLARS = [
   "LES 4 PILIERS D'UN BONUS QUI CONVERTIT. Meme regle : tu verifies, tu remplaces, tu ne commentes pas.",
   "- URGENCE : il resout un probleme brulant, celui que le resultat du quiz vient de nommer.",
@@ -108,29 +132,19 @@ const FOUR_PILLARS = [
   "- CONTINUITE : il ouvre un vide strategique que SEULE l'offre payante comble entierement. Un bonus qui suffit a lui seul ne vend rien.",
 ].join("\n");
 
-/**
- * La contrainte qui protège la créatrice, dans sa version corrigée.
- * Personnalisé oui, humain dans la boucle non.
- */
 const NO_HUMAN_LOOP = [
   "LE BONUS SE LIVRE TOUT SEUL, AUTANT DE FOIS QU'IL Y A DE VISITEURS.",
-  "- PERSONNALISE, OUI : un bonus qui change selon le profil obtenu, selon les reponses ou selon le score est le plus fort qui existe, parce qu'il donne l'impression d'avoir ete ecrit pour cette personne la. Tiquiz sait le faire : variables {prenom} et {score_<axe>} dans les textes, tag Systeme.io par profil, URL de bouton propre a chaque profil.",
+  "- PERSONNALISE, OUI : un bonus qui change selon le profil obtenu est le plus fort qui existe, parce qu'il donne l'impression d'avoir ete ecrit pour cette personne la. Tiquiz sait le faire : un tag Systeme.io par profil, une URL de bouton par profil, et les variables {prenom} et {score_<axe>} dans les textes.",
   "- SUR MESURE, NON : tout ce qui demande a la creatrice de LIRE, RELIRE ou REPONDRE une fois par visiteur s'arrete au quarantieme. Un quiz qui marche ramene des centaines de personnes : c'est une reussite qui se transforme en dette.",
-  "- Donc : si un format que tu proposes demande son temps a chaque nouveau lead, tu le DIS explicitement dans la piste, avec le temps que ca lui coutera par personne. Tu ne le caches jamais derriere le mot \"personnalise\", qui laisse croire que c'est automatique.",
-  "- Un audit \"personnalise\" construit a partir des reponses au quiz part tout seul. Un audit qu'elle relit un par un, non. Ce n'est pas le meme bonus, et la difference doit etre ecrite.",
+  "- Donc : si un format que tu proposes demande son temps a chaque nouveau lead, tu le DIS explicitement dans la piste, avec le temps que ca lui coutera par personne. Tu ne le caches jamais derriere le mot \"personnalise\".",
 ].join("\n");
 
-/**
- * Le partage n'est pas un levier universel. Règle de Jocelyne, portée
- * ici parce que c'est exactement là qu'elle se joue.
- */
 const SENSITIVE_SUBJECT = [
   "SUJET INTIME OU STIGMATISANT (sante, sante mentale, neuroatypie, argent, poids, sexualite, famille, echec) :",
   "- Debloquer le bonus PAR LE PARTAGE revient a demander a quelqu'un de s'exposer devant ses proches. Le bonus ne sera pas reclame, et la creatrice en conclura que son cadeau est trop faible alors que c'est le declencheur qui ne va pas.",
-  "- Sur ces sujets, tu recommandes le declenchement A LA COMPLETION, et tu le dis en une phrase. Si un partage est quand meme souhaite, propose l'envoi a UNE personne (message prive) plutot qu'une publication.",
+  "- Sur ces sujets, tu recommandes le declenchement A LA COMPLETION, et tu le dis en une phrase.",
 ].join("\n");
 
-/** Le style. Repris mot pour mot de son prompt, tiret cadratin en plus. */
 const WRITING_RULES = [
   "TU ECRIS COMME UN HUMAIN COMPETENT QUI PARLE A UN AUTRE HUMAIN COMPETENT :",
   "- \"est\" plutot que \"s'impose comme\", \"constitue\", \"fait figure de\".",
@@ -140,47 +154,71 @@ const WRITING_RULES = [
   "- Repete le mot juste au lieu d'alterner les periphrases.",
   "- Chaque detail, chiffre ou exemple doit servir a quelque chose.",
   "- Aucun emoji, aucune formule de robot (\"N'hesite pas a...\", \"J'espere que cela t'aide\").",
-  "- JAMAIS de tiret cadratin ni de demi-cadratin. Utilise la virgule, les deux-points, la parenthese ou une nouvelle phrase. C'est une signature de texte genere, et elle decredibilise immediatement ce qu'elle signe.",
+  "- JAMAIS de tiret cadratin ni de demi-cadratin. Utilise la virgule, les deux-points, la parenthese ou une nouvelle phrase.",
   "- Donne uniquement ce qui est demande, sans annoncer ce que tu vas faire et sans recapituler ce que tu viens de faire.",
 ].join("\n");
 
 const PERSONA = [
-  "Tu aides une creatrice a concevoir le bonus qu'elle offre aux gens qui viennent de terminer son quiz.",
+  "Tu aides une creatrice a concevoir le bonus qu'elle offre aux gens qui passent son quiz.",
   "Tu connais la psychologie de ce moment precis : la personne vient de repondre a des questions sur elle-meme, elle vient de recevoir un resultat qui la decrit, elle est en pleine prise de conscience. Sa curiosite et son ouverture sont a leur maximum, et elles retomberont vite.",
   "Le bon bonus exploite ce moment : il PROLONGE le diagnostic en action au lieu de le repeter, et il donne l'impression d'avoir ete cree pour ce profil la.",
-  "Tu reponds en francais, tutoiement, ton direct.",
+  "Tu reponds en francais.",
 ].join("\n");
 
-/** Le contexte fourni par la créatrice. */
-export type BonusBrief = {
-  audience: string;
-  niche: string;
-  tone: string;
-  quizTheme: string;
-  offer: string;
-  trigger: BonusTrigger;
-  variant: BonusVariant;
-  /** Les profils de résultat, quand `variant === "per_result"`. */
-  results: string[];
-};
+/** Le ton du quiz, imposé au modèle plutôt que redemandé. */
+function toneLine(b: BonusBrief): string {
+  return b.addressForm === "vous"
+    ? "TON : tu VOUVOIES le lecteur, comme le quiz. Ne bascule jamais sur le tutoiement."
+    : "TON : tu TUTOIES le lecteur, comme le quiz. Ne bascule jamais sur le vouvoiement.";
+}
+
+/** Ce qu'on sait du quiz, pour le message utilisateur. */
+export function renderBriefForPrompt(b: BonusBrief, profileIndex?: number): string {
+  const lines = [
+    `LE QUIZ : "${b.quizTitle}"`,
+    b.quizIntro ? `CE QU'IL PROMET : ${b.quizIntro}` : "",
+    "",
+    `L'OFFRE PAYANTE VERS LAQUELLE LE BONUS MENE : ${b.offerPromise}`,
+    `FORMAT DE L'OFFRE : ${b.offerKind}`,
+    b.offerPrice ? `PRIX : ${b.offerPrice}` : "",
+    "",
+  ];
+  if (b.profiles.length > 0) {
+    if (typeof profileIndex === "number" && b.profiles[profileIndex]) {
+      const p = b.profiles[profileIndex];
+      lines.push(
+        "LE PROFIL POUR LEQUEL TU ECRIS, ET LUI SEUL :",
+        `- ${p.title}`,
+        p.description ? `- ce que le quiz lui dit : ${p.description}` : "",
+      );
+    } else {
+      lines.push("LES PROFILS DE RESULTAT DU QUIZ :");
+      for (const p of b.profiles) {
+        lines.push(`- ${p.title}${p.description ? ` : ${p.description.slice(0, 240)}` : ""}`);
+      }
+    }
+  }
+  return lines.filter(Boolean).join("\n");
+}
 
 /** ÉTAPE 1 : les trois pistes. */
-export function buildPistesSystemPrompt(brief: BonusBrief): string {
+export function buildPistesSystemPrompt(b: BonusBrief): string {
   const perResult =
-    brief.variant === "per_result"
+    b.variant === "per_result"
       ? [
-          "LE BONUS SERA DECLINE PAR PROFIL DE RESULTAT.",
-          "- Privilegie des formats faciles a decliner sans tout recreer : un tronc commun et une partie qui change.",
-          "- OU CA ATTERRIT, et il faut le lui dire : Tiquiz ne stocke qu'UN bonus par quiz (les champs bonus vivent sur le quiz, pas sur le resultat). Une version par profil se livre donc par le TAG SYSTEME.IO du profil, qui declenche l'email de ce profil la, ou par l'URL DE BOUTON propre a chaque profil. Dis-le en une phrase dans le guide, pas avant.",
+          "LE BONUS SERA DECLINE PAR PROFIL.",
+          "- Privilegie des formats faciles a decliner sans tout recreer : un tronc commun, et une partie qui change.",
+          "- Chaque version sera ecrite SEPAREMENT, pour UN profil. Ne propose donc pas un format qui obligerait a mettre les quatre profils dans le meme document : ce serait un catalogue ou le lecteur doit chercher sa section, exactement ce qu'on veut eviter.",
         ].join("\n")
       : "LE BONUS SERA COMMUN A TOUS LES PARTICIPANTS. Une seule version, plus simple a produire et a livrer.";
 
   return [
     PERSONA,
+    toneLine(b),
     "",
-    `LE BONUS SE DEBLOQUE ${TRIGGER_LABEL[brief.trigger].toUpperCase()}.`,
-    brief.trigger === "share"
-      ? "Le visiteur vient de DONNER quelque chose : il attend une contrepartie qui vaille le geste. Le bonus doit paraitre plus grand que le partage qu'on lui a demande."
+    `LE BONUS SE DEBLOQUE ${TRIGGER_LABEL[b.trigger].toUpperCase()}.`,
+    b.trigger === "share"
+      ? "Le visiteur vient de DONNER quelque chose : il attend une contrepartie qui vaille le geste."
       : "Le visiteur vient de recevoir son resultat : il attend une SUITE, pas une recompense. Le bonus doit repondre a la question qu'il se pose a cette seconde, c'est a dire \"et maintenant, je fais quoi ?\".",
     "",
     perResult,
@@ -195,57 +233,83 @@ export function buildPistesSystemPrompt(brief: BonusBrief): string {
     "",
     "COMMENT TU CHOISIS LES TROIS FORMATS (raisonnement silencieux, jamais montre) :",
     `- Choisis parmi cette liste et rien d'autre : ${BONUS_FORMATS.join(", ")}.`,
-    "- Le quiz vient de creer une prise de conscience : les formats qui transforment un diagnostic en premier pas (plan d'action, checklist, workbook, audit) partent favoris. MAIS au moins une des trois pistes doit sortir de ces formats evidents, sinon tu proposes trois fois la meme chose sous trois noms.",
-    "- Audience debutante : cadre et reassurance (checklist, plan d'action, template). Audience avancee : levier et gain de temps (swipe file, calculateur, pack de prompts, generateur).",
+    "- Le quiz vient de creer une prise de conscience : les formats qui transforment un diagnostic en premier pas partent favoris. MAIS au moins une des trois pistes doit sortir de ces formats evidents, sinon tu proposes trois fois la meme chose sous trois noms.",
     "- Trois formats DIFFERENTS et trois angles assez distincts pour la faire reflechir.",
     "",
     WRITING_RULES,
     "",
-    "TU RECOMMANDES, ELLE CHOISIT. Tu designes celle des trois que tu recommandes et pourquoi, en une phrase, pour SON cas. Lui presenter trois pistes sans te prononcer, c'est lui demander de trancher a l'aveugle.",
+    "TU RECOMMANDES, ELLE CHOISIT. Tu designes celle des trois que tu recommandes et pourquoi, en une phrase, pour SON cas.",
     "",
     "Tu reponds STRICTEMENT en JSON valide, sans texte autour, au format :",
     '{ "pistes": [ { "format": string, "title": string, "punchline": string, "why": string, "needsHerTime": string } ], "recommended": number, "recommendedWhy": string }',
     "- pistes : EXACTEMENT trois.",
     "- title : clair, specifique, avec un benefice mesurable. Jamais un titre generique.",
-    "- punchline : une phrase qui donne envie de le telecharger tout de suite, dans SON ton.",
-    "- why : 2 a 3 phrases, le lien entre ce format, la psychologie de son audience apres CE quiz, et le pont vers son offre.",
+    "- punchline : une phrase qui donne envie de le telecharger tout de suite.",
+    "- why : 2 a 3 phrases, le lien entre ce format, la psychologie de ce public apres CE quiz, et le pont vers l'offre.",
     "- needsHerTime : vide si le bonus se livre tout seul. Sinon, la phrase qui dit ce que ca lui coutera par personne.",
-    "- recommended : l'index (0, 1 ou 2) de la piste que tu recommandes.",
-    "- recommendedWhy : une phrase, pour son cas a elle.",
+    "- recommended : l'index (0, 1 ou 2) de la piste recommandee.",
+    "- recommendedWhy : une phrase.",
     "",
-    "EXEMPLE DU NIVEAU ATTENDU (audience fictive : freelances qui n'osent pas augmenter leurs tarifs, quiz \"Quel est ton profil de negociatrice ?\", offre : formation pricing) :",
-    '{ "format": "calculateur", "title": "Ton vrai tarif jour : le calcul que tu evites depuis 2 ans", "punchline": "4 chiffres a remplir, 30 secondes, et tu sauras exactement combien chaque mission te coute au lieu de te rapporter.", "why": "Le quiz vient de lui montrer qu\'elle sous-facture par peur, pas par ignorance. Le calculateur transforme ce ressenti en chiffre brut, impossible a ignorer. Une fois le manque a gagner chiffre, la formation pricing devient la reponse evidente a et maintenant, comment je le recupere ?", "needsHerTime": "" }',
+    "EXEMPLE DU NIVEAU ATTENDU (audience fictive : freelances qui n'osent pas augmenter leurs tarifs) :",
+    '{ "format": "calculateur", "title": "Ton vrai tarif jour : le calcul que tu evites depuis 2 ans", "punchline": "4 chiffres a remplir, 30 secondes, et tu sauras exactement combien chaque mission te coute au lieu de te rapporter.", "why": "Le quiz vient de lui montrer qu\'elle sous-facture par peur, pas par ignorance. Le calculateur transforme ce ressenti en chiffre brut, impossible a ignorer. Une fois le manque a gagner chiffre, la formation devient la reponse evidente a et maintenant, comment je le recupere ?", "needsHerTime": "" }',
   ].join("\n");
 }
 
-/** Les trois blocs de l'étape 2, générés SÉPARÉMENT. */
 export const PRODUCTION_BLOCKS = ["guide", "content", "presentation"] as const;
 export type ProductionBlock = (typeof PRODUCTION_BLOCKS)[number];
 
 export const BLOCK_LABEL: Record<ProductionBlock, string> = {
   guide: "Le guide de création",
-  content: "Le contenu complet",
-  presentation: "La présentation",
+  content: "Le contenu du bonus",
+  presentation: "L'annonce et l'email",
 };
+
+/**
+ * COMMENT LE BONUS ARRIVE VRAIMENT CHEZ LE VISITEUR.
+ *
+ * Le premier guide généré disait "crée 4 résultats dans Tiquiz et mets
+ * le lien du PDF dans chacun". C'est faux, et Béné l'a corrigé : le
+ * fichier vit sur un drive, et c'est un TAG Systeme.io qui déclenche
+ * l'email de livraison.
+ */
+function deliveryFacts(b: BonusBrief): string {
+  const tag =
+    b.trigger === "share"
+      ? b.shareTagName
+        ? `le tag de partage du quiz, qui s'appelle "${b.shareTagName}"`
+        : "le tag de partage du quiz (a definir dans Tiquiz, onglet Partager)"
+      : b.variant === "per_result"
+        ? "le tag Systeme.io du profil obtenu (un tag par profil, defini sur chaque resultat)"
+        : "le tag de capture du quiz";
+
+  return [
+    "LA LIVRAISON, ET ELLE EST NON NEGOCIABLE. Voici le seul chemin exact, a decrire tel quel :",
+    "1. Le fichier est heberge sur un drive (Google Drive, Notion, ou l'espace Systeme.io). ATTENTION : le partage du fichier doit etre regle sur \"tout le monde avec le lien\", en LECTURE. Un lien restreint donne une page d'erreur au visiteur, et la creatrice ne le verra jamais puisque, elle, y a acces.",
+    `2. Dans Systeme.io, une automatisation "Tag ajoute a un contact" ecoute ${tag}.`,
+    "3. Cette automatisation envoie l'email de livraison, qui contient le lien du fichier.",
+    "4. Plus aucune action manuelle ensuite. Le tag part tout seul, l'email part tout seul.",
+    "N'ECRIS JAMAIS qu'il faut coller le lien dans les resultats du quiz ni le remettre a la main : ce n'est pas comme ca que ca marche.",
+  ].join("\n");
+}
 
 /**
  * ÉTAPE 2 : la production, UN BLOC À LA FOIS.
  *
- * Les trois blocs sont générés par trois appels séparés, et pas en un
- * seul JSON. C'est la leçon du 3 août : la campagne email sortait en
- * JSON brut à l'écran parce que la réponse était coupée en plein milieu
- * et que `JSON.parse` échouait. La créatrice voyait notre panne au lieu
- * de son livrable.
+ * Trois appels séparés plutôt qu'un seul JSON : une réponse coupée en
+ * plein milieu ne peut plus emporter les deux autres blocs.
  *
- * Trois appels courts ne peuvent pas se couper l'un l'autre, et un bloc
- * qui échoue laisse les deux autres intacts.
+ * `profileIndex` : quand le bonus est décliné, le contenu s'écrit pour
+ * UN profil. Le premier essai mettait les quatre dans le même document,
+ * ce qui rate trois des cinq critères d'un coup.
  */
 export function buildProductionSystemPrompt(
-  brief: BonusBrief,
+  b: BonusBrief,
   block: ProductionBlock,
+  profileIndex?: number,
 ): string {
-  const common = [
+  const out = [
     PERSONA,
+    toneLine(b),
     "",
     VALUE_CRITERIA,
     "",
@@ -253,58 +317,65 @@ export function buildProductionSystemPrompt(
     "",
     WRITING_RULES,
     "",
-    "Tu produis UNIQUEMENT le bloc demande ci-dessous. Pas d'introduction, pas de conclusion, pas d'annonce de ce qui vient apres.",
-    "Tu ecris en markdown leger : des titres avec ## et des listes avec - . Rien d'autre.",
+    "Tu produis UNIQUEMENT le bloc demande. Pas d'introduction, pas de conclusion, pas d'annonce de ce qui vient apres.",
+    "MISE EN FORME, et elle compte autant que le fond : markdown leger. Des titres avec ## pour les sections, ### pour les sous-sections, des listes avec - , du **gras** sur les mots qui portent l'action. Un pave de texte ne se lit pas, donc ne s'applique pas. Pas de tableaux, pas de code.",
   ];
 
   if (block === "guide") {
-    common.push(
+    out.push(
       "",
-      "BLOC DEMANDE : LE GUIDE DE CREATION.",
-      "- La structure complete du bonus, section par section.",
-      "- Le format de fichier recommande (PDF, Notion, Google Sheet, outil en ligne) et l'outil le plus simple pour le produire.",
-      "- Le temps de production estime, honnetement.",
-      brief.variant === "per_result"
-        ? "- CE QUI CHANGE d'une version a l'autre et CE QUI RESTE COMMUN, pour ne produire le tronc commun qu'une seule fois. Et une phrase sur la livraison : Tiquiz ne stocke qu'un bonus par quiz, donc une version par profil passe par le tag Systeme.io du profil ou par l'URL de bouton propre a ce profil."
-        : "- Une phrase sur la livraison dans Tiquiz.",
-      "- Si le format choisi demande son temps a chaque visiteur, dis-le ICI, en premier, avec le cout par personne.",
+      "BLOC DEMANDE : LE GUIDE DE CREATION. Il s'adresse a la CREATRICE, pas au visiteur.",
+      "Structure imposee, avec ces titres exacts :",
+      "## Ce que tu vas produire",
+      "## La structure, section par section",
+      "## Avec quel outil, et en combien de temps",
+      "## Comment il arrive chez ton visiteur",
+      "Sous le premier titre : une phrase, pas plus.",
+      "Sous le deuxieme : la structure du bonus, une sous-section par partie, avec ce qu'elle contient et pourquoi.",
+      b.variant === "per_result"
+        ? "Sous le troisieme : l'outil, le temps reel, ET ce qui change d'une version a l'autre contre ce qui reste commun, pour ne produire le tronc commun qu'une seule fois."
+        : "Sous le troisieme : l'outil le plus simple et le temps reel, honnetement.",
+      "Sous le quatrieme : la livraison, exactement comme decrite ci-dessous.",
+      "",
+      deliveryFacts(b),
     );
   }
 
   if (block === "content") {
-    common.push(
+    out.push(
       "",
-      "BLOC DEMANDE : LE CONTENU COMPLET, pret a copier-coller.",
-      "- Titre et sous-titre, puis CHAQUE section entierement redigee. JAMAIS de \"ici tu peux ajouter...\" ni de crochets a remplir.",
-      "- ADAPTE-TOI AU FORMAT. Un texte se redige. Un calculateur, un generateur ou un GPT ne se redige pas : donne alors les champs a remplir, la formule exacte, les tranches d'interpretation et le texte affiche pour chaque tranche. Un swipe file donne les modeles eux-memes. Rendre un calculateur sous forme de paragraphes, c'est rendre autre chose que ce qui a ete choisi.",
-      "- Termine par l'appel a l'action vers son offre, presente comme la suite logique et evidente de ce qui precede, jamais comme une publicite.",
+      "BLOC DEMANDE : LE CONTENU DU BONUS, pret a copier-coller. Il s'adresse au VISITEUR.",
+      "- Titre, puis chaque section entierement redigee. JAMAIS de \"ici tu peux ajouter...\" ni de crochets a remplir.",
+      "- ADAPTE-TOI AU FORMAT. Un texte se redige. Un calculateur, un generateur ou un GPT ne se redige pas : donne alors les champs a remplir, la formule exacte, les tranches d'interpretation et le texte affiche pour chaque tranche. Un swipe file donne les modeles eux-memes.",
+      "- Termine par l'appel a l'action vers l'offre, presente comme la suite logique de ce qui precede, jamais comme une publicite.",
     );
+    if (b.variant === "per_result") {
+      // On NOMME le profil dans la consigne, pas seulement dans les
+      // donnees : une instruction qui designe "le profil indique plus
+      // bas" se dilue, une instruction qui dit son nom ne se dilue pas.
+      const p = typeof profileIndex === "number" ? b.profiles[profileIndex] : undefined;
+      out.push(
+        "",
+        p?.title
+          ? `TU ECRIS POUR UN SEUL PROFIL : "${p.title}".`
+          : "TU ECRIS POUR UN SEUL PROFIL, celui indique dans le message.",
+        "INTERDIT de mentionner les autres profils, et INTERDIT d'ecrire \"si ton cas c'est X... si c'est Y...\" : le visiteur ne doit pas avoir a chercher sa section dans un catalogue. Il a obtenu UN resultat, il lit un texte qui parle de lui et de rien d'autre.",
+      );
+    }
   }
 
   if (block === "presentation") {
-    common.push(
+    out.push(
       "",
-      "BLOC DEMANDE : LA PRESENTATION.",
-      "- L'annonce du bonus sur la page de resultat : 2 a 3 phrases qui le presentent comme la recompense naturelle du resultat obtenu.",
-      "- L'objet et le corps de l'email de livraison, dans son ton.",
-      "- Une idee de visuel simple pour le mettre en valeur (couverture, mockup), decrite en deux phrases.",
+      "BLOC DEMANDE : L'ANNONCE ET L'EMAIL. Structure imposee, avec ces titres exacts :",
+      "## Sur la page de resultat",
+      "## L'email de livraison",
+      "## Le visuel",
+      "Sous le premier : 2 a 3 phrases qui presentent le bonus comme la recompense naturelle du resultat obtenu.",
+      "Sous le deuxieme : l'objet, puis le corps de l'email, dans le ton du quiz. C'est l'email declenche par le tag.",
+      "Sous le troisieme : une idee de couverture simple, decrite en deux phrases.",
     );
   }
 
-  return common.join("\n");
-}
-
-/** Le contexte, écrit pour le message utilisateur. */
-export function renderBriefForPrompt(brief: BonusBrief): string {
-  const lines = [
-    `MON AUDIENCE : ${brief.audience}`,
-    `MA NICHE : ${brief.niche}`,
-    `MON TON : ${brief.tone}`,
-    `LE THEME DE MON QUIZ : ${brief.quizTheme}`,
-    `MON OFFRE PAYANTE : ${brief.offer}`,
-  ];
-  if (brief.variant === "per_result" && brief.results.length > 0) {
-    lines.push(`MES PROFILS DE RESULTAT : ${brief.results.join(" | ")}`);
-  }
-  return lines.join("\n");
+  return out.join("\n");
 }
