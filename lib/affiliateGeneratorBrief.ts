@@ -1,4 +1,5 @@
 import { CLAIMS_RULES } from "@/lib/prompts/evidence";
+import { PRIORITY_RULES_CONTENT } from "@/lib/prompts/priority";
 // lib/affiliateGeneratorBrief.ts
 //
 // Ce que le générateur a le droit de dire. Un affilié qui écrit "à la
@@ -96,6 +97,11 @@ export function buildSystemPrompt(format: GeneratorFormat): string {
     "FAITS PRODUITS AUTORISÉS (rien d'autre n'existe) :",
     ATELIER_FACTS,
     CLAIMS_RULES,
+    // Un texte de vente qui empile dix arguments convertit moins bien
+    // qu'un texte qui en porte UN (retour Bene, 4 aout 2026 : "trop
+    // d'infos trop compliquees d'un coup"). Meme regle que l'analyse
+    // et l'assistant, meme fichier : lib/prompts/priority.ts.
+    PRIORITY_RULES_CONTENT,
     WRITING_RULES,
     "FORMAT DEMANDÉ, à respecter à la lettre. Il prime sur toute habitude :",
     FORMAT_BRIEF[format],
