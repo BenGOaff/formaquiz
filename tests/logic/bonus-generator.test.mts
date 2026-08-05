@@ -240,3 +240,95 @@ test("aucun jargon interne ne fuite dans l'interface", () => {
     assert.ok(!jsx.includes(mot), `"${mot}" ne doit pas etre affiche`);
   }
 });
+
+// ── Le bonus s'annonce, il ne vend pas ───────────────────────────────
+//
+// Béné, 5 août 2026, sur l'email généré qui finissait par "c'est
+// exactement ce que fait le Quizing. 47€, tout est dedans. [voir le
+// Quizing]" :
+//
+//   "Sinon ce mail là il sert à rien : c'est déjà dans la séquence email
+//    générée par le générateur de mail (ou alors ça doit l'être) un peu
+//    comme j'ai fait ma séquence email. Et le bonus il est envoyé par
+//    email, il ne doit pas polluer la page de résultat qui mène à un cta
+//    déjà. Par contre tu peux donner des arguments pour présenter le
+//    bonus dans la campagne email et les posts qui vont promouvoir le
+//    quiz : titre + punchline, 5 puces promesses."
+//
+// Sa propre séquence le montre : l'offre, l'histoire, la garantie et le
+// prix vivent dans les emails 3 à 5. Un email de livraison qui vend en
+// trois lignes ne fait que grignoter ce travail.
+
+test("l'email de livraison ne vend pas l'offre", () => {
+  const p = buildProductionSystemPrompt(brief(), "presentation");
+  assert.match(p, /INTERDIT ABSOLU 1/);
+  assert.match(p, /SEQUENCE EMAIL/);
+  assert.match(p, /Pas de prix/);
+});
+
+test("rien n'est ajouté sur la page de résultat", () => {
+  // Elle mene deja a un appel a l'action : un encart de plus ne fait que
+  // diluer le seul clic qui compte.
+  const p = buildProductionSystemPrompt(brief(), "presentation");
+  assert.match(p, /INTERDIT ABSOLU 2/);
+  assert.doesNotMatch(p, /## Sur la page de resultat/);
+});
+
+test("le bloc donne de quoi ANNONCER le bonus", () => {
+  const p = buildProductionSystemPrompt(brief(), "presentation");
+  assert.match(p, /## Le titre et la punchline/);
+  assert.match(p, /## Les 5 puces promesses/);
+  assert.match(p, /## L'email de livraison/);
+  assert.match(p, /campagne email et dans les posts/);
+});
+
+test("une puce promesse porte le bénéfice ET sa conséquence", () => {
+  // C'est ce qui separe une promesse d'un sommaire, et c'est la forme de
+  // ses propres emails ("Tu sais quel quiz creer et pour qui, avant
+  // d'ecrire la premiere question. Fini les trois semaines a hesiter").
+  const p = buildProductionSystemPrompt(brief(), "presentation");
+  assert.match(p, /LE BENEFICE/);
+  assert.match(p, /LA CONSEQUENCE CONCRETE/);
+  assert.match(p, /EXACTEMENT 5 puces/);
+  assert.match(p, /table des matieres/, "le contre-exemple est montre");
+});
+
+test("les puces promesses ne servent qu'à ce bloc", () => {
+  // Les coller partout ferait grossir les deux autres prompts sans rien
+  // leur apporter : le guide s'adresse a la creatrice, le contenu au
+  // visiteur qui a DEJA le bonus.
+  for (const b of ["guide", "content"] as const) {
+    assert.doesNotMatch(buildProductionSystemPrompt(brief(), b), /puces promesses/i, b);
+  }
+});
+
+// ── Trois dossiers, un seul contenu long à l'écran ───────────────────
+//
+// "Je trouve que c'est pas pratique à consulter, ces 3 blocs qui
+// s'enchainent ça fait beaucoup scroller, on voit mal la limite entre
+// chacun. On peut faire 3 dossiers comme les dossiers quiz / sondages de
+// Tiquiz ?"
+
+test("l'écran de production passe par des dossiers", () => {
+  const client = readFileSync(
+    new URL("../../app/(app)/labo-bonus/BonusLabClient.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(client, /"folders"/, "l'etat initial est la grille de dossiers");
+  assert.match(client, /Retour aux dossiers/);
+  // Un dossier par bloc de production, jamais moins.
+  for (const b of PRODUCTION_BLOCKS) {
+    assert.match(client, new RegExp(`\\b${b}: \\{`), `dossier manquant : ${b}`);
+  }
+});
+
+test("une carte dit où on en est sans qu'on l'ouvre", () => {
+  // Sinon il faut entrer dans les trois pour le savoir, ce qui est
+  // exactement le parcours qu'on vient de supprimer.
+  const client = readFileSync(
+    new URL("../../app/(app)/labo-bonus/BonusLabClient.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(client, /folderStatus\(/);
+  assert.match(client, /À générer/);
+});
