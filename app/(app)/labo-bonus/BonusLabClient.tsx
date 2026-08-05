@@ -356,6 +356,38 @@ export function BonusLabClient({
       >
         <Card>
           <CardContent className="flex flex-col gap-5 py-5">
+            {/* LE PLAN D'ABORD (Béné, 5 août 2026) : "c'est ce que
+                reçoit chaque profil qui doit aller en premier, avant les
+                offres, c'est plus logique". Et ça règle une dépendance :
+                ce choix décide si les pastilles de profils existent dans
+                les cartes d'offre. Posé avant, elles apparaissent APRÈS
+                lui, donc dans le sens de lecture. */}
+            <Choice
+              label="Ce que reçoit chaque profil"
+              value={brief.plan}
+              onChange={(v) => setBrief((b) => ({ ...b, plan: v as BonusPlan }))}
+              options={[
+                {
+                  value: "shared",
+                  title: "Le même bonus, la même offre",
+                  hint: "Le plus simple à produire et à livrer.",
+                },
+                {
+                  value: "per_profile",
+                  title: "Un bonus par profil, une seule offre",
+                  hint:
+                    profiles.length > 0
+                      ? `Chacun reçoit un texte qui parle de lui, et tous mènent à la même offre. ${profiles.length} profils sur ton quiz.`
+                      : "Ton quiz n'a pas encore de profils de résultat.",
+                },
+                {
+                  value: "per_profile_offer",
+                  title: "Un bonus par profil, son offre à lui",
+                  hint: "Ton quiz sert à orienter vers l'offre adaptée : chaque bonus ramène vers celle de son profil.",
+                },
+              ]}
+            />
+
             {/* LES OFFRES (Monique, 5 aout 2026) : "je n'ai pas une offre
                 a proposer, mais 3, chaque profil mene vers une offre
                 differente". Une ligne par offre, et on dit a qui elle
@@ -364,7 +396,9 @@ export function BonusLabClient({
               <div>
                 <p className="text-sm font-medium">Ton offre payante</p>
                 <p className="text-xs text-muted-foreground">
-                  C&apos;est vers elle que ton bonus doit ramener.
+                  {hasOfferPerProfile(brief.plan)
+                    ? "Une ligne par offre, et pour chacune les profils qu'elle sert."
+                    : "C'est vers elle que ton bonus doit ramener."}
                 </p>
               </div>
 
@@ -478,55 +512,18 @@ export function BonusLabClient({
             </div>
 
             <Choice
-              label="Ce que reçoit chaque profil"
-              value={brief.plan}
-              onChange={(v) => setBrief((b) => ({ ...b, plan: v as BonusPlan }))}
-              options={[
-                {
-                  value: "shared",
-                  title: "Le même bonus, la même offre",
-                  hint: "Le plus simple à produire et à livrer.",
-                },
-                {
-                  value: "per_profile",
-                  title: "Un bonus par profil, une seule offre",
-                  hint:
-                    profiles.length > 0
-                      ? `Chacun reçoit un texte qui parle de lui, et tous mènent à la même offre. ${profiles.length} profils sur ton quiz.`
-                      : "Ton quiz n'a pas encore de profils de résultat.",
-                },
-                {
-                  value: "per_profile_offer",
-                  title: "Un bonus par profil, son offre à lui",
-                  hint: "Ton quiz sert à orienter vers l'offre adaptée : chaque bonus ramène vers celle de son profil.",
-                },
-              ]}
-            />
-
-            {/* LE PONT ENTRE LE CHOIX ET LES CARTES DU DESSUS. Les
-                pastilles de profils vivent dans chaque offre (elles lui
-                appartiennent), donc au dessus de ce choix : sans cette
-                phrase, elle choisit "son offre a lui" et ne voit pas que
-                quelque chose vient d'apparaitre plus haut. */}
-            {hasOfferPerProfile(brief.plan) && profiles.length > 0 && (
-              <p className="text-xs text-muted-foreground">
-                Indique maintenant quels profils vont vers quelle offre, dans les cartes ci-dessus.
-              </p>
-            )}
-
-            <Choice
-              label="Quand ton visiteur reçoit le bonus"
+              label="Quand vas-tu envoyer ce bonus ?"
               value={brief.trigger}
               onChange={(v) => setBrief((b) => ({ ...b, trigger: v as Brief["trigger"] }))}
               options={[
                 {
                   value: "completion",
-                  title: "À la fin du quiz",
+                  title: "Pour un quiz complété",
                   hint: "Il découvre son résultat, le bonus est la suite logique.",
                 },
                 {
                   value: "share",
-                  title: "Après un partage",
+                  title: "Pour un partage",
                   hint: viralityEnabled
                     ? "Il partage ton quiz, le bonus est sa récompense."
                     : "L'étape de partage n'est pas encore activée sur ton quiz.",
