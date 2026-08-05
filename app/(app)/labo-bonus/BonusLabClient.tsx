@@ -42,7 +42,9 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { toHtml } from "@/lib/markdownLite";
+import { BonusDocument } from "@/components/BonusDocument";
+import { hasStructure, parseBonusDoc } from "@/lib/bonus/document";
+import { buildPrintableHtml } from "@/lib/bonus/printable";
 import {
   BLOCK_LABEL,
   OFFER_KINDS,
@@ -179,28 +181,31 @@ export function BonusLabClient({
     }
   }
 
-  /** Export : une fenêtre d'impression, donc un PDF sans rien installer. */
-  function exportPdf() {
-    const key = keyFor("content");
-    const md = blocks[key];
+  /**
+   * Export : une page autonome, imprimee par le navigateur.
+   *
+   * Elle lit le MEME document que l'ecran (`parseBonusDoc`), donc le PDF
+   * ne peut pas raconter autre chose que ce qu'elle vient de relire et
+   * de corriger.
+   */
+  function exportPdf(block: ProductionBlock) {
+    const md = blocks[keyFor(block)];
     if (!md) return;
     const win = window.open("", "_blank");
     if (!win) {
       toast.error("Ton navigateur a bloqué la fenêtre. Autorise les pop-ups pour cette page.");
       return;
     }
-    const titre = chosen !== null ? pistes[chosen].title : "Bonus";
+    const doc = parseBonusDoc(md);
+    const titre =
+      doc.title ||
+      (block === "content" && piste ? piste.title : BLOCK_LABEL[block]);
+    const profil = perResult && profiles[profileIndex] ? profiles[profileIndex] : "";
     win.document.write(
-      `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${escapeHtml(titre)}</title>` +
-        `<style>` +
-        `@page{margin:20mm}` +
-        `body{font:15px/1.65 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1c1c28;max-width:44rem;margin:0 auto}` +
-        `h1{font-size:26px;line-height:1.25;margin:0 0 24px}` +
-        `h2{font-size:19px;margin:32px 0 10px;page-break-after:avoid}` +
-        `h3{font-size:16px;margin:22px 0 6px;page-break-after:avoid}` +
-        `p,li{margin:0 0 10px}ul{padding-left:20px}strong{font-weight:650}` +
-        `</style></head><body>` +
-        `<h1>${escapeHtml(titre)}</h1>${toHtml(md)}</body></html>`,
+      buildPrintableHtml(doc, {
+        title: titre,
+        footer: profil ? `Profil : ${profil}` : undefined,
+      }),
     );
     win.document.close();
     win.focus();
@@ -423,12 +428,10 @@ export function BonusLabClient({
                         <Copy />
                         Copier
                       </Button>
-                      {block === "content" && (
-                        <Button size="sm" variant="ghost" onClick={exportPdf}>
-                          <Download />
-                          PDF
-                        </Button>
-                      )}
+                      <Button size="sm" variant="ghost" onClick={() => exportPdf(block)}>
+                        <Download />
+                        PDF
+                      </Button>
                     </>
                   )}
                   <Button
@@ -453,12 +456,7 @@ export function BonusLabClient({
                   className="w-full rounded-lg border bg-background px-3 py-2 font-mono text-xs leading-relaxed"
                 />
               )}
-              {value && !isEditing && (
-                <div
-                  className="prose prose-sm max-w-none dark:prose-invert prose-headings:font-display prose-headings:mt-6 prose-headings:mb-2 prose-p:my-2 prose-li:my-0.5"
-                  dangerouslySetInnerHTML={{ __html: toHtml(value) }}
-                />
-              )}
+              {value && !isEditing && <Rendered markdown={value} />}
               {!value && (
                 <p className="text-sm text-muted-foreground">
                   {block === "guide" && "Ce que tu produis, avec quel outil, et comment il arrive chez ton visiteur."}
@@ -472,6 +470,28 @@ export function BonusLabClient({
       })}
     </Shell>
   );
+}
+
+/**
+ * Le rendu d'un bloc généré.
+ *
+ * La STRUCTURE vient de `parseBonusDoc`, en fonction pure et testée ;
+ * ce composant ne relit jamais le markdown lui-même. Un texte sans
+ * aucune section retombe sur un rendu simple : forcer une carte unique
+ * qui contient tout n'apporterait rien.
+ */
+function Rendered({ markdown }: { markdown: string }) {
+  const doc = parseBonusDoc(markdown);
+  if (!hasStructure(doc)) {
+    return (
+      <div className="flex flex-col gap-3 text-[15px] leading-relaxed">
+        {doc.lead.map((b, i) => (
+          <p key={i}>{b.kind === "para" ? b.text : ""}</p>
+        ))}
+      </div>
+    );
+  }
+  return <BonusDocument doc={doc} />;
 }
 
 /** Le gabarit commun aux trois écrans : titre, sous-titre, retour. */
@@ -542,12 +562,4 @@ function Choice({
       </div>
     </div>
   );
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }
