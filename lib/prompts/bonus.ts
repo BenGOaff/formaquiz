@@ -44,6 +44,13 @@
 // Import RELATIF avec l'extension : le runner de tests de ce repo ne
 // resout pas l'alias `@/`.
 import { bonusShape, type BonusShape } from "../bonus/shape.ts";
+import {
+  hasOfferPerProfile,
+  isPerProfile,
+  offerForProfile,
+  type BonusOffer,
+  type BonusPlan,
+} from "../bonus/offers.ts";
 
 /** Les formats proposables. Liste fermée : un modèle à qui on laisse
  *  inventer un format propose "un ebook complet" à la troisième piste. */
@@ -76,9 +83,6 @@ export const TRIGGER_LABEL: Record<BonusTrigger, string> = {
   share: "après un partage, en récompense",
 };
 
-/** Une version unique, ou une par profil de résultat. */
-export type BonusVariant = "single" | "per_result";
-
 /** Le format de l'offre payante vers laquelle le bonus mène. */
 export const OFFER_KINDS = [
   "formation en ligne",
@@ -99,13 +103,17 @@ export type OfferKind = (typeof OFFER_KINDS)[number];
  * son offre payante.
  */
 export type BonusBrief = {
-  /** La promesse principale de l'offre, en une phrase. */
-  offerPromise: string;
-  offerKind: OfferKind;
-  /** Texte libre : "97 euros", "à partir de 1200 euros", "sur devis". */
-  offerPrice: string;
+  /**
+   * LES OFFRES, ET À QUI ELLES S'ADRESSENT (Monique, 5 août 2026).
+   *
+   * Une seule dans le cas courant. Plusieurs quand le quiz sert à
+   * orienter vers l'offre adaptée : "je n'ai pas une offre à proposer,
+   * mais 3, chaque profil mène vers une offre différente".
+   */
+  offers: BonusOffer[];
   trigger: BonusTrigger;
-  variant: BonusVariant;
+  /** Comment le bonus ET l'offre se déclinent. Cf. lib/bonus/offers.ts. */
+  plan: BonusPlan;
 
   // ── Repris du quiz suivi ──
   quizTitle: string;
@@ -178,15 +186,33 @@ function toneLine(b: BonusBrief): string {
 
 /** Ce qu'on sait du quiz, pour le message utilisateur. */
 export function renderBriefForPrompt(b: BonusBrief, profileIndex?: number): string {
+  // L'OFFRE QUI S'APPLIQUE A CE PROFIL LA (Monique, 5 aout 2026).
+  // Sans ca, un quiz qui oriente vers trois offres differentes renvoyait
+  // les trois profils vers la meme, c'est a dire vers l'inverse de ce que
+  // le quiz venait de leur dire.
+  const offer = offerForProfile(b.plan, b.offers, profileIndex ?? -1) ?? b.offers[0] ?? null;
+
   const lines = [
     `LE QUIZ : "${b.quizTitle}"`,
     b.quizIntro ? `CE QU'IL PROMET : ${b.quizIntro}` : "",
     "",
-    `L'OFFRE PAYANTE VERS LAQUELLE LE BONUS MENE : ${b.offerPromise}`,
-    `FORMAT DE L'OFFRE : ${b.offerKind}`,
-    b.offerPrice ? `PRIX : ${b.offerPrice}` : "",
+    offer ? `L'OFFRE PAYANTE VERS LAQUELLE LE BONUS MENE : ${offer.promise}` : "",
+    offer ? `FORMAT DE L'OFFRE : ${offer.kind}` : "",
+    offer?.price ? `PRIX : ${offer.price}` : "",
     "",
   ];
+
+  // Quand chaque profil a SON offre, on montre la carte complete tant
+  // qu'on n'ecrit pas pour un profil precis : c'est ce qui permet a
+  // l'etape des pistes de proposer un format qui tienne pour les trois.
+  if (hasOfferPerProfile(b.plan) && typeof profileIndex !== "number") {
+    lines.push("CHAQUE PROFIL MENE VERS SA PROPRE OFFRE :");
+    b.profiles.forEach((p, i) => {
+      const o = offerForProfile(b.plan, b.offers, i);
+      lines.push(`- ${p.title} -> ${o ? o.promise : "(aucune offre associee)"}`);
+    });
+    lines.push("");
+  }
   if (b.profiles.length > 0) {
     if (typeof profileIndex === "number" && b.profiles[profileIndex]) {
       const p = b.profiles[profileIndex];
@@ -208,13 +234,25 @@ export function renderBriefForPrompt(b: BonusBrief, profileIndex?: number): stri
 /** ÉTAPE 1 : les trois pistes. */
 export function buildPistesSystemPrompt(b: BonusBrief): string {
   const perResult =
-    b.variant === "per_result"
+    isPerProfile(b.plan)
       ? [
           "LE BONUS SERA DECLINE PAR PROFIL.",
           "- Privilegie des formats faciles a decliner sans tout recreer : un tronc commun, et une partie qui change.",
           "- Chaque version sera ecrite SEPAREMENT, pour UN profil. Ne propose donc pas un format qui obligerait a mettre les quatre profils dans le meme document : ce serait un catalogue ou le lecteur doit chercher sa section, exactement ce qu'on veut eviter.",
         ].join("\n")
       : "LE BONUS SERA COMMUN A TOUS LES PARTICIPANTS. Une seule version, plus simple a produire et a livrer.";
+
+  // CHAQUE PROFIL A SON OFFRE (Monique, 5 aout 2026). Le format doit
+  // tenir pour les trois, sinon on choisit une piste impossible a
+  // decliner sans la reecrire.
+  const offres = hasOfferPerProfile(b.plan)
+    ? [
+        "",
+        "ATTENTION : CHAQUE PROFIL MENE VERS UNE OFFRE DIFFERENTE. Le quiz sert justement a orienter vers l'offre adaptee.",
+        "- Propose donc un format dont la MECANIQUE tient pour toutes les offres, et dont seul le contenu change d'un profil a l'autre.",
+        "- Ne propose pas une piste qui ne marcherait que pour une des offres : deux profils sur trois se retrouveraient avec un bonus qui ne mene nulle part.",
+      ].join("\n")
+    : "";
 
   return [
     PERSONA,
@@ -226,6 +264,7 @@ export function buildPistesSystemPrompt(b: BonusBrief): string {
       : "Le visiteur vient de recevoir son resultat : il attend une SUITE, pas une recompense. Le bonus doit repondre a la question qu'il se pose a cette seconde, c'est a dire \"et maintenant, je fais quoi ?\".",
     "",
     perResult,
+    offres,
     "",
     VALUE_CRITERIA,
     "",
@@ -342,7 +381,7 @@ function deliveryFacts(b: BonusBrief, shape: BonusShape): string {
       ? b.shareTagName
         ? `le tag de partage du quiz, qui s'appelle "${b.shareTagName}"`
         : "le tag de partage du quiz (a definir dans Tiquiz, onglet Partager)"
-      : b.variant === "per_result"
+      : isPerProfile(b.plan)
         ? "le tag Systeme.io du profil obtenu (un tag par profil, defini sur chaque resultat)"
         : "le tag de capture du quiz";
 
@@ -418,7 +457,7 @@ export function buildProductionSystemPrompt(
         ? AI_BUILT_PAGE
         : shape === "acces"
           ? "Sous le troisieme : ce qu'elle doit preparer (la date, le support, l'adresse d'acces), le temps reel, et ce qui doit exister AVANT le premier inscrit."
-          : b.variant === "per_result"
+          : isPerProfile(b.plan)
             ? "Sous le troisieme : l'outil, le temps reel, ET ce qui change d'une version a l'autre contre ce qui reste commun, pour ne produire le tronc commun qu'une seule fois."
             : "Sous le troisieme : l'outil le plus simple et le temps reel, honnetement.";
 
@@ -433,7 +472,10 @@ export function buildProductionSystemPrompt(
       "Sous le premier titre : une phrase, pas plus.",
       "Sous le deuxieme : la structure du bonus, une sous-section par partie, avec ce qu'elle contient et pourquoi.",
       thirdBody,
-      shape === "page" && b.variant === "per_result"
+      hasOfferPerProfile(b.plan)
+        ? "CHAQUE VERSION MENE VERS UNE OFFRE DIFFERENTE. Dis-le explicitement dans le guide : le tronc commun est le meme, mais l'appel a l'action et le dernier paragraphe changent d'un profil a l'autre, et l'automatisation Systeme.io de chaque profil envoie SA version. Ne laisse pas croire qu'un seul fichier suffit."
+        : "",
+      shape === "page" && isPerProfile(b.plan)
         ? "UN SEUL PROMPT, pas quatre. La page est la meme pour tous les profils : le prompt demande a l'IA de prevoir une variable en haut du fichier pour le texte qui change d'un profil a l'autre, et le guide dit quoi y mettre pour chacun. Faire coder quatre pages presque identiques est exactement le genre de corvee qu'on vient de supprimer."
         : "",
       "Sous le quatrieme : la livraison, exactement comme decrite ci-dessous.",
@@ -456,7 +498,7 @@ export function buildProductionSystemPrompt(
         : "- ADAPTE-TOI AU FORMAT. Un texte se redige. Un swipe file donne les modeles eux-memes. Un plan donne les etapes datees.",
       "- Termine par l'appel a l'action vers l'offre, presente comme la suite logique de ce qui precede, jamais comme une publicite.",
     );
-    if (b.variant === "per_result") {
+    if (isPerProfile(b.plan)) {
       // On NOMME le profil dans la consigne, pas seulement dans les
       // donnees : une instruction qui designe "le profil indique plus
       // bas" se dilue, une instruction qui dit son nom ne se dilue pas.

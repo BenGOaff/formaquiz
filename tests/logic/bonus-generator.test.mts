@@ -21,12 +21,17 @@ import {
 
 const brief = (over: Partial<BonusBrief> = {}): BonusBrief => ({
   // Ce que la creatrice saisit, et c'est TOUT ce qu'elle saisit.
-  offerPromise:
-    "J'aide les personnes TDAH a apaiser leur stress quotidien en 1 mois grace a des techniques simples",
-  offerKind: "formation en ligne",
-  offerPrice: "97 euros",
+  offers: [
+    {
+      promise:
+        "J'aide les personnes TDAH a apaiser leur stress quotidien en 1 mois grace a des techniques simples",
+      kind: "formation en ligne",
+      price: "97 euros",
+      profileIndexes: [],
+    },
+  ],
   trigger: "completion",
-  variant: "single",
+  plan: "shared",
   // Repris du quiz suivi.
   quizTitle: "Quel est ton profil de vendeuse sur Instagram ?",
   quizIntro: "Decouvre ce qui bloque tes ventes en 3 minutes",
@@ -80,11 +85,12 @@ test("le ton vient du quiz, il ne se redemande pas", () => {
 });
 
 test("la creatrice ne saisit que ce que le quiz ignore", () => {
-  // Trois champs, et trois seulement : la promesse de l'offre, son
-  // format, son prix. Plus les deux choix (declencheur, decline ou non).
+  // Son OFFRE, et rien d'autre : promesse, format, prix, et les profils
+  // qu'elle sert quand il y en a plusieurs. Plus les deux choix
+  // (declencheur, et comment le bonus se decline).
   const route = readFileSync(new URL("../../app/api/me/bonus/route.ts", import.meta.url), "utf8");
-  const schema = route.slice(route.indexOf("const briefSchema"), route.indexOf("const schema ="));
-  for (const champ of ["offerPromise", "offerKind", "offerPrice", "trigger", "variant"]) {
+  const schema = route.slice(route.indexOf("const offerSchema"), route.indexOf("const schema ="));
+  for (const champ of ["offers", "promise", "kind", "price", "trigger", "plan"]) {
     assert.ok(schema.includes(champ), `${champ} doit etre saisi`);
   }
   for (const repris of ["quizTitle", "addressForm", "profiles", "shareTagName", "audience", "niche"]) {
@@ -99,12 +105,12 @@ test("quand le bonus est décliné, on écrit pour UN profil à la fois", () => 
   // document ("si ta fuite c'est le trafic... si c'est la capture...").
   // Le visiteur devait chercher sa section dans un catalogue : ça rate
   // trois des cinq critères d'un coup (ciblé, applicable, unique).
-  const un = renderBriefForPrompt(brief({ variant: "per_result" }), 0);
+  const un = renderBriefForPrompt(brief({ plan: "per_profile" }), 0);
   assert.match(un, /LE PROFIL POUR LEQUEL TU ECRIS, ET LUI SEUL/);
   assert.match(un, /La fonceuse/);
   assert.doesNotMatch(un, /La discrete/);
 
-  const p = buildProductionSystemPrompt(brief({ variant: "per_result" }), "content", 0);
+  const p = buildProductionSystemPrompt(brief({ plan: "per_profile" }), "content", 0);
   assert.match(p, /TU ECRIS POUR UN SEUL PROFIL/);
   assert.match(p, /INTERDIT d'ecrire "si ton cas c'est X/);
 });
@@ -135,7 +141,7 @@ test("le piège du lien de drive restreint est nommé", () => {
 test("le tag change selon le déclencheur", () => {
   assert.match(buildProductionSystemPrompt(brief({ trigger: "share" }), "guide"), /tag de partage/);
   assert.match(
-    buildProductionSystemPrompt(brief({ trigger: "completion", variant: "per_result" }), "guide"),
+    buildProductionSystemPrompt(brief({ trigger: "completion", plan: "per_profile" }), "guide"),
     /tag Systeme\.io du profil obtenu/,
   );
 });
@@ -226,7 +232,7 @@ test("sans quiz relié, la route refuse et le dit", () => {
 test("aucun tiret cadratin dans ce qu'on donne au modèle", () => {
   const prompts = [
     buildPistesSystemPrompt(brief()),
-    buildPistesSystemPrompt(brief({ variant: "per_result", trigger: "share" })),
+    buildPistesSystemPrompt(brief({ plan: "per_profile", trigger: "share" })),
     ...PRODUCTION_BLOCKS.map((b) => buildProductionSystemPrompt(brief(), b)),
   ];
   for (const p of prompts) assert.ok(!/[—–]/.test(p), "un tiret cadratin a survécu");
@@ -445,7 +451,7 @@ test("dans les trois formes, c'est le TAG qui declenche l'email", () => {
 });
 
 test("un bonus decline ne fait pas coder quatre pages", () => {
-  const p = buildProductionSystemPrompt(brief({ variant: "per_result" }), "guide", 0, "calculateur");
+  const p = buildProductionSystemPrompt(brief({ plan: "per_profile" }), "guide", 0, "calculateur");
   assert.match(p, /UN SEUL PROMPT, pas quatre/);
 });
 

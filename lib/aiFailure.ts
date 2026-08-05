@@ -108,6 +108,8 @@ export function failureCopy(reason: string, what?: string): string {
       return `${quoi}la demande a été refusée par l'IA. Ce n'est pas de ton côté : signale-le-moi, je regarde le journal du serveur.`;
     case "unreadable":
       return `${quoi}la réponse est arrivée dans un format illisible. Relance, c'est en général bon du premier coup.`;
+    case "offer_coverage":
+      return "Chaque profil de résultat doit être relié à une offre, et à une seule. Complète les cases en haut de la page, puis relance.";
     case "no_quiz":
       return "Aucun quiz trouvé sur ton compte relié. Connecte le bon compte, ou crée ton quiz d'abord.";
     default:
