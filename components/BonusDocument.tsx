@@ -165,11 +165,15 @@ function CodeBlock({ text }: { text: string }) {
 }
 
 /**
- * Le gras et le code, et RIEN d'autre.
+ * EXACTEMENT ce que la barre d'outils de l'éditeur peut produire.
  *
- * Le texte vient d'un modèle, donc il finit dans un `innerHTML` : on
- * échappe d'abord, on remet le gras ensuite. L'inverse laisserait passer
- * une balise écrite par le modèle.
+ * Le texte vient d'un modèle ou d'un `contentEditable`, donc il finit
+ * dans un `innerHTML` : on échappe d'abord, on remet la mise en forme
+ * ensuite. L'inverse laisserait passer une balise écrite par le modèle.
+ *
+ * Le gras, l'italique, le code et les liens : la liste doit rester
+ * alignée sur `lib/bonus/markdownHtml.ts`, sinon la créatrice met un mot
+ * en italique dans l'éditeur et voit des astérisques chez son visiteur.
  */
 export function inline(text: string): string {
   const safe = String(text ?? "")
@@ -177,6 +181,19 @@ export function inline(text: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
   return safe
+    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, label: string, href: string) => {
+      // Un lien ecrit par un modele finit dans un `href` : `javascript:`
+      // et `data:` n'ont rien a y faire.
+      const url = safeUrl(href);
+      return url ? `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>` : m;
+    })
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>")
     .replace(/`([^`]+)`/g, "<code>$1</code>");
+}
+
+/** `null` si le schéma n'est pas de ceux qu'on accepte d'ouvrir. */
+function safeUrl(href: string): string | null {
+  const u = String(href ?? "").trim();
+  return /^(https?:\/\/|mailto:|\/)/i.test(u) ? u.replace(/"/g, "&quot;") : null;
 }

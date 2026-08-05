@@ -29,8 +29,23 @@ function esc(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
+/**
+ * La MEME mise en forme qu'a l'ecran (cf. `inline()` dans
+ * components/BonusDocument.tsx). Deux listes ecrites separement
+ * divergent : le PDF finirait par montrer des asterisques la ou l'ecran
+ * montre de l'italique.
+ */
 function inline(text: string): string {
-  return esc(text).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  return esc(text)
+    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, label: string, href: string) => {
+      const u = String(href ?? "").trim();
+      return /^(https?:\/\/|mailto:|\/)/i.test(u)
+        ? `<a href="${u.replace(/"/g, "&quot;")}">${label}</a>`
+        : m;
+    })
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>")
+    .replace(/`([^`]+)`/g, "<code>$1</code>");
 }
 
 /** `n` est l'index de la section : il donne sa couleur au bloc, la MEME
