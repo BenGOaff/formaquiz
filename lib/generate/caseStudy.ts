@@ -9,6 +9,7 @@ import { getCarnet } from "@/lib/carnet";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { buildClaudeMessageBody } from "@/lib/claudeRequest";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
+import { MAX_ATTEMPTS, isRetryableStatus, retryDelayMs } from "@/lib/generate/retry";
 import { resolvePersona, personaLabel } from "@/lib/personas";
 import type { TiquizMetrics } from "@/lib/types";
 
@@ -76,16 +77,28 @@ export async function generateCaseStudyDraft(
   });
 
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) return null;
+    // Une surcharge en face (429 / 529) n'est pas un echec : elle se
+    // repasse quelques secondes plus tard. Rythme partage avec tout le
+    // reste du repo (lib/generate/retry.ts).
+    let res: Response | null = null;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) break;
+      console.error("[caseStudy] Anthropic", res.status);
+      if (!isRetryableStatus(res.status) || attempt === MAX_ATTEMPTS) break;
+      await new Promise((r) =>
+        setTimeout(r, retryDelayMs(attempt, res!.headers.get("retry-after"))),
+      );
+    }
+    if (!res || !res.ok) return null;
     const data = await res.json();
     const text: string = Array.isArray(data?.content)
       ? data.content

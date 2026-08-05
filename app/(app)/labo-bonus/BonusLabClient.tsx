@@ -31,10 +31,13 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   ArrowLeft,
+  BookOpen,
   Check,
   Copy,
   Download,
+  FileText,
   Loader2,
+  Megaphone,
   Pencil,
   Sparkles,
   Wand2,
@@ -72,6 +75,45 @@ type Brief = {
 
 type Step = "brief" | "pistes" | "produce";
 
+/**
+ * Les trois dossiers de l'écran de production.
+ *
+ * Même mécanique que "Mes projets" dans Tiquiz : `"folders"` affiche la
+ * grille de cartes, un clic ouvre la catégorie, la flèche remonte. Béné
+ * l'a demandée nommément, et c'est la bonne : trois documents longs
+ * empilés sur une page, on ne voit plus où l'un finit.
+ */
+type Folder = "folders" | ProductionBlock;
+
+const FOLDERS: Record<
+  ProductionBlock,
+  { icon: typeof BookOpen; fg: string; bg: string; hint: string; empty: string }
+> = {
+  guide: {
+    icon: BookOpen,
+    fg: "text-indigo-600 dark:text-indigo-300",
+    bg: "bg-indigo-50 dark:bg-indigo-950/40",
+    hint: "Pour toi : ce que tu produis, avec quel outil, et comment il arrive chez ton visiteur.",
+    empty: "Rien ici pour l'instant. Génère ton guide de création.",
+  },
+  content: {
+    icon: FileText,
+    fg: "text-violet-600 dark:text-violet-300",
+    bg: "bg-violet-50 dark:bg-violet-950/40",
+    hint: "Pour ton visiteur : le texte du bonus lui-même, prêt à mettre en page.",
+    empty: "Rien ici pour l'instant. Génère le contenu de ton bonus.",
+  },
+  presentation: {
+    icon: Megaphone,
+    fg: "text-amber-600 dark:text-amber-300",
+    bg: "bg-amber-50 dark:bg-amber-950/40",
+    // La page de résultat n'est plus citée : elle mène déjà à l'offre,
+    // et le bonus part par email (retour Béné, 5 août 2026).
+    hint: "Titre, punchline et 5 puces promesses pour annoncer le bonus dans ta campagne et tes posts, plus l'email qui le livre.",
+    empty: "Rien ici pour l'instant. Génère de quoi parler de ton bonus.",
+  },
+};
+
 export function BonusLabClient({
   quizTitle,
   profiles,
@@ -97,6 +139,8 @@ export function BonusLabClient({
   const [blocks, setBlocks] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  // Trois dossiers, un seul ouvert a la fois (cf. l'ecran 3 plus bas).
+  const [folder, setFolder] = useState<Folder>("folders");
 
   const perResult = brief.variant === "per_result" && profiles.length > 0;
   // Un bonus décliné a un contenu PAR profil : on garde les versions
@@ -106,6 +150,25 @@ export function BonusLabClient({
     [perResult, profileIndex],
   );
   const keyFor = (b: ProductionBlock) => (b === "content" ? contentKey : b);
+
+  /**
+   * Ce que la carte du dossier annonce, sans l'ouvrir.
+   *
+   * Une carte qui ne dit pas où on en est oblige à entrer dans les trois
+   * pour le savoir, ce qui est exactement le scroll qu'on vient de
+   * supprimer. Le contenu décliné compte ses profils : c'est le seul
+   * dossier qui peut être à moitié fait.
+   */
+  function folderStatus(b: ProductionBlock): string {
+    if (b === "content" && perResult) {
+      const done = profiles.filter((_, i) => blocks[`content:${i}`]).length;
+      if (done === 0) return "À générer";
+      return done === profiles.length
+        ? `Les ${profiles.length} profils sont écrits`
+        : `${done} profil${done > 1 ? "s" : ""} sur ${profiles.length} écrit${done > 1 ? "s" : ""}`;
+    }
+    return blocks[keyFor(b)] ? "Prêt" : "À générer";
+  }
 
   async function call(body: Record<string, unknown>) {
     const res = await fetch("/api/me/bonus", {
@@ -363,6 +426,7 @@ export function BonusLabClient({
                   onClick={() => {
                     setChosen(i);
                     setBlocks({});
+                    setFolder("folders");
                     setStep("produce");
                   }}
                 >
@@ -376,15 +440,68 @@ export function BonusLabClient({
     );
   }
 
-  // ── Écran 3 : la production ──
+  // ── Écran 3 : les trois dossiers ──
+  //
+  // "Ces 3 blocs qui s'enchainent ça fait beaucoup scroller, on voit mal
+  // la limite entre chacun. On peut faire 3 dossiers comme les dossiers
+  // quiz / sondages de Tiquiz ?" (Béné, 5 août 2026). Oui, et c'est le
+  // même mécanisme : une grille de cartes-catégories, un clic ouvre la
+  // catégorie, une flèche remonte. Un seul contenu long à l'écran à la
+  // fois, donc plus de frontière à deviner.
   const piste = chosen !== null ? pistes[chosen] : null;
+
+  if (folder === "folders") {
+    return (
+      <Shell
+        title={piste?.title ?? "Ton bonus"}
+        subtitle={piste?.punchline ?? ""}
+        onBack={() => setStep("pistes")}
+      >
+        <div className="grid items-start gap-4 sm:grid-cols-3">
+          {PRODUCTION_BLOCKS.map((block) => {
+            const f = FOLDERS[block];
+            const Icon = f.icon;
+            return (
+              <button
+                key={block}
+                type="button"
+                onClick={() => setFolder(block)}
+                className="flex h-full flex-col gap-3 rounded-xl border border-border bg-background p-5 text-left transition-colors hover:border-primary/50"
+              >
+                <span className={`flex size-11 items-center justify-center rounded-xl ${f.bg}`}>
+                  <Icon className={`size-5 ${f.fg}`} />
+                </span>
+                <span className="font-display font-semibold leading-snug">
+                  {BLOCK_LABEL[block]}
+                </span>
+                <span className="text-sm text-muted-foreground">{f.hint}</span>
+                <span className="mt-auto pt-1 text-xs font-medium text-muted-foreground">
+                  {folderStatus(block)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </Shell>
+    );
+  }
+
+  // ── Écran 3 bis : le contenu d'un dossier ──
+  const block = folder;
+  const key = keyFor(block);
+  const value = blocks[key];
+  const isEditing = editing === key;
+
   return (
     <Shell
-      title={piste?.title ?? "Ton bonus"}
-      subtitle={piste?.punchline ?? ""}
-      onBack={() => setStep("pistes")}
+      title={BLOCK_LABEL[block]}
+      subtitle={FOLDERS[block].hint}
+      onBack={() => setFolder("folders")}
+      backLabel="Retour aux dossiers"
     >
-      {perResult && (
+      {/* Le sélecteur de profil ne concerne que le contenu : c'est le
+          seul bloc qui s'écrit une fois par profil. */}
+      {perResult && block === "content" && (
         <div className="flex flex-col gap-1.5">
           <label htmlFor="profil" className="text-sm font-medium">
             Le profil que tu prépares
@@ -408,70 +525,52 @@ export function BonusLabClient({
         </div>
       )}
 
-      {PRODUCTION_BLOCKS.map((block) => {
-        const key = keyFor(block);
-        const value = blocks[key];
-        const isEditing = editing === key;
-        return (
-          <Card key={key}>
-            <CardContent className="flex flex-col gap-3 py-5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="font-semibold">{BLOCK_LABEL[block]}</p>
-                <div className="flex flex-wrap gap-2">
-                  {value && (
-                    <>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setEditing(isEditing ? null : key)}
-                      >
-                        {isEditing ? <Check /> : <Pencil />}
-                        {isEditing ? "Terminé" : "Modifier"}
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => copy(value)}>
-                        <Copy />
-                        Copier
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => exportPdf(block)}>
-                        <Download />
-                        PDF
-                      </Button>
-                    </>
-                  )}
-                  <Button
-                    size="sm"
-                    variant={value ? "outline" : "default"}
-                    onClick={() => produce(block)}
-                    disabled={busy !== null}
-                  >
-                    {busy === key ? <Loader2 className="animate-spin" /> : <Wand2 />}
-                    {value ? "Refaire" : "Générer"}
-                  </Button>
-                </div>
-              </div>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          variant={value ? "outline" : "default"}
+          onClick={() => produce(block)}
+          disabled={busy !== null}
+        >
+          {busy === key ? <Loader2 className="animate-spin" /> : <Wand2 />}
+          {value ? "Refaire" : "Générer"}
+        </Button>
+        {value && (
+          <>
+            <Button size="sm" variant="ghost" onClick={() => setEditing(isEditing ? null : key)}>
+              {isEditing ? <Check /> : <Pencil />}
+              {isEditing ? "Terminé" : "Modifier"}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => copy(value)}>
+              <Copy />
+              Copier
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => exportPdf(block)}>
+              <Download />
+              PDF
+            </Button>
+          </>
+        )}
+      </div>
 
-              {/* UN TEXTE GENERE EST UN BROUILLON, PAS UN LIVRABLE : elle
-                  corrige sur place, et l'export reprend sa version. */}
-              {value && isEditing && (
-                <textarea
-                  value={value}
-                  onChange={(e) => setBlocks((b) => ({ ...b, [key]: e.target.value }))}
-                  rows={22}
-                  className="w-full rounded-lg border bg-background px-3 py-2 font-mono text-xs leading-relaxed"
-                />
-              )}
-              {value && !isEditing && <Rendered markdown={value} />}
-              {!value && (
-                <p className="text-sm text-muted-foreground">
-                  {block === "guide" && "Ce que tu produis, avec quel outil, et comment il arrive chez ton visiteur."}
-                  {block === "content" && "Le texte du bonus lui-même, prêt à mettre en page."}
-                  {block === "presentation" && "L'annonce sur la page de résultat, et l'email de livraison."}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        );
-      })}
+      {/* UN TEXTE GENERE EST UN BROUILLON, PAS UN LIVRABLE : elle
+          corrige sur place, et l'export reprend sa version. */}
+      {value && isEditing && (
+        <textarea
+          value={value}
+          onChange={(e) => setBlocks((b) => ({ ...b, [key]: e.target.value }))}
+          rows={22}
+          className="w-full rounded-lg border bg-background px-3 py-2 font-mono text-xs leading-relaxed"
+        />
+      )}
+      {value && !isEditing && <Rendered markdown={value} />}
+      {!value && (
+        <Card>
+          <CardContent className="py-8 text-center text-sm text-muted-foreground">
+            {FOLDERS[block].empty}
+          </CardContent>
+        </Card>
+      )}
     </Shell>
   );
 }
@@ -503,11 +602,13 @@ function Shell({
   title,
   subtitle,
   onBack,
+  backLabel = "Retour",
   children,
 }: {
   title: string;
   subtitle?: string;
   onBack?: () => void;
+  backLabel?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -520,7 +621,7 @@ function Shell({
             className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="size-4" />
-            Retour
+            {backLabel}
           </button>
         )}
         <h1 className="font-display text-2xl font-bold">{title}</h1>

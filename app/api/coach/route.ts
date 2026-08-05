@@ -11,6 +11,7 @@ import { getCarnet } from "@/lib/carnet";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { buildClaudeMessageBody } from "@/lib/claudeRequest";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
+import { MAX_ATTEMPTS, isRetryableStatus, retryDelayMs } from "@/lib/generate/retry";
 import {
   buildCoachSystemPrompt,
   extractEscalation,
@@ -52,12 +53,19 @@ async function getOrCreateThread(
 }
 
 /**
- * Appelle l'API Anthropic avec un retry unique : sur erreur reseau ou 5xx
- * (et 429), on retente une fois ; sur 4xx definitif, on abandonne. Evite le
+ * Appelle l'API Anthropic avec des reprises : sur erreur reseau ou 5xx
+ * (et 429), on retente ; sur 4xx definitif, on abandonne. Evite le
  * "coach muet" sur un blip transitoire. Renvoie le texte, ou null si echec.
+ *
+ * LES REPRISES ATTENDENT, ET C'EST LE POINT (5 aout 2026). Le journal du
+ * serveur a montre un vrai `529 overloaded_error` sur le generateur de
+ * bonus. Le coach etait expose pareil, et sa reprise partait AUSSITOT :
+ * elle retombait sur la meme seconde de surcharge, donc elle ne
+ * rattrapait rien, elle doublait juste l'appel. Combien de tentatives et
+ * apres quelle attente : `lib/generate/retry.ts`, comme partout ailleurs.
  */
 async function callAnthropicWithRetry(apiKey: string, body: unknown): Promise<string | null> {
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -87,9 +95,22 @@ async function callAnthropicWithRetry(apiKey: string, body: unknown): Promise<st
           : "";
       }
       // 4xx (hors 429) : rejouer ne changera rien, echec definitif.
-      if (res.status < 500 && res.status !== 429) return null;
-    } catch {
-      // Erreur reseau : on retente une fois.
+      if (!isRetryableStatus(res.status)) {
+        console.error("[coach] Anthropic", res.status);
+        return null;
+      }
+      console.warn("[coach] Anthropic", res.status, "tentative", attempt);
+      if (attempt < MAX_ATTEMPTS) {
+        await new Promise((r) =>
+          setTimeout(r, retryDelayMs(attempt, res.headers.get("retry-after"))),
+        );
+      }
+    } catch (err) {
+      // Erreur reseau : on retente, apres la meme pause.
+      console.warn("[coach] appel interrompu, tentative", attempt, err);
+      if (attempt < MAX_ATTEMPTS) {
+        await new Promise((r) => setTimeout(r, retryDelayMs(attempt)));
+      }
     }
   }
   return null;

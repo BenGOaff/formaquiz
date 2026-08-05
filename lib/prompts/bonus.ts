@@ -261,8 +261,38 @@ export type ProductionBlock = (typeof PRODUCTION_BLOCKS)[number];
 export const BLOCK_LABEL: Record<ProductionBlock, string> = {
   guide: "Le guide de création",
   content: "Le contenu du bonus",
-  presentation: "L'annonce et l'email",
+  presentation: "De quoi en parler",
 };
+
+/**
+ * LA MÉCANIQUE DES PUCES PROMESSES.
+ *
+ * Béné, 5 août 2026 : "tu peux donner des arguments pour présenter le
+ * bonus dans la campagne email et les posts qui vont promouvoir le
+ * quiz : titre + punchline, 5 puces promesses (bénéfice + conséquence
+ * concrète du bénéfice)."
+ *
+ * La mécanique est distillée de `copywriting-claude/Puces promesses`,
+ * jamais recopiée : donner une liste finie à un modèle produit des
+ * puces qui se ressemblent toutes d'un quiz à l'autre. Le patron en
+ * deux temps vient de ses propres emails ("Tu sais quel quiz créer et
+ * pour qui, avant d'écrire la première question. Fini les trois
+ * semaines à hésiter sur le sujet").
+ *
+ * Le deuxième temps est ce qui distingue une puce d'un sommaire :
+ * "un modèle d'email" est une table des matières, "tu écris ton email
+ * du lundi en dix minutes au lieu d'y passer ta matinée" est une
+ * promesse.
+ */
+const PROMISE_BULLETS = [
+  "LES PUCES PROMESSES, EN DEUX TEMPS, ET LES DEUX SONT OBLIGATOIRES :",
+  "1. LE BENEFICE : ce que la personne SAIT FAIRE ou OBTIENT apres avoir utilise le bonus.",
+  "2. LA CONSEQUENCE CONCRETE : ce que ca change dans sa semaine. Du temps gagne, une hesitation qui disparait, une erreur qu'elle ne fait plus, un resultat qu'elle peut constater.",
+  "Le deuxieme temps est ce qui separe une promesse d'un sommaire. \"Un modele d'email\" est une table des matieres. \"Tu ecris ton email du lundi en dix minutes au lieu d'y passer ta matinee\" est une promesse.",
+  "Une puce = une phrase, deux au maximum. Elle commence par un VERBE ou par \"Comment\", jamais par un nom de chapitre.",
+  "INTERDIT : les superlatifs creux (revolutionnaire, ultime, incontournable), les mots-valises (optimiser, booster, passer au niveau superieur), et toute promesse invérifiable.",
+  "INTERDIT : parler du bonus a la troisieme personne (\"ce guide contient\"). On parle a la personne qui va le recevoir.",
+].join("\n");
 
 /**
  * COMMENT LE BONUS ARRIVE VRAIMENT CHEZ LE VISITEUR.
@@ -367,13 +397,20 @@ export function buildProductionSystemPrompt(
   if (block === "presentation") {
     out.push(
       "",
-      "BLOC DEMANDE : L'ANNONCE ET L'EMAIL. Structure imposee, avec ces titres exacts :",
-      "## Sur la page de resultat",
+      "BLOC DEMANDE : DE QUOI PARLER DU BONUS. Ce bloc sert a ANNONCER le bonus dans la campagne email et dans les posts qui font la promotion du quiz. Structure imposee, avec ces titres exacts :",
+      "## Le titre et la punchline",
+      "## Les 5 puces promesses",
       "## L'email de livraison",
-      "## Le visuel",
-      "Sous le premier : 2 a 3 phrases qui presentent le bonus comme la recompense naturelle du resultat obtenu.",
-      "Sous le deuxieme : l'objet, puis le corps de l'email, dans le ton du quiz. C'est l'email declenche par le tag.",
-      "Sous le troisieme : une idee de couverture simple, decrite en deux phrases.",
+      "Sous le premier : le titre du bonus, puis UNE phrase de punchline qui donne envie de l'obtenir. Le titre nomme le resultat, pas le format.",
+      "Sous le deuxieme : EXACTEMENT 5 puces, en liste a tirets.",
+      "",
+      PROMISE_BULLETS,
+      "",
+      "Sous le troisieme : l'objet, puis le corps de l'email qui LIVRE le bonus, dans le ton du quiz. Il contient le lien du fichier, une phrase qui dit par ou commencer, et rien d'autre.",
+      "",
+      // DEUX INTERDITS QUI VIENNENT D'UN VRAI RETOUR (Béné, 5 août 2026).
+      "INTERDIT ABSOLU 1 : vendre l'offre dans cet email. Pas de prix, pas de lien vers l'offre, pas de \"si tu veux aller plus loin\". La vente vit dans la SEQUENCE EMAIL, qui est generee ailleurs et qui la fait mieux : elle a plusieurs jours, une histoire, une garantie. Un email de livraison qui vend en trois lignes ne fait que grignoter la sequence.",
+      "INTERDIT ABSOLU 2 : ecrire quoi que ce soit a ajouter SUR LA PAGE DE RESULTAT. Elle mene deja a un appel a l'action, et le bonus arrive par email. Un encart de plus sur cette page ne fait que diluer le seul clic qui compte.",
     );
   }
 
