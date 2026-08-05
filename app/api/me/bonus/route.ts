@@ -3,16 +3,13 @@
 // Le générateur de bonus post-quiz. Prompt de Béné, corrigé ensemble le
 // 5 août 2026 (cf. lib/prompts/bonus.ts pour le détail des décisions).
 //
-// -- ACCÈS RESTREINT, ET C'EST VOULU ----------------------------------
+// -- OUVERT AUX ÉLÈVES (5 août 2026) ----------------------------------
 //
-// Réservé aux adresses admin tant que Béné n'a pas testé la sortie sur
-// de vrais cas. Un générateur qui consomme des tokens et rend un
-// livrable qu'on n'a jamais lu n'a rien à faire devant des élèves : la
-// campagne email du 3 août est sortie en JSON brut à l'écran, et
-// personne ne l'avait vue avant eux.
-//
-// Ouvrir aux élèves = retirer le `isAdminEmail` ci-dessous et ajouter
-// l'entrée dans la navigation. Deux lignes, quand elle le décidera.
+// La route a vécu deux jours réservée aux admins, le temps que Béné
+// vérifie la sortie sur de vrais cas. Un générateur qui consomme des
+// tokens et rend un livrable que personne n'a lu n'a rien à faire devant
+// des élèves : la campagne email du 3 août est sortie en JSON brut à
+// l'écran, et personne ne l'avait vue avant eux.
 //
 // -- POURQUOI DEUX ÉTAPES, ET TROIS APPELS À L'ÉTAPE 2 ----------------
 //
@@ -29,7 +26,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getViewer } from "@/lib/parcours";
-import { isAdminEmail } from "@/lib/adminEmails";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { buildClaudeMessageBody } from "@/lib/claudeRequest";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
@@ -95,11 +91,6 @@ export async function POST(req: NextRequest) {
   if (!viewer) {
     return NextResponse.json({ ok: false, reason: "unauth" }, { status: 401 });
   }
-  // Voir l'en-tête : restriction volontaire, le temps du test.
-  if (!isAdminEmail(viewer.email)) {
-    return NextResponse.json({ ok: false, reason: "not_open_yet" }, { status: 403 });
-  }
-
   const apiKey = getApiKey();
   if (!apiKey) {
     return NextResponse.json({ ok: false, reason: "no_api_key" }, { status: 500 });

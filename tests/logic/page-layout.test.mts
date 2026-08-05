@@ -134,25 +134,37 @@ test("un onglet vide dit pourquoi il est vide", () => {
   assert.match(src, /Aucun modèle disponible pour le moment/);
 });
 
-// ── Le générateur de bonus reste en test ─────────────────────────────
+// ── Le générateur de bonus est ouvert (5 août 2026) ──────────────────
 
-test("son onglet n'existe que pour l'admin", () => {
-  // "Mets-le sur une page que les users ne connaissent pas."
+test("son onglet est visible par tout le monde", () => {
+  // "Ok c'est cool on envoie pour les users." Il a vecu deux jours
+  // derriere un `isAdmin`, le temps de verifier sa sortie.
   const client = read("../../app/(app)/funnel/FunnelClient.tsx");
   const i = client.indexOf("/labo-bonus");
   assert.ok(i > 0, "l'onglet existe");
-  // La garde est juste au dessus du lien.
-  assert.match(client.slice(Math.max(0, i - 400), i), /\{isAdmin && \(/);
+  assert.doesNotMatch(client.slice(Math.max(0, i - 400), i), /\{isAdmin && \(/);
 });
 
-test("et la navigation principale ne le liste pas", () => {
+test("il vit dans les onglets de la page Bonus, pas dans le menu", () => {
+  // Une entree de plus dans la navigation principale pour un outil qui
+  // appartient a la meme famille (emails, promo, modeles) eparpillerait
+  // ce qui vient d'etre regroupe.
   assert.doesNotMatch(read("../../components/AppHeader.tsx"), /labo-bonus/);
 });
 
-test("isAdmin est transmis sur les DEUX branches de la page", () => {
+test("les DEUX branches de la page recoivent les memes proprietes", () => {
   // La page rend FunnelClient deux fois : verrouillee (palier 7 euros)
-  // et libre. Oublier l'une des deux est exactement le defaut que ce
-  // repo corrige en boucle.
+  // et libre. Une propriete ajoutee a une seule des deux est exactement
+  // le defaut que ce repo corrige en boucle, et il ne se voit que pour
+  // les eleves qui sont du mauvais cote du verrou.
+  //
+  // Le test porte sur l'EGALITE des deux appels, pas sur une propriete
+  // en particulier : il survit donc a celles qui vont et viennent.
   const page = read("../../app/(app)/funnel/page.tsx");
-  assert.equal((page.match(/isAdmin=\{isAdmin\}/g) ?? []).length, 2);
+  const appels = [...page.matchAll(/<FunnelClient([\s\S]*?)\/>/g)].map((m) =>
+    [...m[1].matchAll(/(\w+)=\{/g)].map((x) => x[1]).sort().join(","),
+  );
+  assert.equal(appels.length, 2, "la page rend FunnelClient deux fois");
+  assert.equal(appels[0], appels[1]);
+  assert.ok(appels[0].length > 0, "les appels passent bien des proprietes");
 });

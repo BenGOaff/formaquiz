@@ -232,13 +232,54 @@ test("aucun tiret cadratin dans ce qu'on donne au modèle", () => {
   for (const p of prompts) assert.ok(!/[—–]/.test(p), "un tiret cadratin a survécu");
 });
 
-// ── L'accès, le temps du test ────────────────────────────────────────
+// ── L'ouverture aux eleves (5 aout 2026) ─────────────────────────────
+//
+// "Ok c'est cool on envoie pour les users je vais leur demander de
+// tester." Le generateur a vecu deux jours en page non listee, reservee
+// aux admins, le temps que Bene verifie sa sortie sur de vrais cas.
 
-test("la page ET la route sont fermées, pas seulement la page", () => {
+test("la page ET la route sont ouvertes, pas seulement la page", () => {
+  // Fermer l'une sans l'autre etait le point de vigilance a l'aller ;
+  // c'est le meme au retour. Une page ouverte devant une route qui refuse
+  // donnerait un ecran qui echoue a chaque clic.
   const page = readFileSync(new URL("../../app/(app)/labo-bonus/page.tsx", import.meta.url), "utf8");
   const route = readFileSync(new URL("../../app/api/me/bonus/route.ts", import.meta.url), "utf8");
-  assert.match(page, /isAdminEmail/);
-  assert.match(route, /isAdminEmail/);
+  assert.doesNotMatch(page, /isAdminEmail/);
+  assert.doesNotMatch(route, /isAdminEmail/);
+  // Mais la connexion, elle, reste exigee des deux cotes.
+  assert.match(page, /if \(!viewer\) redirect/);
+  assert.match(route, /reason: "unauth"/);
+});
+
+test("le coach sait ou est le generateur, et ce qu'il produit", () => {
+  // "Il faut aussi informer le coach pour qu'il puisse proposer cette
+  // nouvelle option si l'user ne sait pas quel bonus offrir et qu'il
+  // sache comment les guider, ou trouver ca, ce que ca propose."
+  const k = readFileSync(new URL("../../lib/coach/knowledge.ts", import.meta.url), "utf8");
+  assert.match(k, /GÉNÉRATEUR DE BONUS POST-QUIZ/);
+  assert.match(k, /onglet "Bonus post-quiz"/, "il sait OU c'est");
+  assert.match(k, /compte Tiquiz doit être connecté/, "il sait ce qu'il faut AVANT");
+  assert.match(k, /3 pistes/, "il sait ce que ca REND");
+});
+
+test("le coach conseille les MEMES criteres que le generateur", () => {
+  // Deux avis contradictoires dans le meme espace, c'est pire que pas de
+  // conseil du tout.
+  const k = readFileSync(new URL("../../lib/coach/knowledge.ts", import.meta.url), "utf8");
+  for (const c of ["UTILE", "SPÉCIFIQUE", "CIBLÉ", "APPLICABLE", "UNIQUE"]) {
+    assert.ok(k.includes(c), `le critere ${c} manque au coach`);
+  }
+  assert.match(k, /PERSONNALISÉ/);
+  assert.match(k, /SUR MESURE/);
+  assert.match(k, /jamais collé dans la page de résultat/);
+});
+
+test("le coach n'envoie plus vers une page qui a change de nom", () => {
+  // "Campagne" est devenu "Bonus" le 5 aout : un coach qui nomme un
+  // menu qui n'existe plus fait chercher l'eleve pour rien.
+  const k = readFileSync(new URL("../../lib/coach/knowledge.ts", import.meta.url), "utf8");
+  const orientation = k.slice(k.indexOf("OUTILS DE L'ESPACE"), k.indexOf("COMMENT MARCHE TIQUIZ"));
+  assert.match(orientation, /page "Bonus" du menu/);
 });
 
 test("aucun jargon interne ne fuite dans l'interface", () => {
