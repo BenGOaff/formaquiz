@@ -103,6 +103,11 @@ export interface TiquizReadout {
   } | null;
   funnelVerdict: string | null;
   trafficVerdict: string | null;
+  /** Comment ce quiz demarre par rapport aux AUTRES quiz de l'eleve.
+   *  Deja redige par Tiquiz, comme les deux verdicts au dessus : c'est
+   *  ce qui garantit que le coach et l'ecran de stats disent la meme
+   *  phrase. Absent des versions anterieures au 5 aout 2026. */
+  startRateVerdict?: string | null;
 }
 
 // ── Chantier B : funnel "done-for-you" genere a partir du carnet ──
