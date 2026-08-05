@@ -225,3 +225,34 @@ test("l'ecran nomme les profils sans offre", () => {
   );
   assert.match(client, /coverage\.missing\.map\(\(i\) => profiles\[i\]\)/);
 });
+
+// ── L'ordre de lecture de l'écran (Béné, 5 août 2026) ────────────────
+
+test("le choix de declinaison suit les offres, le declencheur vient apres", () => {
+  // "Peut-etre passer le choix du nombre de bonus au-dessous des offres
+  // du coup ? Ce serait logique non ?" Oui : on lit "voila ce que je
+  // vends", puis "voila comment ca se decline", puis "quand il le
+  // recoit". Le declencheur parlait du moment de la remise et s'etait
+  // glisse entre les deux.
+  const client = readFileSync(
+    new URL("../../app/(app)/labo-bonus/BonusLabClient.tsx", import.meta.url),
+    "utf8",
+  );
+  const offres = client.indexOf("Ton offre payante");
+  const plan = client.indexOf("Ce que reçoit chaque profil");
+  const declencheur = client.indexOf("Quand ton visiteur reçoit le bonus");
+  assert.ok(offres > 0 && plan > 0 && declencheur > 0, "les trois blocs existent");
+  assert.ok(offres < plan, "les offres d'abord");
+  assert.ok(plan < declencheur, "puis la declinaison, puis le declencheur");
+});
+
+test("choisir une offre par profil renvoie aux cartes du dessus", () => {
+  // Les pastilles de profils vivent DANS chaque offre, donc au dessus du
+  // choix : sans cette phrase, elle coche "son offre a lui" et ne voit
+  // pas que quelque chose vient d'apparaitre plus haut.
+  const client = readFileSync(
+    new URL("../../app/(app)/labo-bonus/BonusLabClient.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(client, /dans les cartes ci-dessus/);
+});

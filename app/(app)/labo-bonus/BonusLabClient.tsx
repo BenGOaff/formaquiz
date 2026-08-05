@@ -478,26 +478,6 @@ export function BonusLabClient({
             </div>
 
             <Choice
-              label="Quand ton visiteur reçoit le bonus"
-              value={brief.trigger}
-              onChange={(v) => setBrief((b) => ({ ...b, trigger: v as Brief["trigger"] }))}
-              options={[
-                {
-                  value: "completion",
-                  title: "À la fin du quiz",
-                  hint: "Il découvre son résultat, le bonus est la suite logique.",
-                },
-                {
-                  value: "share",
-                  title: "Après un partage",
-                  hint: viralityEnabled
-                    ? "Il partage ton quiz, le bonus est sa récompense."
-                    : "L'étape de partage n'est pas encore activée sur ton quiz.",
-                },
-              ]}
-            />
-
-            <Choice
               label="Ce que reçoit chaque profil"
               value={brief.plan}
               onChange={(v) => setBrief((b) => ({ ...b, plan: v as BonusPlan }))}
@@ -519,6 +499,37 @@ export function BonusLabClient({
                   value: "per_profile_offer",
                   title: "Un bonus par profil, son offre à lui",
                   hint: "Ton quiz sert à orienter vers l'offre adaptée : chaque bonus ramène vers celle de son profil.",
+                },
+              ]}
+            />
+
+            {/* LE PONT ENTRE LE CHOIX ET LES CARTES DU DESSUS. Les
+                pastilles de profils vivent dans chaque offre (elles lui
+                appartiennent), donc au dessus de ce choix : sans cette
+                phrase, elle choisit "son offre a lui" et ne voit pas que
+                quelque chose vient d'apparaitre plus haut. */}
+            {hasOfferPerProfile(brief.plan) && profiles.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Indique maintenant quels profils vont vers quelle offre, dans les cartes ci-dessus.
+              </p>
+            )}
+
+            <Choice
+              label="Quand ton visiteur reçoit le bonus"
+              value={brief.trigger}
+              onChange={(v) => setBrief((b) => ({ ...b, trigger: v as Brief["trigger"] }))}
+              options={[
+                {
+                  value: "completion",
+                  title: "À la fin du quiz",
+                  hint: "Il découvre son résultat, le bonus est la suite logique.",
+                },
+                {
+                  value: "share",
+                  title: "Après un partage",
+                  hint: viralityEnabled
+                    ? "Il partage ton quiz, le bonus est sa récompense."
+                    : "L'étape de partage n'est pas encore activée sur ton quiz.",
                 },
               ]}
             />
