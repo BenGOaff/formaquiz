@@ -1,5 +1,6 @@
 "use client";
 
+import { TabBar, TabButton, TabLink } from "@/components/TabBar";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -32,19 +33,30 @@ interface ProfileOption {
   hasCta: boolean;
 }
 
+type Tab = "emails" | "promo" | "modeles";
+
 export function FunnelClient({
   initialAssets,
   generatedAt,
   templates = [],
   profiles = [],
   initialIntentions = {},
+  isAdmin = false,
 }: {
   initialAssets: FunnelAssets | null;
   generatedAt: string | null;
   templates?: SioTemplate[];
   profiles?: ProfileOption[];
   initialIntentions?: IntentionMap;
+  /** Le generateur de bonus est en test : son onglet n'existe que pour
+   *  Bene, le temps qu'elle verifie la sortie sur de vrais cas. */
+  isAdmin?: boolean;
 }) {
+  // ONGLETS (demande Bene, 5 aout 2026 : "systeme d'onglets comme les
+  // reglages pour trouver plus facilement"). Les trois blocs
+  // s'empilaient sur une seule page : on ne trouvait les modeles qu'en
+  // faisant defiler deux generateurs.
+  const [tab, setTab] = useState<Tab>("emails");
   const router = useRouter();
   const [assets, setAssets] = useState<FunnelAssets | null>(initialAssets);
 
@@ -206,12 +218,33 @@ export function FunnelClient({
 
   return (
     <div className="flex flex-col gap-8">
+      <TabBar>
+        <TabButton active={tab === "emails"} onClick={() => setTab("emails")} icon={Users}>
+          Emails
+        </TabButton>
+        <TabButton active={tab === "promo"} onClick={() => setTab("promo")} icon={Megaphone}>
+          Promo du quiz
+        </TabButton>
+        <TabButton active={tab === "modeles"} onClick={() => setTab("modeles")} icon={Download}>
+          Modèles
+        </TabButton>
+        {/* En test, et visible d'elle seule : le generateur de bonus
+            vit sur une page non listee tant que sa sortie n'a pas ete
+            verifiee sur de vrais cas. */}
+        {isAdmin && (
+          <TabLink href="/labo-bonus" icon={Sparkles}>
+            Bonus post-quiz
+          </TabLink>
+        )}
+      </TabBar>
+
       {/* DEUX GENERATIONS, PAS SEPT (retour Bene, 3 aout 2026 : "je veux
           JUSTE 5 mails par resultat. Pas ce truc j'en ai partout je ne
           sais meme pas quoi en faire"). La sequence de bienvenue et la
           sequence de vente douce ont ete retirees : elles s'empilaient
           sans que personne sache quand les envoyer. */}
 
+      {tab === "emails" && (
       <Block
         icon={Users}
         title="La séquence post-quiz de chaque profil"
@@ -241,7 +274,9 @@ export function FunnelClient({
           </Folder>
         ))}
       </Block>
+      )}
 
+      {tab === "promo" && (
       <Block
         icon={Megaphone}
         title="Ton kit de lancement"
@@ -268,8 +303,11 @@ export function FunnelClient({
           />
         )}
       </Block>
+      )}
 
-      {(hasSequences || hasLaunch) && (
+      {/* Le telechargement porte sur les DEUX generations : il reste
+          visible sur les deux onglets qui les produisent. */}
+      {tab !== "modeles" && (hasSequences || hasLaunch) && (
         <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-4">
           <p className="text-xs text-muted-foreground">
             {generatedAt
@@ -283,7 +321,17 @@ export function FunnelClient({
         </div>
       )}
 
-      {templates.length > 0 && <SioTemplatesBlock templates={templates} />}
+      {tab === "modeles" &&
+        (templates.length > 0 ? (
+          <SioTemplatesBlock templates={templates} />
+        ) : (
+          // UN ONGLET VIDE DOIT DIRE POURQUOI. Sans cette phrase, elle
+          // clique, ne voit rien, et conclut que c'est casse.
+          <p className="text-sm text-muted-foreground">
+            Aucun modèle disponible pour le moment. Ils apparaissent ici dès que Béné en publie
+            un nouveau.
+          </p>
+        ))}
     </div>
   );
 

@@ -26,7 +26,7 @@ export default async function ProfilPage({
   const initialTab = tab === "reglages" ? "reglages" : tab === "connexion" ? "connexion" : "profil";
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-1">
         <h1 className="flex items-center gap-2 font-display text-2xl font-bold sm:text-3xl">
           <UserCircle className="size-7 text-primary" />

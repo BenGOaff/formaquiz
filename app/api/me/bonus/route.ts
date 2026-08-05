@@ -33,7 +33,9 @@ import { isAdminEmail } from "@/lib/adminEmails";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { buildClaudeMessageBody } from "@/lib/claudeRequest";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
+import { fetchQuizAudit } from "@/lib/integrations/tiquiz";
 import {
+  OFFER_KINDS,
   PRODUCTION_BLOCKS,
   buildPistesSystemPrompt,
   buildProductionSystemPrompt,
@@ -44,15 +46,19 @@ import {
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
+// LA CREATRICE NE SAISIT QUE CE QUE LE QUIZ NE SAIT PAS.
+//
+// "On ne reutilise pas assez les donnees du quiz : pourquoi ne pas
+// prendre le quiz suivi par l'Atelier et recuperer toutes ces infos
+// automatiquement ?" (Bene, 5 aout 2026). Le theme, le ton, les profils
+// et le tag de partage viennent du pont Tiquiz, cote serveur : ils ne
+// transitent pas par le client, donc personne ne peut les contredire.
 const briefSchema = z.object({
-  audience: z.string().min(3).max(600),
-  niche: z.string().min(3).max(600),
-  tone: z.string().min(2).max(400),
-  quizTheme: z.string().min(3).max(400),
-  offer: z.string().min(3).max(600),
+  offerPromise: z.string().min(10).max(600),
+  offerKind: z.enum(OFFER_KINDS),
+  offerPrice: z.string().max(120).default(""),
   trigger: z.enum(["completion", "share"]),
   variant: z.enum(["single", "per_result"]),
-  results: z.array(z.string().max(200)).max(12).default([]),
 });
 
 const schema = z.discriminatedUnion("step", [
@@ -61,6 +67,8 @@ const schema = z.discriminatedUnion("step", [
     step: z.literal("produce"),
     brief: briefSchema,
     block: z.enum(PRODUCTION_BLOCKS),
+    /** Le profil pour lequel on ecrit, quand le bonus est decline. */
+    profileIndex: z.number().int().min(0).max(11).optional(),
     /** La piste choisie, telle qu'elle a été montrée à l'écran. */
     chosen: z.object({
       format: z.string().max(120),
@@ -100,7 +108,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: "bad_input" }, { status: 400 });
   }
   const input = parsed.data;
-  const brief = input.brief as BonusBrief;
+
+  // LE QUIZ SUIVI EST LA SOURCE DE VERITE POUR TOUT LE RESTE.
+  // Rien de tout ca ne vient du client : on le relit a chaque appel.
+  const quizzes = await fetchQuizAudit(viewer.userId).catch(() => null);
+  const quiz = (quizzes ?? []).find((q) => q.status === "active") ?? (quizzes ?? [])[0] ?? null;
+  if (!quiz) {
+    // UN REFUS N'EST PAS UNE PANNE, et il doit dire quoi faire.
+    return NextResponse.json({ ok: false, reason: "no_quiz" }, { status: 409 });
+  }
+
+  const brief: BonusBrief = {
+    ...input.brief,
+    quizTitle: quiz.title || "",
+    quizIntro: String(quiz.introduction ?? ""),
+    addressForm: String(quiz.addressForm ?? "tu") === "vous" ? "vous" : "tu",
+    profiles: (quiz.resultProfiles ?? []).map((p) => ({
+      title: p.title,
+      description: p.description ?? "",
+    })),
+    shareTagName: String(quiz.shareTagName ?? ""),
+  };
 
   const model = resolveAnthropicModel(process.env.ANTHROPIC_MODEL, "sonnet");
 
@@ -157,7 +185,7 @@ export async function POST(req: NextRequest) {
 
   // ── ÉTAPE 2 : un bloc de production ──
   const user = [
-    renderBriefForPrompt(brief),
+    renderBriefForPrompt(brief, input.profileIndex),
     "",
     "LA PISTE CHOISIE :",
     `- Format : ${input.chosen.format}`,
@@ -170,7 +198,11 @@ export async function POST(req: NextRequest) {
   // Le contenu complet est le plus long des trois : il a son propre
   // budget. Les deux autres tiennent largement en dessous.
   const maxTokens = input.block === "content" ? 6000 : 2500;
-  const raw = await callClaude(buildProductionSystemPrompt(brief, input.block), user, maxTokens);
+  const raw = await callClaude(
+    buildProductionSystemPrompt(brief, input.block, input.profileIndex),
+    user,
+    maxTokens,
+  );
   if (!raw) {
     return NextResponse.json({ ok: false, reason: "generation_failed" }, { status: 502 });
   }

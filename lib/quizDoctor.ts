@@ -16,6 +16,15 @@ export interface QuizResultProfile {
 
 export interface QuizStruct {
   title: string;
+  /** "tu" ou "vous", et le sous-titre d'accueil : le generateur de bonus
+   *  ecrit dans le ton du quiz au lieu de le redemander (retour Bene,
+   *  5 aout 2026). Optionnels : une version de Tiquiz anterieure au
+   *  5 aout ne les envoie pas. */
+  addressForm?: string;
+  introduction?: string;
+  /** Le tag Systeme.io pose apres un partage : c'est lui qui declenche
+   *  l'email de livraison du bonus de viralite. */
+  shareTagName?: string;
   status: string;
   questions: number;
   results: number;

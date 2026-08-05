@@ -2,27 +2,54 @@
 
 // app/(app)/labo-bonus/BonusLabClient.tsx
 //
-// Le générateur de bonus post-quiz, écran de test.
+// Le générateur de bonus post-quiz.
 //
-// Trois étapes avec un arrêt franc entre chaque, comme dans le prompt
-// d'origine : le cadrage, les trois pistes, la production. On ne saute
-// jamais une étape, parce que c'est le seul moment où la créatrice peut
-// corriger le tir avant qu'on écrive dix pages.
+// -- UN ÉCRAN PAR ÉTAPE (retour Béné, 5 août 2026) --------------------
 //
-// LA PRODUCTION SE FAIT BLOC PAR BLOC, et chaque bloc a son propre appel.
-// Le 3 août, la campagne email est sortie en JSON brut à l'écran parce
-// qu'une réponse trop longue avait été coupée en plein milieu. Trois
-// appels courts ne peuvent pas se couper l'un l'autre, et un bloc qui
-// échoue laisse les deux autres intacts.
+// "Simplifier l'UX UI : des écrans qui se suivent c'est mieux que de
+// scroller indéfiniment, on peut faire un écran par étape."
+//
+// La première version empilait tout sur une page : le formulaire, les
+// pistes, puis trois blocs de production. On finissait par faire défiler
+// pour retrouver ce qu'on venait de générer.
+//
+// -- CE QU'ON NE DIT PLUS ---------------------------------------------
+//
+// "Tu penseras à enlever ce genre de choses pour les users : un bloc à
+// la fois, ça ne peut pas se couper en plein milieu comme la campagne
+// email en juillet." Nos incidents internes n'ont rien à faire à
+// l'écran. Le découpage en trois appels reste, la justification part
+// dans ce commentaire.
+//
+// -- ET ELLE PEUT CORRIGER AVANT D'EXPORTER ---------------------------
+//
+// "Proposer de l'éditer ? Avant de générer le PDF ?" Oui : un texte
+// généré est un brouillon, pas un livrable. Chaque bloc s'édite sur
+// place, et l'export reprend le texte corrigé.
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Copy, Loader2, Sparkles, Wand2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  Copy,
+  Download,
+  Loader2,
+  Pencil,
+  Sparkles,
+  Wand2,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toHtml } from "@/lib/markdownLite";
-import { BLOCK_LABEL, PRODUCTION_BLOCKS, type ProductionBlock } from "@/lib/prompts/bonus";
+import {
+  BLOCK_LABEL,
+  OFFER_KINDS,
+  PRODUCTION_BLOCKS,
+  type OfferKind,
+  type ProductionBlock,
+} from "@/lib/prompts/bonus";
 
 type Piste = {
   format: string;
@@ -33,133 +60,111 @@ type Piste = {
 };
 
 type Brief = {
-  audience: string;
-  niche: string;
-  tone: string;
-  quizTheme: string;
-  offer: string;
+  offerPromise: string;
+  offerKind: OfferKind;
+  offerPrice: string;
   trigger: "completion" | "share";
   variant: "single" | "per_result";
-  results: string[];
 };
 
-const FIELDS: { key: keyof Brief; label: string; hint: string; rows?: number }[] = [
-  {
-    key: "audience",
-    label: "Mon audience",
-    hint: "À qui tu parles, et ce qu'elle cherche. Ex : coachs bien-être qui veulent remplir leur agenda sans pub.",
-    rows: 2,
-  },
-  {
-    key: "niche",
-    label: "Ma niche",
-    hint: "Ex : le coaching holistique pour femmes entrepreneures.",
-  },
-  {
-    key: "tone",
-    label: "Mon ton",
-    hint: "Ex : direct et chaleureux, tutoiement, pointe d'humour.",
-  },
-  {
-    key: "quizTheme",
-    label: "Le thème de mon quiz",
-    hint: "Ex : Quel est ton profil de vendeuse sur Instagram ?",
-  },
-  {
-    key: "offer",
-    label: "Mon offre payante",
-    hint: "Celle vers laquelle le bonus doit mener. Ex : accompagnement 3 mois Agenda plein.",
-    rows: 2,
-  },
-];
+type Step = "brief" | "pistes" | "produce";
 
 export function BonusLabClient({
-  niche,
-  knownResults,
+  quizTitle,
+  profiles,
+  viralityEnabled,
 }: {
-  niche: string | null;
-  knownResults: string[];
+  quizTitle: string | null;
+  profiles: string[];
+  viralityEnabled: boolean;
 }) {
+  const [step, setStep] = useState<Step>("brief");
   const [brief, setBrief] = useState<Brief>({
-    audience: "",
-    niche: niche ?? "",
-    tone: "",
-    quizTheme: "",
-    offer: "",
+    offerPromise: "",
+    offerKind: "formation en ligne",
+    offerPrice: "",
     trigger: "completion",
-    variant: "single",
-    results: knownResults,
+    variant: profiles.length > 1 ? "per_result" : "single",
   });
-  const [pistes, setPistes] = useState<Piste[] | null>(null);
+  const [pistes, setPistes] = useState<Piste[]>([]);
   const [recommended, setRecommended] = useState(0);
   const [recommendedWhy, setRecommendedWhy] = useState("");
   const [chosen, setChosen] = useState<number | null>(null);
-  const [blocks, setBlocks] = useState<Partial<Record<ProductionBlock, string>>>({});
+  const [profileIndex, setProfileIndex] = useState(0);
+  const [blocks, setBlocks] = useState<Record<string, string>>({});
+  const [editing, setEditing] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
-  const missing = FIELDS.filter((f) => !String(brief[f.key] ?? "").trim()).map((f) => f.label);
+  const perResult = brief.variant === "per_result" && profiles.length > 0;
+  // Un bonus décliné a un contenu PAR profil : on garde les versions
+  // séparément, sinon générer le deuxième effacerait le premier.
+  const contentKey = useMemo(
+    () => (perResult ? `content:${profileIndex}` : "content"),
+    [perResult, profileIndex],
+  );
+  const keyFor = (b: ProductionBlock) => (b === "content" ? contentKey : b);
+
+  async function call(body: Record<string, unknown>) {
+    const res = await fetch("/api/me/bonus", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    return res.json().catch(() => ({}));
+  }
 
   async function askPistes() {
-    if (missing.length > 0) {
-      toast.error(`Il manque : ${missing.join(", ")}.`);
+    if (brief.offerPromise.trim().length < 10) {
+      toast.error("Décris ton offre en une phrase pour que je puisse viser juste.");
       return;
     }
     setBusy("pistes");
-    setPistes(null);
-    setChosen(null);
-    setBlocks({});
     try {
-      const res = await fetch("/api/me/bonus", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ step: "pistes", brief }),
-      });
-      const data = await res.json().catch(() => ({}));
-      // UN `ok: false` PRODUIT TOUJOURS QUELQUE CHOSE A L'ECRAN.
+      const data = await call({ step: "pistes", brief });
       if (!data?.ok) {
         toast.error(
-          data?.reason === "unreadable"
-            ? "La génération n'a pas abouti. Relance, ça repart en général du premier coup."
-            : "Génération impossible pour le moment. Réessaie dans un instant.",
+          data?.reason === "no_quiz"
+            ? "Aucun quiz trouvé sur ton compte relié. Connecte le bon compte, ou crée ton quiz d'abord."
+            : "La génération n'a pas abouti. Relance, ça repart en général du premier coup.",
         );
         return;
       }
       setPistes(data.pistes as Piste[]);
       setRecommended(Number(data.recommended) || 0);
       setRecommendedWhy(String(data.recommendedWhy ?? ""));
+      setChosen(null);
+      setBlocks({});
+      setStep("pistes");
     } catch {
-      toast.error("Génération impossible pour le moment. Réessaie dans un instant.");
+      toast.error("La génération n'a pas abouti. Réessaie dans un instant.");
     } finally {
       setBusy(null);
     }
   }
 
   async function produce(block: ProductionBlock) {
-    if (chosen === null || !pistes) return;
-    setBusy(block);
+    if (chosen === null) return;
+    const key = keyFor(block);
+    setBusy(key);
     try {
-      const res = await fetch("/api/me/bonus", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          step: "produce",
-          brief,
-          block,
-          chosen: {
-            format: pistes[chosen].format,
-            title: pistes[chosen].title,
-            punchline: pistes[chosen].punchline,
-          },
-        }),
+      const data = await call({
+        step: "produce",
+        brief,
+        block,
+        ...(block === "content" && perResult ? { profileIndex } : {}),
+        chosen: {
+          format: pistes[chosen].format,
+          title: pistes[chosen].title,
+          punchline: pistes[chosen].punchline,
+        },
       });
-      const data = await res.json().catch(() => ({}));
       if (!data?.ok) {
-        toast.error(`${BLOCK_LABEL[block]} n'a pas abouti. Relance ce bloc, les autres sont gardés.`);
+        toast.error(`${BLOCK_LABEL[block]} n'a pas abouti. Relance, le reste est gardé.`);
         return;
       }
-      setBlocks((b) => ({ ...b, [block]: String(data.markdown ?? "") }));
+      setBlocks((b) => ({ ...b, [key]: String(data.markdown ?? "") }));
     } catch {
-      toast.error(`${BLOCK_LABEL[block]} n'a pas abouti. Relance ce bloc, les autres sont gardés.`);
+      toast.error(`${BLOCK_LABEL[block]} n'a pas abouti. Relance, le reste est gardé.`);
     } finally {
       setBusy(null);
     }
@@ -174,211 +179,375 @@ export function BonusLabClient({
     }
   }
 
-  return (
-    <div className="flex flex-col gap-8">
-      <header className="flex flex-col gap-2">
-        <h1 className="font-display text-2xl font-bold">Le bonus parfait, après le quiz</h1>
-        <p className="text-sm text-muted-foreground">
-          Trois étapes : tu cadres, tu choisis une piste, on produit. En test, page non listée.
-        </p>
-      </header>
+  /** Export : une fenêtre d'impression, donc un PDF sans rien installer. */
+  function exportPdf() {
+    const key = keyFor("content");
+    const md = blocks[key];
+    if (!md) return;
+    const win = window.open("", "_blank");
+    if (!win) {
+      toast.error("Ton navigateur a bloqué la fenêtre. Autorise les pop-ups pour cette page.");
+      return;
+    }
+    const titre = chosen !== null ? pistes[chosen].title : "Bonus";
+    win.document.write(
+      `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${escapeHtml(titre)}</title>` +
+        `<style>` +
+        `@page{margin:20mm}` +
+        `body{font:15px/1.65 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1c1c28;max-width:44rem;margin:0 auto}` +
+        `h1{font-size:26px;line-height:1.25;margin:0 0 24px}` +
+        `h2{font-size:19px;margin:32px 0 10px;page-break-after:avoid}` +
+        `h3{font-size:16px;margin:22px 0 6px;page-break-after:avoid}` +
+        `p,li{margin:0 0 10px}ul{padding-left:20px}strong{font-weight:650}` +
+        `</style></head><body>` +
+        `<h1>${escapeHtml(titre)}</h1>${toHtml(md)}</body></html>`,
+    );
+    win.document.close();
+    win.focus();
+    win.print();
+  }
 
-      {/* ── ÉTAPE 1 : le cadrage ── */}
-      <section className="flex flex-col gap-4">
-        <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          1. Ton contexte
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {FIELDS.map((f) => (
-            <div key={f.key} className="flex flex-col gap-1">
-              <label htmlFor={f.key} className="text-sm font-medium">
-                {f.label}
+  // ── Écran 1 : le contexte ──
+  if (step === "brief") {
+    return (
+      <Shell
+        title="Ton bonus post-quiz"
+        subtitle={
+          quizTitle
+            ? `On part de ton quiz "${quizTitle}" : son thème, son ton et ses profils sont déjà repris. Il ne reste que ton offre.`
+            : "On part de ton quiz relié. Il ne reste que ton offre à décrire."
+        }
+      >
+        <Card>
+          <CardContent className="flex flex-col gap-5 py-5">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="promise" className="text-sm font-medium">
+                Décris la promesse principale de ton offre
               </label>
               <textarea
-                id={f.key}
-                rows={f.rows ?? 1}
-                value={String(brief[f.key] ?? "")}
-                onChange={(e) => setBrief((b) => ({ ...b, [f.key]: e.target.value }))}
+                id="promise"
+                rows={3}
+                value={brief.offerPromise}
+                onChange={(e) => setBrief((b) => ({ ...b, offerPromise: e.target.value }))}
+                placeholder="J'aide les personnes TDAH à apaiser leur stress quotidien en 1 mois grâce à des techniques simples et méconnues"
                 className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
               />
-              <p className="text-xs text-muted-foreground">{f.hint}</p>
+              <p className="text-xs text-muted-foreground">
+                C&apos;est vers elle que ton bonus doit ramener.
+              </p>
             </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="kind" className="text-sm font-medium">
+                  Format de ton offre
+                </label>
+                <select
+                  id="kind"
+                  value={brief.offerKind}
+                  onChange={(e) => setBrief((b) => ({ ...b, offerKind: e.target.value as OfferKind }))}
+                  className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
+                >
+                  {OFFER_KINDS.map((k) => (
+                    <option key={k} value={k}>
+                      {k}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="price" className="text-sm font-medium">
+                  Prix de ton offre
+                </label>
+                <input
+                  id="price"
+                  value={brief.offerPrice}
+                  onChange={(e) => setBrief((b) => ({ ...b, offerPrice: e.target.value }))}
+                  placeholder="97 euros, ou à partir de 1200 euros, ou sur devis"
+                  className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+
+            <Choice
+              label="Quand ton visiteur reçoit le bonus"
+              value={brief.trigger}
+              onChange={(v) => setBrief((b) => ({ ...b, trigger: v as Brief["trigger"] }))}
+              options={[
+                {
+                  value: "completion",
+                  title: "À la fin du quiz",
+                  hint: "Il découvre son résultat, le bonus est la suite logique.",
+                },
+                {
+                  value: "share",
+                  title: "Après un partage",
+                  hint: viralityEnabled
+                    ? "Il partage ton quiz, le bonus est sa récompense."
+                    : "L'étape de partage n'est pas encore activée sur ton quiz.",
+                },
+              ]}
+            />
+
+            <Choice
+              label="Une version, ou une par profil"
+              value={brief.variant}
+              onChange={(v) => setBrief((b) => ({ ...b, variant: v as Brief["variant"] }))}
+              options={[
+                {
+                  value: "single",
+                  title: "Le même pour tout le monde",
+                  hint: "Plus simple à produire et à livrer.",
+                },
+                {
+                  value: "per_result",
+                  title: "Un par profil de résultat",
+                  hint:
+                    profiles.length > 0
+                      ? `Plus fort : chacun reçoit un bonus qui parle de lui. ${profiles.length} profils sur ton quiz.`
+                      : "Ton quiz n'a pas encore de profils de résultat.",
+                },
+              ]}
+            />
+
+            <Button onClick={askPistes} disabled={busy !== null} className="w-fit">
+              {busy === "pistes" ? <Loader2 className="animate-spin" /> : <Sparkles />}
+              {busy === "pistes" ? "Je cherche tes pistes..." : "Proposer 3 pistes"}
+            </Button>
+          </CardContent>
+        </Card>
+      </Shell>
+    );
+  }
+
+  // ── Écran 2 : les trois pistes ──
+  if (step === "pistes") {
+    return (
+      <Shell
+        title="Trois pistes, tu en choisis une"
+        subtitle="Elles sont volontairement différentes. Prends celle qui te ressemble, pas la plus impressionnante."
+        onBack={() => setStep("brief")}
+      >
+        {recommendedWhy && (
+          <p className="rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+            <strong>Ma recommandation : la piste {recommended + 1}.</strong> {recommendedWhy}
+          </p>
+        )}
+        <div className="grid items-start gap-4 lg:grid-cols-3">
+          {pistes.map((p, i) => (
+            <Card key={i} className={i === recommended ? "border-primary/50" : ""}>
+              <CardContent className="flex flex-col gap-2.5 py-5">
+                <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  {p.format}
+                </span>
+                <p className="font-semibold leading-snug">{p.title}</p>
+                <p className="text-sm">{p.punchline}</p>
+                <p className="text-sm text-muted-foreground">{p.why}</p>
+                {p.needsHerTime && (
+                  <p className="rounded-md bg-amber-50 px-2.5 py-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+                    {p.needsHerTime}
+                  </p>
+                )}
+                <Button
+                  size="sm"
+                  className="mt-1 w-fit"
+                  onClick={() => {
+                    setChosen(i);
+                    setBlocks({});
+                    setStep("produce");
+                  }}
+                >
+                  Je prends celle-ci
+                </Button>
+              </CardContent>
+            </Card>
           ))}
         </div>
+      </Shell>
+    );
+  }
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1">
-            <label htmlFor="trigger" className="text-sm font-medium">
-              Quand le bonus se débloque
-            </label>
-            <select
-              id="trigger"
-              value={brief.trigger}
-              onChange={(e) =>
-                setBrief((b) => ({ ...b, trigger: e.target.value as Brief["trigger"] }))
-              }
-              className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
-            >
-              <option value="completion">À la fin du quiz, avec le résultat</option>
-              <option value="share">Après un partage, en récompense</option>
-            </select>
-            <p className="text-xs text-muted-foreground">
-              Ce ne sont pas les mêmes bonus. Après un partage, la personne a donné quelque chose
-              et attend une contrepartie. À la fin du quiz, elle attend une suite.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label htmlFor="variant" className="text-sm font-medium">
-              Une version, ou une par profil
-            </label>
-            <select
-              id="variant"
-              value={brief.variant}
-              onChange={(e) =>
-                setBrief((b) => ({ ...b, variant: e.target.value as Brief["variant"] }))
-              }
-              className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
-            >
-              <option value="single">Commun à tous les participants</option>
-              <option value="per_result">Décliné par profil de résultat</option>
-            </select>
-            <p className="text-xs text-muted-foreground">
-              Décliné, c&apos;est plus fort : le participant reçoit un cadeau qui parle de lui. Tiquiz
-              ne stocke qu&apos;un bonus par quiz, donc les versions se livrent par le tag Systeme.io
-              du profil, ou par l&apos;URL de bouton propre à chaque profil.
-            </p>
-          </div>
+  // ── Écran 3 : la production ──
+  const piste = chosen !== null ? pistes[chosen] : null;
+  return (
+    <Shell
+      title={piste?.title ?? "Ton bonus"}
+      subtitle={piste?.punchline ?? ""}
+      onBack={() => setStep("pistes")}
+    >
+      {perResult && (
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="profil" className="text-sm font-medium">
+            Le profil que tu prépares
+          </label>
+          <select
+            id="profil"
+            value={profileIndex}
+            onChange={(e) => setProfileIndex(Number(e.target.value))}
+            className="w-full max-w-sm rounded-lg border bg-background px-3 py-2 text-sm"
+          >
+            {profiles.map((p, i) => (
+              <option key={i} value={i}>
+                {p}
+                {blocks[`content:${i}`] ? " (écrit)" : ""}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground">
+            Chaque profil a son propre texte. Tu les écris l&apos;un après l&apos;autre.
+          </p>
         </div>
+      )}
 
-        {brief.variant === "per_result" && (
-          <div className="flex flex-col gap-1">
-            <label htmlFor="results" className="text-sm font-medium">
-              Tes profils de résultat, un par ligne
-            </label>
-            <textarea
-              id="results"
-              rows={4}
-              value={brief.results.join("\n")}
-              onChange={(e) =>
-                setBrief((b) => ({
-                  ...b,
-                  results: e.target.value.split("\n").map((l) => l.trim()).filter(Boolean),
-                }))
-              }
-              className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
-            />
-            {knownResults.length > 0 && (
-              <p className="text-xs text-muted-foreground">
-                Pré-remplis depuis ton quiz Tiquiz relié. Corrige si ce n&apos;est pas le bon quiz.
-              </p>
-            )}
-          </div>
-        )}
-
-        <Button onClick={askPistes} disabled={busy !== null} className="w-fit">
-          {busy === "pistes" ? <Loader2 className="animate-spin" /> : <Sparkles />}
-          {busy === "pistes" ? "Je réfléchis..." : "Proposer 3 pistes"}
-        </Button>
-      </section>
-
-      {/* ── ÉTAPE 2 : les trois pistes ── */}
-      {pistes && (
-        <section className="flex flex-col gap-4">
-          <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            2. Trois pistes, tu en choisis une
-          </h2>
-          {recommendedWhy && (
-            <p className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
-              <strong>Ma recommandation : la piste {recommended + 1}.</strong> {recommendedWhy}
-            </p>
-          )}
-          <div className="grid gap-3 lg:grid-cols-3 items-start">
-            {pistes.map((p, i) => (
-              <Card
-                key={i}
-                className={
-                  chosen === i ? "border-2 border-primary" : i === recommended ? "border-primary/40" : ""
-                }
-              >
-                <CardContent className="flex flex-col gap-2 py-4">
-                  <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    {p.format}
-                  </span>
-                  <p className="font-semibold leading-snug">{p.title}</p>
-                  <p className="text-sm">{p.punchline}</p>
-                  <p className="text-sm text-muted-foreground">{p.why}</p>
-                  {/* Ce qui coûte son temps se dit, ça ne se cache pas
-                      derrière le mot "personnalisé". */}
-                  {p.needsHerTime && (
-                    <p className="rounded-md bg-amber-50 px-2 py-1.5 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
-                      {p.needsHerTime}
-                    </p>
+      {PRODUCTION_BLOCKS.map((block) => {
+        const key = keyFor(block);
+        const value = blocks[key];
+        const isEditing = editing === key;
+        return (
+          <Card key={key}>
+            <CardContent className="flex flex-col gap-3 py-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="font-semibold">{BLOCK_LABEL[block]}</p>
+                <div className="flex flex-wrap gap-2">
+                  {value && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setEditing(isEditing ? null : key)}
+                      >
+                        {isEditing ? <Check /> : <Pencil />}
+                        {isEditing ? "Terminé" : "Modifier"}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => copy(value)}>
+                        <Copy />
+                        Copier
+                      </Button>
+                      {block === "content" && (
+                        <Button size="sm" variant="ghost" onClick={exportPdf}>
+                          <Download />
+                          PDF
+                        </Button>
+                      )}
+                    </>
                   )}
                   <Button
                     size="sm"
-                    variant={chosen === i ? "default" : "outline"}
-                    onClick={() => {
-                      setChosen(i);
-                      setBlocks({});
-                    }}
-                    className="mt-1 w-fit"
+                    variant={value ? "outline" : "default"}
+                    onClick={() => produce(block)}
+                    disabled={busy !== null}
                   >
-                    {chosen === i ? "Choisie" : "Je prends celle-ci"}
+                    {busy === key ? <Loader2 className="animate-spin" /> : <Wand2 />}
+                    {value ? "Refaire" : "Générer"}
                   </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </section>
-      )}
+                </div>
+              </div>
 
-      {/* ── ÉTAPE 3 : la production, bloc par bloc ── */}
-      {chosen !== null && pistes && (
-        <section className="flex flex-col gap-4">
-          <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            3. La production
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Un bloc à la fois : c&apos;est plus long à lancer, et ça ne peut pas se couper en plein
-            milieu comme la campagne email en juillet.
-          </p>
-          <div className="flex flex-col gap-4">
-            {PRODUCTION_BLOCKS.map((block) => (
-              <Card key={block}>
-                <CardContent className="flex flex-col gap-3 py-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="font-semibold">{BLOCK_LABEL[block]}</p>
-                    <div className="flex gap-2">
-                      {blocks[block] && (
-                        <Button size="sm" variant="ghost" onClick={() => copy(blocks[block] ?? "")}>
-                          <Copy />
-                          Copier
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        variant={blocks[block] ? "outline" : "default"}
-                        onClick={() => produce(block)}
-                        disabled={busy !== null}
-                      >
-                        {busy === block ? <Loader2 className="animate-spin" /> : <Wand2 />}
-                        {blocks[block] ? "Refaire" : "Générer"}
-                      </Button>
-                    </div>
-                  </div>
-                  {blocks[block] && (
-                    <div
-                      className="prose prose-sm max-w-none dark:prose-invert"
-                      dangerouslySetInnerHTML={{ __html: toHtml(blocks[block] ?? "") }}
-                    />
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </section>
-      )}
+              {/* UN TEXTE GENERE EST UN BROUILLON, PAS UN LIVRABLE : elle
+                  corrige sur place, et l'export reprend sa version. */}
+              {value && isEditing && (
+                <textarea
+                  value={value}
+                  onChange={(e) => setBlocks((b) => ({ ...b, [key]: e.target.value }))}
+                  rows={22}
+                  className="w-full rounded-lg border bg-background px-3 py-2 font-mono text-xs leading-relaxed"
+                />
+              )}
+              {value && !isEditing && (
+                <div
+                  className="prose prose-sm max-w-none dark:prose-invert prose-headings:font-display prose-headings:mt-6 prose-headings:mb-2 prose-p:my-2 prose-li:my-0.5"
+                  dangerouslySetInnerHTML={{ __html: toHtml(value) }}
+                />
+              )}
+              {!value && (
+                <p className="text-sm text-muted-foreground">
+                  {block === "guide" && "Ce que tu produis, avec quel outil, et comment il arrive chez ton visiteur."}
+                  {block === "content" && "Le texte du bonus lui-même, prêt à mettre en page."}
+                  {block === "presentation" && "L'annonce sur la page de résultat, et l'email de livraison."}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })}
+    </Shell>
+  );
+}
+
+/** Le gabarit commun aux trois écrans : titre, sous-titre, retour. */
+function Shell({
+  title,
+  subtitle,
+  onBack,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  onBack?: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-6">
+      <header className="flex flex-col gap-2">
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="size-4" />
+            Retour
+          </button>
+        )}
+        <h1 className="font-display text-2xl font-bold">{title}</h1>
+        {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+      </header>
+      {children}
     </div>
   );
+}
+
+/** Deux cartes cliquables : plus lisible qu'un menu déroulant pour un
+ *  choix qui change le résultat en profondeur. */
+function Choice({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; title: string; hint: string }[];
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-sm font-medium">{label}</p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {options.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => onChange(o.value)}
+            className={`flex flex-col gap-1 rounded-xl border p-3 text-left transition-colors ${
+              value === o.value
+                ? "border-primary bg-primary/5"
+                : "border-border hover:border-primary/40"
+            }`}
+          >
+            <span className="text-sm font-medium">{o.title}</span>
+            <span className="text-xs text-muted-foreground">{o.hint}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }

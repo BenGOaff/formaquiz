@@ -1,5 +1,6 @@
 "use client";
 
+import { TabBar, TabButton, TabLink } from "@/components/TabBar";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -196,8 +197,11 @@ export function ProfileTabs({
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Onglets */}
-      <div className="flex gap-1 rounded-xl border border-border bg-surface-soft p-1">
+      {/* Onglets. Le motif vit dans components/TabBar.tsx depuis le
+          5 aout 2026 : la page Bonus en a besoin aussi, et deux barres
+          ecrites separement finissent toujours par ne plus se
+          ressembler. */}
+      <TabBar>
         <TabButton active={tab === "profil"} onClick={() => setTab("profil")} icon={User}>
           Profil
         </TabButton>
@@ -209,14 +213,10 @@ export function ProfileTabs({
         </TabButton>
         {/* Le certificat garde sa page dediee (studio complet) : l'onglet
             y mene, pour que tous les reglages partent du meme endroit. */}
-        <a
-          href="/certificat"
-          className="flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <Award className="size-4" />
+        <TabLink href="/certificat" icon={Award}>
           Certificat
-        </a>
-      </div>
+        </TabLink>
+      </TabBar>
 
       {tab === "profil" && (
         <Card>
@@ -435,32 +435,6 @@ export function ProfileTabs({
         </Card>
       )}
     </div>
-  );
-}
-
-function TabButton({
-  active,
-  onClick,
-  icon: Icon,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: typeof User;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors",
-        active ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
-      )}
-    >
-      <Icon className="size-4" />
-      {children}
-    </button>
   );
 }
 

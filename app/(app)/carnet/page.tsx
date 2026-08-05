@@ -34,7 +34,7 @@ export default async function CarnetPage() {
   );
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-1">
         <h1 className="flex items-center gap-2 font-display text-2xl font-bold sm:text-3xl">
           <BookOpen className="size-7 text-primary" />

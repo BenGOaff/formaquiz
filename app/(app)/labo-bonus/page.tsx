@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 
 import { getViewer } from "@/lib/parcours";
 import { isAdminEmail } from "@/lib/adminEmails";
-import { fetchQuizProfiles } from "@/lib/integrations/tiquiz";
+import { fetchQuizAudit } from "@/lib/integrations/tiquiz";
 import { BonusLabClient } from "./BonusLabClient";
 
 export const dynamic = "force-dynamic";
@@ -24,15 +24,17 @@ export default async function LaboBonusPage() {
   if (!viewer) redirect("/login");
   if (!isAdminEmail(viewer.email)) redirect("/");
 
-  // Ses profils de résultat, si son compte Tiquiz est relié : ça évite de
-  // les retaper quand le bonus est décliné par profil. Échec silencieux,
-  // la page marche sans.
-  const profiles = await fetchQuizProfiles(viewer.userId).catch(() => []);
+  // TOUT CE QUE LE QUIZ SAIT DEJA, on ne le redemande pas (retour Bene,
+  // 5 aout 2026). Echec silencieux : la page marche sans, la route
+  // refuse proprement s'il n'y a aucun quiz relie.
+  const quizzes = await fetchQuizAudit(viewer.userId).catch(() => null);
+  const quiz = (quizzes ?? []).find((q) => q.status === "active") ?? (quizzes ?? [])[0] ?? null;
 
   return (
     <BonusLabClient
-      niche={viewer.profile?.niche ?? null}
-      knownResults={profiles.map((p) => p.title).filter(Boolean)}
+      quizTitle={quiz?.title ?? null}
+      profiles={(quiz?.resultProfiles ?? []).map((p) => p.title).filter(Boolean)}
+      viralityEnabled={quiz?.viralityEnabled === true}
     />
   );
 }
