@@ -20,6 +20,7 @@ import { readFileSync } from "node:fs";
 
 import { docToPlain, hasStructure, parseBonusDoc } from "../../lib/bonus/document.ts";
 import { buildPrintableHtml } from "../../lib/bonus/printable.ts";
+import { SECTION_ACCENTS, sectionAccent } from "../../lib/bonus/accents.ts";
 
 // Un extrait fidèle de ce que le générateur a vraiment produit.
 const REEL = `## Ce que tu vas produire
@@ -134,8 +135,8 @@ test("le PDF reprend les sections et les etapes de l'ecran", () => {
   const html = buildPrintableHtml(doc, { title: "Mon bonus" });
   assert.match(html, /Mon bonus/);
   assert.match(html, /Ce que tu vas produire/);
-  assert.match(html, /class="badge">Jour 1</);
-  assert.equal((html.match(/<section>/g) ?? []).length, 3);
+  assert.match(html, /class="badge a\d">Jour 1</);
+  assert.equal((html.match(/<section class="a\d">/g) ?? []).length, 3);
 });
 
 test("le PDF echappe ce qui vient du modele", () => {
@@ -171,3 +172,47 @@ test("l'ecran n'a plus le droit de rendre le markdown brut", () => {
   assert.doesNotMatch(client, /toHtml\(/, "le rendu passe par le document, jamais par toHtml");
 });
 
+
+// ── La couleur : l'Atelier n'est pas le quiz d'une cliente ───────────
+//
+// Béné, 5 août 2026 : "ça c'était pour les quiz des users, ceux qu'ils
+// affichent à leurs visiteurs ! Dans l'Atelier tu peux te lâcher et
+// réutiliser le branding de l'Atelier et de Tiquiz ! Ça n'est pas
+// montré aux visiteurs de nos users !"
+
+test("les sections sont colorées, et le cycle est stable", () => {
+  // Stable : regenerer un bloc ne redistribue pas les couleurs sous ses
+  // yeux, et la premiere section est toujours a la couleur de la marque.
+  assert.equal(sectionAccent(0).hex, "#5D6CDB", "la marque de l'Atelier et de Tiquiz");
+  assert.equal(sectionAccent(0).key, sectionAccent(SECTION_ACCENTS.length).key);
+  assert.notEqual(sectionAccent(0).key, sectionAccent(1).key);
+});
+
+test("un index absurde ne casse pas le rendu", () => {
+  for (const i of [-1, -7, NaN, 1.5, 999]) {
+    assert.ok(sectionAccent(i).hex.startsWith("#"), String(i));
+  }
+});
+
+test("les classes Tailwind sont ecrites en toutes lettres", () => {
+  // Tailwind ne genere que ce qu'il voit dans le source : une classe
+  // fabriquee par concatenation sort SANS style, et personne ne s'en
+  // apercoit avant de regarder l'ecran.
+  const src = readFileSync(new URL("../../lib/bonus/accents.ts", import.meta.url), "utf8");
+  assert.doesNotMatch(src, /`(bg|text|border)-\$\{/, "aucune classe construite a l'execution");
+  for (const a of SECTION_ACCENTS) {
+    assert.match(a.badge, /^bg-[a-z]+-\d{2,3}/, `${a.key} : pastille`);
+    assert.match(a.head, /^bg-[a-z]+-\d{2,3}/, `${a.key} : en-tete`);
+  }
+});
+
+test("le PDF porte les MEMES couleurs que l'ecran", () => {
+  // Deux palettes ecrites separement divergent au premier ajustement, et
+  // personne ne le voit avant d'imprimer.
+  const doc = parseBonusDoc(REEL);
+  const html = buildPrintableHtml(doc, { title: "Mon bonus" });
+  for (let i = 0; i < doc.sections.length; i++) {
+    assert.ok(html.includes(sectionAccent(i).hex), `la section ${i + 1} garde sa couleur`);
+  }
+  assert.match(html, /class="cover"/, "le titre a son bandeau de marque");
+});

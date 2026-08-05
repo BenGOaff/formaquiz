@@ -5,63 +5,71 @@
 // "Des cases, des couleurs, des blocs séparés, une logique, facile à
 // lire et comprendre, visuellement agréable." (Béné, 5 août 2026)
 //
-// -- CE QUI DÉCIDE DE L'ALLURE, ET CE QUI N'EN DÉCIDE PAS -------------
+// -- LA DISTINCTION QUI DÉCIDE DE TOUT --------------------------------
 //
-// La STRUCTURE vient de `lib/bonus/document.ts`, en fonction pure et
-// testée. Ce fichier ne fait que la peindre : il ne relit jamais le
-// markdown, il ne devine rien. Deux mises en forme qui repartent du
-// texte brut finissent toujours par ne plus se ressembler, et c'est
-// exactement ce qui arriverait entre l'écran et le PDF.
+// J'avais d'abord fait sobre, en invoquant son refus du 3 août sur les
+// cartes de couleurs. Elle a corrigé : ce refus valait pour le QUIZ
+// PUBLIC d'une créatrice, qui doit ressembler à SA marque et pas à la
+// nôtre. Ici on est dans l'Atelier, notre espace membre, que ses
+// visiteurs à elle ne verront jamais. Donc on assume le branding.
 //
-// -- POURQUOI CE N'EST PAS UN ARC-EN-CIEL -----------------------------
+// -- CE QUI DÉCIDE, ET CE QUI PEINT ----------------------------------
 //
-// Le 3 août, la page de résultat en quatre temps a été refusée deux fois
-// pour la même raison : "sans forcément créer 4 cartes de couleurs trop
-// IA" et "il est de la même couleur que les boutons, ça entraîne de la
-// confusion". La leçon vaut ici : le rythme se fait par la TAILLE, le
-// GRAS et l'ESPACE, et une seule couleur, celle de la marque, sert de
-// repère. Une section = une carte, un numéro dans une pastille, et de
-// l'air. Pas six teintes.
+// La STRUCTURE vient de `lib/bonus/document.ts`, les COULEURS de
+// `lib/bonus/accents.ts`, les deux en fonctions pures et testées. Ce
+// fichier ne fait que peindre : il ne relit jamais le markdown et
+// n'invente aucune couleur. C'est ce qui garantit que le PDF, qui lit
+// les mêmes deux modules, ressemble à l'écran.
 
 import type { BonusDoc, DocBlock } from "@/lib/bonus/document";
+import { sectionAccent, type SectionAccent } from "@/lib/bonus/accents";
 
 export function BonusDocument({ doc }: { doc: BonusDoc }) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
+      {/* Le titre du document porte la couleur de la marque, en bandeau :
+          il annonce qu'on entre dans un livrable, pas dans une note. */}
       {doc.title && (
-        <h2 className="font-display text-xl font-bold leading-snug">{doc.title}</h2>
+        <div className="rounded-xl bg-gradient-to-r from-primary to-violet-500 px-5 py-4">
+          <h2 className="font-display text-xl font-bold leading-snug text-white">{doc.title}</h2>
+        </div>
       )}
+
       {doc.lead.length > 0 && (
         <div className="flex flex-col gap-3 text-[15px] leading-relaxed">
           {doc.lead.map((b, i) => (
-            <Block key={i} block={b} />
+            <Block key={i} block={b} accent={sectionAccent(0)} />
           ))}
         </div>
       )}
 
-      {doc.sections.map((s, i) => (
-        <section
-          key={i}
-          className="overflow-hidden rounded-xl border border-border bg-background"
-        >
-          <header className="flex items-start gap-3 border-b border-border bg-surface-soft px-4 py-3">
-            <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
-              {i + 1}
-            </span>
-            <h3 className="font-display text-[15px] font-semibold leading-snug">{s.title}</h3>
-          </header>
-          <div className="flex flex-col gap-3 px-4 py-4 text-[15px] leading-relaxed">
-            {s.blocks.map((b, j) => (
-              <Block key={j} block={b} />
-            ))}
-          </div>
-        </section>
-      ))}
+      {doc.sections.map((s, i) => {
+        const accent = sectionAccent(i);
+        return (
+          <section key={i} className="overflow-hidden rounded-xl border border-border bg-background">
+            <header className={`flex items-start gap-3 border-b px-4 py-3 ${accent.head}`}>
+              <span
+                className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${accent.badge}`}
+              >
+                {i + 1}
+              </span>
+              <h3 className={`font-display text-[15px] font-semibold leading-snug ${accent.title}`}>
+                {s.title}
+              </h3>
+            </header>
+            <div className="flex flex-col gap-3 px-4 py-4 text-[15px] leading-relaxed">
+              {s.blocks.map((b, j) => (
+                <Block key={j} block={b} accent={accent} />
+              ))}
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }
 
-function Block({ block }: { block: DocBlock }) {
+function Block({ block, accent }: { block: DocBlock; accent: SectionAccent }) {
   if (block.kind === "para") {
     return <p dangerouslySetInnerHTML={{ __html: inline(block.text) }} />;
   }
@@ -71,7 +79,10 @@ function Block({ block }: { block: DocBlock }) {
       <ul className="flex flex-col gap-1.5">
         {block.items.map((it, i) => (
           <li key={i} className="flex gap-2.5">
-            <span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary/60" />
+            <span
+              className={`mt-2 size-1.5 shrink-0 rounded-full ${accent.badge}`}
+              aria-hidden
+            />
             <span dangerouslySetInnerHTML={{ __html: inline(it) }} />
           </li>
         ))}
@@ -79,7 +90,7 @@ function Block({ block }: { block: DocBlock }) {
     );
   }
 
-  // Les étapes portent leur numéro dans une pastille au lieu de le
+  // Les étapes portent leur numéro dans une étiquette au lieu de le
   // laisser dans le texte : c'est ce qui rend un plan en 7 jours
   // parcourable d'un coup d'oeil au lieu de se lire comme un paragraphe.
   if (block.kind === "steps") {
@@ -87,7 +98,9 @@ function Block({ block }: { block: DocBlock }) {
       <ol className="flex flex-col gap-2.5">
         {block.items.map((it, i) => (
           <li key={i} className="flex gap-3">
-            <span className="mt-0.5 shrink-0 rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+            <span
+              className={`mt-0.5 shrink-0 rounded-md px-2 py-0.5 text-xs font-semibold ${accent.step}`}
+            >
               {it.label}
             </span>
             <span dangerouslySetInnerHTML={{ __html: inline(it.text) }} />
@@ -97,15 +110,13 @@ function Block({ block }: { block: DocBlock }) {
     );
   }
 
-  // Un sous-titre : il porte son propre bloc, décalé par un filet à
-  // gauche pour qu'on voie qu'il appartient à la section.
   return (
-    <div className="flex flex-col gap-2 border-l-2 border-primary/25 pl-3">
+    <div className={`flex flex-col gap-2 border-l-2 pl-3 ${accent.rule}`}>
       <p className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
         {block.title}
       </p>
       {block.blocks.map((b, i) => (
-        <Block key={i} block={b} />
+        <Block key={i} block={b} accent={accent} />
       ))}
     </div>
   );
