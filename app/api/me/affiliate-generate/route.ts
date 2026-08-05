@@ -15,6 +15,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { buildClaudeMessageBody } from "@/lib/claudeRequest";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
+import { MAX_ATTEMPTS, isRetryableStatus, retryDelayMs } from "@/lib/generate/retry";
 import {
   GENERATOR_FORMATS,
   FORMAT_REMINDER,
@@ -109,21 +110,41 @@ export async function POST(req: NextRequest) {
   const deadline = Date.now() + 85_000;
   const budgetLeft = () => deadline - Date.now();
 
+  // UNE SURCHARGE N'EST PAS UN ECHEC (5 aout 2026). Le journal du serveur
+  // a montre un vrai `529 overloaded_error` sur le generateur de bonus ;
+  // ici, le meme refus rendait un texte vide du premier coup, sans jamais
+  // retenter. Le rythme des reprises vient de `lib/generate/retry.ts`,
+  // ecrit le 4 aout pour les emails de Fabienne : une seule regle.
   async function callClaude(messages: { role: "user" | "assistant"; content: string }[]) {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey as string,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify(
-        buildClaudeMessageBody({ model, max_tokens: maxTokens, temperature: 0.8, system, messages }),
-      ),
-      signal: AbortSignal.timeout(Math.max(1_000, budgetLeft())),
-    });
-    if (!res.ok) {
+    let res: Response | null = null;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": apiKey as string,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(
+          buildClaudeMessageBody({
+            model,
+            max_tokens: maxTokens,
+            temperature: 0.8,
+            system,
+            messages,
+          }),
+        ),
+        signal: AbortSignal.timeout(Math.max(1_000, budgetLeft())),
+      });
+      if (res.ok) break;
       console.error("[affiliate-generate] Anthropic", res.status, await res.text().catch(() => ""));
+      if (!isRetryableStatus(res.status) || attempt === MAX_ATTEMPTS) break;
+      const wait = retryDelayMs(attempt, res.headers.get("retry-after"));
+      // Relancer sans pouvoir finir, c'est une page 524 et zero texte.
+      if (budgetLeft() < wait + 20_000) break;
+      await new Promise((r) => setTimeout(r, wait));
+    }
+    if (!res || !res.ok) {
       return null;
     }
     const data = await res.json();

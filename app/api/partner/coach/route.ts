@@ -26,6 +26,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { buildClaudeMessageBody } from "@/lib/claudeRequest";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
+import { MAX_ATTEMPTS, isRetryableStatus, retryDelayMs } from "@/lib/generate/retry";
 import { buildCoachSystemPrompt } from "@/lib/coach/knowledge";
 import { embedQuery } from "@/lib/coach/embedder";
 import {
@@ -125,8 +126,13 @@ async function guestAskedToday(email: string): Promise<number> {
   return count ?? 0;
 }
 
+/**
+ * Meme correction que le coach de l'Atelier (5 aout 2026) : la reprise
+ * partait aussitot, donc elle retombait sur la meme seconde de surcharge
+ * Anthropic. Le rythme vient de `lib/generate/retry.ts`, une seule fois.
+ */
 async function callAnthropic(apiKey: string, body: unknown): Promise<string | null> {
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -146,9 +152,21 @@ async function callAnthropic(apiKey: string, body: unknown): Promise<string | nu
           .trim();
         return text || null;
       }
-      if (res.status < 500 && res.status !== 429) return null;
-    } catch {
-      /* réseau : on retente une fois */
+      if (!isRetryableStatus(res.status)) {
+        console.error("[partner/coach] Anthropic", res.status);
+        return null;
+      }
+      console.warn("[partner/coach] Anthropic", res.status, "tentative", attempt);
+      if (attempt < MAX_ATTEMPTS) {
+        await new Promise((r) =>
+          setTimeout(r, retryDelayMs(attempt, res.headers.get("retry-after"))),
+        );
+      }
+    } catch (err) {
+      console.warn("[partner/coach] appel interrompu, tentative", attempt, err);
+      if (attempt < MAX_ATTEMPTS) {
+        await new Promise((r) => setTimeout(r, retryDelayMs(attempt)));
+      }
     }
   }
   return null;

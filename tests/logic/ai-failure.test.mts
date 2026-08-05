@@ -127,6 +127,41 @@ test("le budget de temps est partage avec la reprise", () => {
   assert.doesNotMatch(src, /AbortSignal\.timeout\(85_000\)/, "plus de minuteur fixe par appel");
 });
 
+// ── Une seule regle de reprise, et TOUS les appels y passent ─────────
+//
+// Le 529 du 5 aout ne frappait pas que le generateur de bonus : les deux
+// coachs retentaient AUSSITOT (donc sur la meme seconde de surcharge),
+// et deux autres appels ne retentaient pas du tout.
+
+test("la liste des statuts transitoires n'existe qu'a un endroit", () => {
+  // Je l'avais recopiee dans aiFailure.ts. C'est le defaut que ce repo
+  // corrige en boucle : deux copies d'une regle finissent par diverger.
+  const src = readFileSync(new URL("../../lib/aiFailure.ts", import.meta.url), "utf8");
+  assert.match(src, /isRetryableStatus/);
+  assert.doesNotMatch(src, /status === 529/, "la liste vit dans lib/generate/retry.ts");
+});
+
+test("aucun appel a Anthropic ne repart sans attendre", () => {
+  const callers = [
+    "app/api/coach/route.ts",
+    "app/api/partner/coach/route.ts",
+    "app/api/me/bonus/route.ts",
+    "app/api/me/affiliate-generate/route.ts",
+    "lib/generate/funnel.ts",
+    "lib/generate/caseStudy.ts",
+  ];
+  for (const f of callers) {
+    const src = readFileSync(new URL(`../../${f}`, import.meta.url), "utf8");
+    assert.match(src, /api\.anthropic\.com/, f);
+    assert.match(src, /retryDelayMs\(/, `${f} : une reprise sans pause ne rattrape rien`);
+    assert.doesNotMatch(
+      src,
+      /status < 500 && res\.status !== 429/,
+      `${f} : la liste des statuts transitoires se lit, elle ne se recopie pas`,
+    );
+  }
+});
+
 test("l'ecran passe par la meme regle que le serveur", () => {
   const src = readFileSync(
     new URL("../../app/(app)/labo-bonus/BonusLabClient.tsx", import.meta.url),

@@ -20,10 +20,22 @@
 //
 // -- CE QUE CE MODULE FAIT, ET CE QU'IL NE FAIT PAS -------------------
 //
-// Il traduit un statut HTTP ou une exception en RAISON. Il n'écrit
-// aucune phrase : l'interface existe en français ici, mais la même règle
-// est portable vers Tiquiz et Tipote, qui vivent en 7 langues. Le
-// serveur renvoie la raison, jamais la phrase (règle du 3 août).
+// Il traduit un statut HTTP ou une exception en RAISON.
+//
+// -- IL NE DÉCIDE PAS CE QUI SE RÉESSAIE ------------------------------
+//
+// Ça, c'est `lib/generate/retry.ts`, écrit le 4 août pour Fabienne (ses
+// trois emails dont "un ou parfois deux" seulement sortaient). J'avais
+// commencé par réécrire la liste des statuts transitoires ici : c'est
+// exactement le défaut que ce repo corrige en boucle, une règle écrite à
+// deux endroits finit toujours par diverger. Ce module s'appuie donc
+// dessus au lieu de la recopier, et le délai entre deux tentatives vient
+// de là aussi (avec l'en-tête `retry-after` du fournisseur, que lui seul
+// sait renseigner).
+
+// Import RELATIF avec l'extension : le runner de tests de ce repo ne
+// resout pas l'alias `@/` (contrairement a celui de Tiquiz).
+import { isRetryableStatus } from "./generate/retry.ts";
 
 /** Ce qui a empêché la génération, du point de vue de la créatrice. */
 export type AiFailure =
@@ -45,11 +57,11 @@ export type AiFailure =
  * la même requête passera dans une minute. Les autres 4xx viennent de ce
  * qu'on a envoyé, donc réessayer ne sert à rien et il faut le dire, sinon
  * la créatrice relance dix fois pour rien.
+ *
+ * La liste elle-même vit dans `lib/generate/retry.ts`, et une seule fois.
  */
 export function classifyUpstream(status: number): AiFailure {
-  if (status === 429 || status === 529) return "busy";
-  if (status >= 500) return "busy";
-  return "refused";
+  return isRetryableStatus(status) ? "busy" : "refused";
 }
 
 /**

@@ -40,6 +40,7 @@ import {
   statusFor,
   type AiFailure,
 } from "@/lib/aiFailure";
+import { MAX_ATTEMPTS, retryDelayMs } from "@/lib/generate/retry";
 import { fetchQuizAudit } from "@/lib/integrations/tiquiz";
 import {
   OFFER_KINDS,
@@ -149,7 +150,9 @@ export async function POST(req: NextRequest) {
 
   type ClaudeOutcome =
     | { ok: true; text: string; truncated: boolean }
-    | { ok: false; failure: AiFailure };
+    // `retryAfter` : l'en-tete du fournisseur, lui seul sait quand sa
+    // fenetre se rouvre.
+    | { ok: false; failure: AiFailure; retryAfter?: string | null };
 
   async function callOnce(
     system: string,
@@ -187,7 +190,11 @@ export async function POST(req: NextRequest) {
 
     if (!res.ok) {
       console.error("[bonus] Anthropic", res.status, await res.text().catch(() => ""));
-      return { ok: false, failure: classifyUpstream(res.status) };
+      return {
+        ok: false,
+        failure: classifyUpstream(res.status),
+        retryAfter: res.headers.get("retry-after"),
+      };
     }
 
     const data = (await res.json().catch(() => null)) as {
@@ -207,23 +214,45 @@ export async function POST(req: NextRequest) {
   }
 
   /**
-   * Le meme appel, avec UNE reprise quand c'est sature en face.
+   * Le meme appel, avec des reprises quand c'est sature en face.
    *
-   * Une saturation Anthropic dure quelques secondes : faire relancer la
-   * creatrice a la main pour ca, c'est lui faire porter une panne qui
-   * n'est pas la sienne. Une seule reprise, et seulement s'il reste du
-   * budget : au dela on rend la main plutot que de finir en 524.
+   * C'EST LE CAS QU'ON A VRAIMENT VU (5 aout 2026, journal du serveur) :
+   *
+   *   [bonus] Anthropic 529 {"type":"overloaded_error"}
+   *
+   * Rien de casse chez nous, Anthropic etait sature a cette seconde la.
+   * Faire relancer la creatrice a la main pour ca, c'est lui faire porter
+   * une panne qui n'est pas la sienne, et lui laisser croire que son
+   * texte etait en cause.
+   *
+   * Une surcharge se refuse en une fraction de seconde : les reprises
+   * coutent du temps d'attente, pas du temps de generation. On peut donc
+   * s'en offrir plusieurs. Combien, et apres quelle attente, c'est
+   * `lib/generate/retry.ts` qui le dit (ecrit le 4 aout pour les emails
+   * de Fabienne) : une deuxieme regle ici finirait par contredire la
+   * premiere.
+   *
+   * On s'arrete des qu'il ne reste plus de quoi FINIR une generation :
+   * relancer a 20 secondes de la fin du budget, c'est une page 524 de
+   * Cloudflare avec zero ligne, ce qui est pire que d'admettre la
+   * saturation tout de suite.
    */
   async function callClaude(
     system: string,
     user: string,
     maxTokens: number,
   ): Promise<ClaudeOutcome> {
-    const first = await callOnce(system, user, maxTokens);
-    if (first.ok || !isRetryable(first.failure) || budgetLeft() < 25_000) return first;
-    console.warn("[bonus] sature, une reprise");
-    await new Promise((r) => setTimeout(r, 1_500));
-    return callOnce(system, user, maxTokens);
+    let out = await callOnce(system, user, maxTokens);
+    for (let attempt = 1; attempt < MAX_ATTEMPTS; attempt++) {
+      if (out.ok || !isRetryable(out.failure)) return out;
+      const wait = retryDelayMs(attempt, out.retryAfter);
+      // 45 s : ce qu'il faut au bloc le plus long pour aboutir.
+      if (budgetLeft() < wait + 45_000) return out;
+      console.warn("[bonus] sature, reprise dans", wait, "ms");
+      await new Promise((r) => setTimeout(r, wait));
+      out = await callOnce(system, user, maxTokens);
+    }
+    return out;
   }
 
   function failed(failure: AiFailure) {
