@@ -43,6 +43,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BonusDocument } from "@/components/BonusDocument";
+import { failureCopy } from "@/lib/aiFailure";
 import { hasStructure, parseBonusDoc } from "@/lib/bonus/document";
 import { buildPrintableHtml } from "@/lib/bonus/printable";
 import {
@@ -124,11 +125,7 @@ export function BonusLabClient({
     try {
       const data = await call({ step: "pistes", brief });
       if (!data?.ok) {
-        toast.error(
-          data?.reason === "no_quiz"
-            ? "Aucun quiz trouvé sur ton compte relié. Connecte le bon compte, ou crée ton quiz d'abord."
-            : "La génération n'a pas abouti. Relance, ça repart en général du premier coup.",
-        );
+        toast.error(failureCopy(String(data?.reason ?? "")));
         return;
       }
       setPistes(data.pistes as Piste[]);
@@ -161,12 +158,19 @@ export function BonusLabClient({
         },
       });
       if (!data?.ok) {
-        toast.error(`${BLOCK_LABEL[block]} n'a pas abouti. Relance, le reste est gardé.`);
+        toast.error(failureCopy(String(data?.reason ?? ""), BLOCK_LABEL[block]));
         return;
       }
       setBlocks((b) => ({ ...b, [key]: String(data.markdown ?? "") }));
+      // Un texte coupe a la limite de longueur est utilisable, mais il
+      // s'arrete au milieu d'une phrase : on le rend ET on le dit.
+      if (data.truncated) {
+        toast.warning(
+          `${BLOCK_LABEL[block]} s'est arrêté avant la fin (limite de longueur). Relance-le, ou complète la dernière partie à la main.`,
+        );
+      }
     } catch {
-      toast.error(`${BLOCK_LABEL[block]} n'a pas abouti. Relance, le reste est gardé.`);
+      toast.error(failureCopy("", BLOCK_LABEL[block]));
     } finally {
       setBusy(null);
     }
