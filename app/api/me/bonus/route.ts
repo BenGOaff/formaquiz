@@ -33,6 +33,13 @@ import { isAdminEmail } from "@/lib/adminEmails";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { buildClaudeMessageBody } from "@/lib/claudeRequest";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
+import {
+  classifyThrown,
+  classifyUpstream,
+  isRetryable,
+  statusFor,
+  type AiFailure,
+} from "@/lib/aiFailure";
 import { fetchQuizAudit } from "@/lib/integrations/tiquiz";
 import {
   OFFER_KINDS,
@@ -132,52 +139,111 @@ export async function POST(req: NextRequest) {
 
   const model = resolveAnthropicModel(process.env.ANTHROPIC_MODEL, "sonnet");
 
-  async function callClaude(system: string, user: string, maxTokens: number) {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify(
-        buildClaudeMessageBody({
-          model,
-          max_tokens: maxTokens,
-          temperature: 0.7,
-          system,
-          messages: [{ role: "user", content: user }],
-        }),
-      ),
-      // On rend la main avant Cloudflare, qui coupe a ~100 s et rend une
-      // page 524 qu'on ne controle pas.
-      signal: AbortSignal.timeout(85_000),
-    });
+  // UN BUDGET POUR TOUTE LA REQUETE, PAS PAR APPEL.
+  //
+  // Cloudflare coupe a ~100 s et rend une page 524 qu'on ne controle pas.
+  // Le budget est partage avec la reprise automatique ci-dessous : deux
+  // minuteurs de 85 s bout a bout, ca fait 170 s, donc une page 524.
+  const deadline = Date.now() + 85_000;
+  const budgetLeft = () => deadline - Date.now();
+
+  type ClaudeOutcome =
+    | { ok: true; text: string; truncated: boolean }
+    | { ok: false; failure: AiFailure };
+
+  async function callOnce(
+    system: string,
+    user: string,
+    maxTokens: number,
+  ): Promise<ClaudeOutcome> {
+    let res: Response;
+    try {
+      res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(
+          buildClaudeMessageBody({
+            model,
+            max_tokens: maxTokens,
+            temperature: 0.7,
+            system,
+            messages: [{ role: "user", content: user }],
+          }),
+        ),
+        signal: AbortSignal.timeout(Math.max(1_000, budgetLeft())),
+      });
+    } catch (err) {
+      // SANS CE catch, une coupure de notre propre minuteur remontait en
+      // exception non geree : la creatrice recevait un 500 opaque la ou
+      // la seule chose a faire etait de relancer.
+      const failure = classifyThrown(err);
+      console.error("[bonus] appel interrompu :", failure, err);
+      return { ok: false, failure };
+    }
+
     if (!res.ok) {
       console.error("[bonus] Anthropic", res.status, await res.text().catch(() => ""));
-      return null;
+      return { ok: false, failure: classifyUpstream(res.status) };
     }
-    const data = (await res.json()) as { content?: Array<{ text?: string }> };
-    const raw = (data.content ?? []).map((c) => c.text ?? "").join("").trim();
-    return raw || null;
+
+    const data = (await res.json().catch(() => null)) as {
+      content?: Array<{ text?: string }>;
+      stop_reason?: string;
+    } | null;
+    const raw = (data?.content ?? []).map((c) => c.text ?? "").join("").trim();
+    if (!raw) {
+      console.error("[bonus] reponse vide", data?.stop_reason ?? "");
+      return { ok: false, failure: "empty" };
+    }
+    // Un texte coupe a la limite de tokens reste utilisable : on le rend,
+    // mais on le DIT. Le laisser passer en silence, c'est une creatrice
+    // qui publie un bonus dont la derniere section s'arrete au milieu
+    // d'une phrase sans jamais comprendre pourquoi.
+    return { ok: true, text: raw, truncated: data?.stop_reason === "max_tokens" };
+  }
+
+  /**
+   * Le meme appel, avec UNE reprise quand c'est sature en face.
+   *
+   * Une saturation Anthropic dure quelques secondes : faire relancer la
+   * creatrice a la main pour ca, c'est lui faire porter une panne qui
+   * n'est pas la sienne. Une seule reprise, et seulement s'il reste du
+   * budget : au dela on rend la main plutot que de finir en 524.
+   */
+  async function callClaude(
+    system: string,
+    user: string,
+    maxTokens: number,
+  ): Promise<ClaudeOutcome> {
+    const first = await callOnce(system, user, maxTokens);
+    if (first.ok || !isRetryable(first.failure) || budgetLeft() < 25_000) return first;
+    console.warn("[bonus] sature, une reprise");
+    await new Promise((r) => setTimeout(r, 1_500));
+    return callOnce(system, user, maxTokens);
+  }
+
+  function failed(failure: AiFailure) {
+    return NextResponse.json({ ok: false, reason: failure }, { status: statusFor(failure) });
   }
 
   // ── ÉTAPE 1 : les trois pistes ──
   if (input.step === "pistes") {
-    const raw = await callClaude(
+    const out = await callClaude(
       buildPistesSystemPrompt(brief),
       renderBriefForPrompt(brief) + "\n\nPropose-moi les trois pistes maintenant.",
       2000,
     );
-    if (!raw) {
-      return NextResponse.json({ ok: false, reason: "generation_failed" }, { status: 502 });
-    }
-    const pistes = parsePistes(raw);
+    if (!out.ok) return failed(out.failure);
+    const pistes = parsePistes(out.text);
     if (!pistes) {
       // ON N'AFFICHE JAMAIS DE JSON A UNE CREATRICE (regle du 3 aout).
       // Le texte brut part dans les logs, l'ecran dit que ca n'a pas
       // abouti et propose de relancer.
-      console.error("[bonus] pistes illisibles :", raw.slice(0, 1500));
+      console.error("[bonus] pistes illisibles :", out.text.slice(0, 1500));
       return NextResponse.json({ ok: false, reason: "unreadable" }, { status: 502 });
     }
     return NextResponse.json({ ok: true, ...pistes });
@@ -197,16 +263,25 @@ export async function POST(req: NextRequest) {
 
   // Le contenu complet est le plus long des trois : il a son propre
   // budget. Les deux autres tiennent largement en dessous.
-  const maxTokens = input.block === "content" ? 6000 : 2500;
-  const raw = await callClaude(
+  //
+  // 4500 et pas 6000 : au dela, la generation depasse regulierement les
+  // 85 secondes du budget et se fait couper, ce qui rend ZERO ligne. Un
+  // bonus de 4500 tokens fait deja plus de 3000 mots, et le generateur
+  // d'articles affilies, qui tourne en prod depuis juillet, plafonne a
+  // 4000 sans que personne n'ait trouve ses textes courts.
+  const maxTokens = input.block === "content" ? 4500 : 2500;
+  const out = await callClaude(
     buildProductionSystemPrompt(brief, input.block, input.profileIndex),
     user,
     maxTokens,
   );
-  if (!raw) {
-    return NextResponse.json({ ok: false, reason: "generation_failed" }, { status: 502 });
-  }
-  return NextResponse.json({ ok: true, block: input.block, markdown: sanitizeAiText(raw) });
+  if (!out.ok) return failed(out.failure);
+  return NextResponse.json({
+    ok: true,
+    block: input.block,
+    markdown: sanitizeAiText(out.text),
+    truncated: out.truncated,
+  });
 }
 
 type Piste = {
