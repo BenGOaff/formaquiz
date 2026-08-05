@@ -1,3 +1,4 @@
+import { isAdminEmail } from "@/lib/adminEmails";
 import { redirect } from "next/navigation";
 import { getViewer } from "@/lib/parcours";
 import { getFunnelAssets, getFunnelIntentions } from "@/lib/generate/funnel";
@@ -17,6 +18,9 @@ export default async function FunnelPage() {
   if (!viewer.enrolled) return <NoAccess email={viewer.email} />;
 
   const locked = !canAccessSection(viewer.tier, "/funnel");
+  // L'onglet du generateur de bonus n'existe que pour elle, le temps
+  // du test (cf. app/(app)/labo-bonus).
+  const isAdmin = isAdminEmail(viewer.email);
   const checkoutUrl = upsellUrl();
 
   const [{ assets, generatedAt }, templates, profiles, intentions] = await Promise.all([
@@ -32,13 +36,19 @@ export default async function FunnelPage() {
   }));
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6">
+    // MEME LARGEUR QUE LE RESTE (retour Bene, 5 aout 2026). Cette page
+    // portait un `mx-auto max-w-3xl` a elle, quand le tableau de bord,
+    // les avancees, l'affiliation et les jours prennent toute la largeur
+    // du container commun (app/(app)/layout.tsx). Les marges et le
+    // padding vivent la-bas, une seule fois : une page ne definit que son
+    // rythme vertical.
+    <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-1">
-        <h1 className="font-display text-2xl font-bold sm:text-3xl">Ta campagne</h1>
+        <h1 className="font-display text-2xl font-bold sm:text-3xl">Tes bonus</h1>
         <p className="text-sm text-muted-foreground">
-          Deux choses, écrites à partir de ton carnet et de ton quiz : les emails que reçoit un
-          visiteur après son résultat, et de quoi faire connaître ton quiz. Tu copies dans
-          Systeme.io, tu personnalises, c&apos;est parti.
+          Tout ce qui s&apos;écrit à partir de ton carnet et de ton quiz : les emails que reçoit
+          un visiteur après son résultat, de quoi faire connaître ton quiz, et les modèles à
+          importer. Tu copies dans Systeme.io, tu personnalises, c&apos;est parti.
         </p>
       </header>
       {/* PALIER 7 EUR : on MONTRE la Campagne au lieu de la cacher (demande
@@ -59,6 +69,7 @@ export default async function FunnelPage() {
             templates={templates}
             profiles={profileOptions}
             initialIntentions={intentions}
+            isAdmin={isAdmin}
           />
         </LockedSection>
       ) : (
@@ -68,6 +79,7 @@ export default async function FunnelPage() {
           templates={templates}
           profiles={profileOptions}
           initialIntentions={intentions}
+          isAdmin={isAdmin}
         />
       )}
     </div>

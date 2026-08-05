@@ -8,7 +8,7 @@ import {
   BookOpen,
   GraduationCap,
   Trophy,
-  Megaphone,
+  Gift,
   Share2,
   ShieldCheck,
   UserCircle,
@@ -29,7 +29,10 @@ const NAV = [
   { href: "/dashboard", label: "Formation", icon: GraduationCap },
   { href: "/avancees", label: "Avancées", icon: Trophy },
   { href: "/carnet", label: "Carnet", icon: BookOpen },
-  { href: "/funnel", label: "Campagne", icon: Megaphone },
+  // "Campagne" ne disait rien a personne (retour Bene, 5 aout 2026).
+  // C'est la page ou vivent les ressources offertes : les emails, le kit
+  // de promo et les modeles a importer.
+  { href: "/funnel", label: "Bonus", icon: Gift },
   { href: "/affiliation", label: "Affiliation", icon: Share2 },
 ];
 
