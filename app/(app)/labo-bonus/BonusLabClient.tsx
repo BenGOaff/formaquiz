@@ -39,6 +39,7 @@ import {
   Loader2,
   Megaphone,
   Pencil,
+  Plus,
   Sparkles,
   Wand2,
 } from "lucide-react";
@@ -50,6 +51,13 @@ import { RichTextEditor } from "@/components/admin/RichTextEditor";
 import { failureCopy } from "@/lib/aiFailure";
 import { hasStructure, parseBonusDoc } from "@/lib/bonus/document";
 import { editorHtmlToMarkdown, markdownToEditorHtml } from "@/lib/bonus/markdownHtml";
+import {
+  analyzeOfferCoverage,
+  hasOfferPerProfile,
+  isPerProfile,
+  type BonusOffer,
+  type BonusPlan,
+} from "@/lib/bonus/offers";
 import { buildPrintableHtml } from "@/lib/bonus/printable";
 import {
   BLOCK_LABEL,
@@ -68,11 +76,18 @@ type Piste = {
 };
 
 type Brief = {
-  offerPromise: string;
-  offerKind: OfferKind;
-  offerPrice: string;
+  /** Une seule offre dans le cas courant, plusieurs pour un quiz qui
+   *  oriente vers l'offre adaptee (Monique, 5 aout 2026). */
+  offers: BonusOffer[];
   trigger: "completion" | "share";
-  variant: "single" | "per_result";
+  plan: BonusPlan;
+};
+
+const OFFRE_VIDE: BonusOffer = {
+  promise: "",
+  kind: "formation en ligne",
+  price: "",
+  profileIndexes: [],
 };
 
 type Step = "brief" | "pistes" | "produce";
@@ -127,11 +142,11 @@ export function BonusLabClient({
 }) {
   const [step, setStep] = useState<Step>("brief");
   const [brief, setBrief] = useState<Brief>({
-    offerPromise: "",
-    offerKind: "formation en ligne",
-    offerPrice: "",
+    offers: [{ ...OFFRE_VIDE }],
     trigger: "completion",
-    variant: profiles.length > 1 ? "per_result" : "single",
+    // Un quiz a profils multiples gagne presque toujours a decliner son
+    // bonus : c'est le defaut, elle peut simplifier en un clic.
+    plan: profiles.length > 1 ? "per_profile" : "shared",
   });
   const [pistes, setPistes] = useState<Piste[]>([]);
   const [recommended, setRecommended] = useState(0);
@@ -144,7 +159,50 @@ export function BonusLabClient({
   // Trois dossiers, un seul ouvert a la fois (cf. l'ecran 3 plus bas).
   const [folder, setFolder] = useState<Folder>("folders");
 
-  const perResult = brief.variant === "per_result" && profiles.length > 0;
+  const perResult = isPerProfile(brief.plan) && profiles.length > 0;
+  // Chaque profil a-t-il exactement une offre ? On previent AVANT de
+  // produire : un bonus ecrit pour un profil qui ne mene nulle part fait
+  // travailler la creatrice pour rien.
+  const coverage = useMemo(
+    () => analyzeOfferCoverage(brief.plan, brief.offers, profiles.length),
+    [brief.plan, brief.offers, profiles.length],
+  );
+
+  function setOffer(i: number, patch: Partial<BonusOffer>) {
+    setBrief((b) => ({
+      ...b,
+      offers: b.offers.map((o, j) => (j === i ? { ...o, ...patch } : o)),
+    }));
+  }
+  function addOffer() {
+    setBrief((b) => ({ ...b, offers: [...b.offers, { ...OFFRE_VIDE }] }));
+  }
+  function removeOffer(i: number) {
+    setBrief((b) => ({
+      ...b,
+      offers: b.offers.length > 1 ? b.offers.filter((_, j) => j !== i) : b.offers,
+    }));
+  }
+  function toggleOfferProfile(i: number, p: number) {
+    setBrief((b) => ({
+      ...b,
+      offers: b.offers.map((o, j) => {
+        // Un profil n'appartient qu'a UNE offre : le cocher ailleurs le
+        // retire d'ou il etait. Sans ca, on fabrique l'ambiguite qu'on
+        // vient de rendre bloquante.
+        const has = o.profileIndexes.includes(p);
+        if (j === i) {
+          return {
+            ...o,
+            profileIndexes: has
+              ? o.profileIndexes.filter((x) => x !== p)
+              : [...o.profileIndexes, p].sort((a, c) => a - c),
+          };
+        }
+        return { ...o, profileIndexes: o.profileIndexes.filter((x) => x !== p) };
+      }),
+    }));
+  }
   // Un bonus décliné a un contenu PAR profil : on garde les versions
   // séparément, sinon générer le deuxième effacerait le premier.
   const contentKey = useMemo(
@@ -182,8 +240,12 @@ export function BonusLabClient({
   }
 
   async function askPistes() {
-    if (brief.offerPromise.trim().length < 10) {
-      toast.error("Décris ton offre en une phrase pour que je puisse viser juste.");
+    if (brief.offers.some((o) => o.promise.trim().length < 10)) {
+      toast.error("Décris chaque offre en une phrase pour que je puisse viser juste.");
+      return;
+    }
+    if (!coverage.ok) {
+      toast.error(failureCopy("offer_coverage"));
       return;
     }
     setBusy("pistes");
@@ -294,53 +356,125 @@ export function BonusLabClient({
       >
         <Card>
           <CardContent className="flex flex-col gap-5 py-5">
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="promise" className="text-sm font-medium">
-                Décris la promesse principale de ton offre
-              </label>
-              <textarea
-                id="promise"
-                rows={3}
-                value={brief.offerPromise}
-                onChange={(e) => setBrief((b) => ({ ...b, offerPromise: e.target.value }))}
-                placeholder="J'aide les personnes TDAH à apaiser leur stress quotidien en 1 mois grâce à des techniques simples et méconnues"
-                className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
-              />
-              <p className="text-xs text-muted-foreground">
-                C&apos;est vers elle que ton bonus doit ramener.
-              </p>
-            </div>
+            {/* LES OFFRES (Monique, 5 aout 2026) : "je n'ai pas une offre
+                a proposer, mais 3, chaque profil mene vers une offre
+                differente". Une ligne par offre, et on dit a qui elle
+                s'adresse quand il y en a plusieurs. */}
+            <div className="flex flex-col gap-3">
+              <div>
+                <p className="text-sm font-medium">Ton offre payante</p>
+                <p className="text-xs text-muted-foreground">
+                  C&apos;est vers elle que ton bonus doit ramener.
+                </p>
+              </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="kind" className="text-sm font-medium">
-                  Format de ton offre
-                </label>
-                <select
-                  id="kind"
-                  value={brief.offerKind}
-                  onChange={(e) => setBrief((b) => ({ ...b, offerKind: e.target.value as OfferKind }))}
-                  className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
-                >
-                  {OFFER_KINDS.map((k) => (
-                    <option key={k} value={k}>
-                      {k}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="price" className="text-sm font-medium">
-                  Prix de ton offre
-                </label>
-                <input
-                  id="price"
-                  value={brief.offerPrice}
-                  onChange={(e) => setBrief((b) => ({ ...b, offerPrice: e.target.value }))}
-                  placeholder="97 euros, ou à partir de 1200 euros, ou sur devis"
-                  className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
-                />
-              </div>
+              {brief.offers.map((offre, i) => (
+                <Card key={i}>
+                  <CardContent className="flex flex-col gap-3 py-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Offre {i + 1}
+                      </span>
+                      {brief.offers.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeOffer(i)}
+                          className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                        >
+                          Retirer
+                        </button>
+                      )}
+                    </div>
+
+                    <textarea
+                      rows={2}
+                      value={offre.promise}
+                      onChange={(e) => setOffer(i, { promise: e.target.value })}
+                      placeholder="J'aide les personnes TDAH à apaiser leur stress quotidien en 1 mois grâce à des techniques simples et méconnues"
+                      className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
+                      aria-label={`Promesse de l'offre ${i + 1}`}
+                    />
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <select
+                        value={offre.kind}
+                        onChange={(e) => setOffer(i, { kind: e.target.value as OfferKind })}
+                        className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
+                        aria-label={`Format de l'offre ${i + 1}`}
+                      >
+                        {OFFER_KINDS.map((k) => (
+                          <option key={k} value={k}>
+                            {k}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        value={offre.price}
+                        onChange={(e) => setOffer(i, { price: e.target.value })}
+                        placeholder="97 euros, ou sur devis"
+                        className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
+                        aria-label={`Prix de l'offre ${i + 1}`}
+                      />
+                    </div>
+
+                    {/* Les profils servis par CETTE offre. Visible
+                        uniquement quand chaque profil a la sienne :
+                        ailleurs, une seule offre s'adresse a tout le
+                        monde et la question n'a pas de sens. */}
+                    {hasOfferPerProfile(brief.plan) && profiles.length > 0 && (
+                      <div className="flex flex-col gap-1.5">
+                        <p className="text-xs font-medium">Pour quels profils de résultat ?</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {profiles.map((p, pi) => {
+                            const actif = offre.profileIndexes.includes(pi);
+                            return (
+                              <button
+                                key={pi}
+                                type="button"
+                                onClick={() => toggleOfferProfile(i, pi)}
+                                className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                                  actif
+                                    ? "border-primary bg-primary text-primary-foreground"
+                                    : "border-border text-muted-foreground hover:border-primary/40"
+                                }`}
+                              >
+                                {p}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+
+              {hasOfferPerProfile(brief.plan) && (
+                <Button variant="outline" size="sm" className="w-fit" onClick={addOffer}>
+                  <Plus className="size-4" />
+                  Ajouter une offre
+                </Button>
+              )}
+
+              {/* On NOMME les profils concernes : "il manque une offre"
+                  oblige a comparer soi-meme pour savoir lesquels. */}
+              {!coverage.ok && (
+                <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+                  {coverage.missing.length > 0 && (
+                    <>
+                      Sans offre :{" "}
+                      <strong>{coverage.missing.map((i) => profiles[i]).join(", ")}</strong>.{" "}
+                    </>
+                  )}
+                  {coverage.duplicated.length > 0 && (
+                    <>
+                      Dans deux offres à la fois :{" "}
+                      <strong>{coverage.duplicated.map((i) => profiles[i]).join(", ")}</strong>.{" "}
+                    </>
+                  )}
+                  Chaque profil doit être relié à une offre, et à une seule.
+                </p>
+              )}
             </div>
 
             <Choice
@@ -364,22 +498,27 @@ export function BonusLabClient({
             />
 
             <Choice
-              label="Une version, ou une par profil"
-              value={brief.variant}
-              onChange={(v) => setBrief((b) => ({ ...b, variant: v as Brief["variant"] }))}
+              label="Ce que reçoit chaque profil"
+              value={brief.plan}
+              onChange={(v) => setBrief((b) => ({ ...b, plan: v as BonusPlan }))}
               options={[
                 {
-                  value: "single",
-                  title: "Le même pour tout le monde",
-                  hint: "Plus simple à produire et à livrer.",
+                  value: "shared",
+                  title: "Le même bonus, la même offre",
+                  hint: "Le plus simple à produire et à livrer.",
                 },
                 {
-                  value: "per_result",
-                  title: "Un par profil de résultat",
+                  value: "per_profile",
+                  title: "Un bonus par profil, une seule offre",
                   hint:
                     profiles.length > 0
-                      ? `Plus fort : chacun reçoit un bonus qui parle de lui. ${profiles.length} profils sur ton quiz.`
+                      ? `Chacun reçoit un texte qui parle de lui, et tous mènent à la même offre. ${profiles.length} profils sur ton quiz.`
                       : "Ton quiz n'a pas encore de profils de résultat.",
+                },
+                {
+                  value: "per_profile_offer",
+                  title: "Un bonus par profil, son offre à lui",
+                  hint: "Ton quiz sert à orienter vers l'offre adaptée : chaque bonus ramène vers celle de son profil.",
                 },
               ]}
             />
@@ -655,7 +794,9 @@ function Choice({
   return (
     <div className="flex flex-col gap-2">
       <p className="text-sm font-medium">{label}</p>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div
+        className={`grid gap-2 ${options.length > 2 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}
+      >
         {options.map((o) => (
           <button
             key={o.value}

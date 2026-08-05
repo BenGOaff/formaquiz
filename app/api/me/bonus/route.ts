@@ -38,6 +38,7 @@ import {
 } from "@/lib/aiFailure";
 import { MAX_ATTEMPTS, retryDelayMs } from "@/lib/generate/retry";
 import { fetchQuizAudit } from "@/lib/integrations/tiquiz";
+import { BONUS_PLANS, analyzeOfferCoverage } from "@/lib/bonus/offers";
 import {
   OFFER_KINDS,
   PRODUCTION_BLOCKS,
@@ -57,12 +58,22 @@ export const maxDuration = 120;
 // automatiquement ?" (Bene, 5 aout 2026). Le theme, le ton, les profils
 // et le tag de partage viennent du pont Tiquiz, cote serveur : ils ne
 // transitent pas par le client, donc personne ne peut les contredire.
+const offerSchema = z.object({
+  promise: z.string().min(10).max(600),
+  kind: z.enum(OFFER_KINDS),
+  price: z.string().max(120).default(""),
+  // Les profils que CETTE offre sert. Ignore hors du plan a offres
+  // multiples, ou une seule offre s'adresse a tout le monde.
+  profileIndexes: z.array(z.number().int().min(0).max(11)).max(12).default([]),
+});
+
 const briefSchema = z.object({
-  offerPromise: z.string().min(10).max(600),
-  offerKind: z.enum(OFFER_KINDS),
-  offerPrice: z.string().max(120).default(""),
+  // PLUSIEURS OFFRES (Monique, 5 aout 2026) : un quiz peut servir a
+  // orienter vers l'offre adaptee, donc il y en a une par profil. Douze
+  // au maximum, comme les profils.
+  offers: z.array(offerSchema).min(1).max(12),
   trigger: z.enum(["completion", "share"]),
-  variant: z.enum(["single", "per_result"]),
+  plan: z.enum(BONUS_PLANS),
 });
 
 const schema = z.discriminatedUnion("step", [
@@ -128,6 +139,15 @@ export async function POST(req: NextRequest) {
     })),
     shareTagName: String(quiz.shareTagName ?? ""),
   };
+
+  // CHAQUE PROFIL DOIT AVOIR SON OFFRE, et c'est le serveur qui tranche.
+  // L'ecran previent deja, mais un bonus ecrit pour un profil qui ne mene
+  // nulle part fait travailler la creatrice pour rien : mieux vaut un
+  // refus qui dit quoi corriger.
+  const coverage = analyzeOfferCoverage(brief.plan, brief.offers, brief.profiles.length);
+  if (!coverage.ok) {
+    return NextResponse.json({ ok: false, reason: "offer_coverage" }, { status: 409 });
+  }
 
   const model = resolveAnthropicModel(process.env.ANTHROPIC_MODEL, "sonnet");
 
