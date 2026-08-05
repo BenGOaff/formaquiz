@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { Target, ExternalLink, Loader2, Plus, Link2, RefreshCw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { LinkedAccountNotice } from "@/components/LinkedAccountNotice";
 
 type QuizRef = { id: string; title: string; project_id: string | null; mode: string | null };
 type ProjectRef = { id: string; name: string; is_default: boolean };
@@ -122,34 +123,10 @@ export function TiquizFocusCard() {
     }
   }
 
-  /**
-   * Relier un AUTRE compte : on coupe la connexion actuelle (ce qui pose
-   * l'opt-out, donc la liaison automatique ne reprendra pas la main sur
-   * l'ancienne adresse), puis on relance le consentement.
-   *
-   * Navigation DURE et pas `router.push` : la route de démarrage pose un
-   * cookie anti-CSRF et redirige vers un AUTRE domaine.
-   */
-  async function switchAccount() {
-    setBusy(true);
-    try {
-      const res = await fetch("/api/integrations/tiquiz/disconnect", { method: "POST" });
-      const data = await res.json().catch(() => ({}));
-      // Un refus doit produire quelque chose à l'écran : un échec
-      // silencieux envoie chercher au mauvais endroit.
-      if (!data?.ok) {
-        toast.error("Impossible de délier le compte pour le moment. Réessaie dans un instant.");
-        setBusy(false);
-        return;
-      }
-      window.location.href = `/api/integrations/tiquiz/start${
-        provider === "tipote" ? "?provider=tipote" : ""
-      }`;
-    } catch {
-      toast.error("Impossible de délier le compte pour le moment. Réessaie dans un instant.");
-      setBusy(false);
-    }
-  }
+  // La bascule de compte vivait ici. Elle est partie dans
+  // `LinkedAccountNotice` le 5 août : trois autres écrans en avaient
+  // besoin, et une bascule recopiée quatre fois finit par se comporter
+  // de quatre façons différentes.
 
   const providerName = provider === "tipote" ? "Tipote" : "Tiquiz";
 
@@ -232,28 +209,22 @@ export function TiquizFocusCard() {
       <Card className="h-full">
         <CardContent className="flex h-full flex-col gap-3 py-5">
           {Header}
-          {account && (
-            <div className="flex flex-col gap-0.5 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">
-                Compte {providerName} relié
-              </span>
-              <strong className="break-all text-sm">{account}</strong>
-            </div>
-          )}
-          <p className="text-sm text-muted-foreground">
-            Ce compte ne contient aucun quiz. Soit c'est le moment d'en créer un, soit tes quiz
-            vivent sur un autre compte {providerName}, sous une autre adresse email.
-          </p>
+          {/* Le MÊME encart que la page Avancées, et pas une deuxième
+              version écrite ici : le 5 août, cette carte disait la bonne
+              chose pendant que trois blocs de la page Avancées disaient
+              encore le contraire. */}
+          <LinkedAccountNotice
+            reason="no-quiz"
+            provider={provider}
+            providerName={providerName}
+            email={account}
+          />
           <div className="mt-auto flex flex-wrap gap-2">
             <Button asChild size="sm">
               <a href="/api/integrations/tiquiz/go?to=create" target="_blank" rel="noopener noreferrer">
                 <Plus />
                 Créer mon premier quiz
               </a>
-            </Button>
-            <Button size="sm" variant="outline" onClick={switchAccount} disabled={busy}>
-              {busy ? <Loader2 className="animate-spin" /> : <Link2 />}
-              Changer de compte
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">

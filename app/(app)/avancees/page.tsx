@@ -2,7 +2,12 @@ import { redirect } from "next/navigation";
 import { Trophy, Medal } from "lucide-react";
 import { getViewer, getDaysWithProgress, snapshotFromDays } from "@/lib/parcours";
 import { earnedBadgeCodes, BADGES } from "@/lib/gamification";
-import { ensureAutoConnect, getTiquizConnection } from "@/lib/integrations/tiquiz";
+import {
+  ensureAutoConnect,
+  fetchTiquizQuizList,
+  getTiquizConnection,
+  providerLabel,
+} from "@/lib/integrations/tiquiz";
 import { computeTiquizInsights } from "@/lib/insights/tiquizInsights";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -29,6 +34,16 @@ export default async function AvanceesPage() {
   const days = await getDaysWithProgress(viewer.userId);
   const connection = await getTiquizConnection(viewer.userId);
   const tiquizMetrics = connection?.metrics ?? null;
+
+  // Le NOMBRE de quiz du compte relié, et pas seulement ses compteurs.
+  // Sans lui, cette page ne peut pas distinguer "elle débute" de "on
+  // interroge le mauvais compte", et les trois blocs ci-dessous
+  // affirmaient le premier (cf. lib/tiquizAccount.ts, drame Jocelyne).
+  // `null` en cas d'échec : on ne conclut alors rien du tout.
+  const quizList = connection ? await fetchTiquizQuizList(viewer.userId) : null;
+  const quizCount = quizList ? quizList.quizzes.filter((q) => q.mode !== "survey").length : null;
+  const provider = connection?.provider ?? "tiquiz";
+  const providerName = providerLabel(provider);
 
   const parcours = days.filter((d) => !d.is_bonus);
   const completed = parcours.filter((d) => d.progress === "completed").length;
@@ -71,13 +86,21 @@ export default async function AvanceesPage() {
         metrics={tiquizMetrics}
         lastSyncedAt={connection?.last_synced_at ?? null}
         connectedEmail={connection?.tiquiz_email ?? null}
+        provider={provider}
+        providerName={providerName}
+        quizCount={quizCount}
       />
 
       {/* Coach proactif : recommandations issues des vrais chiffres */}
       {connection && <TiquizInsights insights={computeTiquizInsights(tiquizMetrics)} />}
 
       {/* Quiz Doctor : audit de la structure du quiz (réglages) */}
-      <QuizDoctor connected={Boolean(connection)} />
+      <QuizDoctor
+        connected={Boolean(connection)}
+        provider={provider}
+        providerName={providerName}
+        account={connection?.tiquiz_email ?? null}
+      />
 
       {/* Badges */}
       <section className="flex flex-col gap-3">
