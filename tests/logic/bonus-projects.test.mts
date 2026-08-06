@@ -27,6 +27,25 @@ import {
   worthSaving,
 } from "../../lib/bonus/project.ts";
 import { bonusContextBlock, BONUS_IMPLEMENTATION_RULES, type CoachBonusRow } from "../../lib/coach/bonusContext.ts";
+import {
+  BONUS_RULES_PREFIX,
+  buildOnePisteSystemPrompt,
+  buildPistesSystemPrompt,
+  buildProductionSystemPrompt,
+  type BonusBrief,
+} from "../../lib/prompts/bonus.ts";
+
+/** Un brief complet, pour les prompts. */
+const BRIEF_BONUS: BonusBrief = {
+  offers: [{ promise: "Je remets tes comptes a plat en 30 jours", kind: "accompagnement ou coaching", price: "490 euros", profileIndexes: [] }],
+  trigger: "completion",
+  plan: "shared",
+  quizTitle: "Ou en est ta tresorerie ?",
+  quizIntro: "Fais le point en 3 minutes",
+  addressForm: "tu",
+  profiles: [{ title: "La debordee", description: "x" }],
+  shareTagName: "partage-quiz",
+};
 
 const lire = (f: string) => readFileSync(new URL(`../../${f}`, import.meta.url), "utf8");
 
@@ -340,4 +359,127 @@ test("la table absente ne casse pas l'ecran", () => {
   assert.match(r, /if \(error\) return NextResponse\.json\(\{ ok: true, projects: \[\], degraded: true \}\)/);
   const page = lire("app/(app)/labo-bonus/page.tsx");
   assert.match(page, /catch \{\s*return \[\];/);
+});
+
+// ── Une piste de plus, sur clic (Béné, 6 août 2026) ──────────────────
+//
+// "On peut ajouter l'option de générer 1 idée de bonus en plus à la 2ème
+// étape ? Au cas où l'élève n'est pas convaincu par les propositions. À
+// générer UNIQUEMENT si l'user clique sur le bouton, limiter la conso de
+// token."
+
+test("l'etape 'une de plus' rend UNE piste, pas trois", () => {
+  // Relancer l'etape entiere couterait trois fois la sortie ET effacerait
+  // des propositions qu'elle n'a peut-etre pas fini de lire.
+  const p = buildOnePisteSystemPrompt(BRIEF_BONUS, [{ format: "calculateur", title: "X" }]);
+  assert.match(p, /TU EN PROPOSES UNE SEULE/);
+  assert.doesNotMatch(p, /EXACTEMENT trois|"pistes": \[/);
+});
+
+test("le modele sait ce qui est deja affiche", () => {
+  // Sans cette liste, il repropose le format evident : une generation
+  // payee pour un doublon, la pire depense possible.
+  const p = buildOnePisteSystemPrompt(BRIEF_BONUS, [
+    { format: "calculateur", title: "Ton vrai tarif jour" },
+    { format: "checklist", title: "Les 7 fuites" },
+  ]);
+  assert.match(p, /1\. calculateur : Ton vrai tarif jour/);
+  assert.match(p, /2\. checklist : Les 7 fuites/);
+  assert.match(p, /un format qui n'est PAS dans la liste/);
+});
+
+test("le budget de sortie est reduit, pas seulement le declenchement", () => {
+  // Le clic est la moitie du levier ; l'autre moitie est le max_tokens.
+  const route = lire("app/api/me/bonus/route.ts");
+  const i = route.indexOf('input.step === "more"');
+  assert.ok(i > 0, "l'etape doit exister");
+  const bloc = route.slice(i, i + 700);
+  assert.match(bloc, /\n      800,/, "une piste seule ne demande pas le budget de trois");
+});
+
+test("le bouton ne se declenche QUE sur clic, et il est plafonne", () => {
+  const c = lire("app/(app)/labo-bonus/BonusLabClient.tsx");
+  assert.match(c, /onClick=\{askOneMore\}/);
+  assert.match(c, /if \(pistes\.length >= MAX_PISTES\) return;/);
+  assert.match(c, /pistes\.length < MAX_PISTES && \(/, "le bouton disparait au plafond");
+  // Aucun appel automatique : la fonction n'est referencee que par le
+  // bouton et sa propre definition.
+  const appels = (c.match(/askOneMore/g) ?? []).length;
+  assert.equal(appels, 2, `askOneMore ne doit etre appele que par le bouton (vu ${appels} mentions)`);
+});
+
+test("les pistes deja obtenues ne sont pas effacees", () => {
+  // C'est la difference avec relancer l'etape : "celles du dessus
+  // restent" est promis a l'ecran, donc ca doit etre vrai.
+  const c = lire("app/(app)/labo-bonus/BonusLabClient.tsx");
+  assert.match(c, /const suivantes = \[\.\.\.pistes, data\.piste as Piste\];/);
+});
+
+// ── Le cache de prompt (reco Anthropic) ─────────────────────────────
+
+test("le socle cache ne contient AUCUNE valeur du brief", () => {
+  // C'est LE piege. Le cache d'Anthropic est un prefixe exact : une
+  // seule interpolation (le titre du quiz, le ton, un prix) rend le
+  // socle unique par creatrice. Il ne serait plus jamais relu, seulement
+  // ecrit, et l'ecriture coute 1,25 fois le prix normal : on paierait
+  // pour ne rien economiser.
+  assert.doesNotMatch(BONUS_RULES_PREFIX, /\$\{/);
+  const src = lire("lib/prompts/bonus.ts");
+  const i = src.indexOf("export const BONUS_RULES_PREFIX = [");
+  const bloc = src.slice(i, src.indexOf('].join(', i));
+  assert.doesNotMatch(bloc, /\bb\.|brief|toneLine|TRIGGER_LABEL/);
+});
+
+test("le socle est au dessus du minimum cachable du modele", () => {
+  // claude-sonnet-4-6 : 1024 tokens minimum. En dessous, Anthropic ne
+  // cache PAS et ne le dit pas : il facture plein tarif en silence.
+  // On borne en CARACTERES avec le ratio le plus pessimiste (4 car /
+  // token), pour qu'un raccourcissement futur rougisse ici plutot que
+  // sur une facture.
+  assert.ok(
+    BONUS_RULES_PREFIX.length >= 4096,
+    `socle ${BONUS_RULES_PREFIX.length} caracteres, soit peut-etre moins de 1024 tokens`,
+  );
+});
+
+test("le socle n'est pas renvoye une deuxieme fois dans la partie variable", () => {
+  // Le payer deux fois par appel serait exactement l'inverse du but.
+  const b: BonusBrief = BRIEF_BONUS;
+  for (const variable of [
+    buildPistesSystemPrompt(b),
+    buildOnePisteSystemPrompt(b, []),
+    buildProductionSystemPrompt(b, "guide", undefined, "calculateur"),
+    buildProductionSystemPrompt(b, "content", undefined, "calculateur"),
+    buildProductionSystemPrompt(b, "presentation", undefined, "calculateur"),
+  ]) {
+    assert.ok(!variable.includes(BONUS_RULES_PREFIX), "le socle est envoye en double");
+    // Le repere : la premiere phrase de la persona.
+    assert.doesNotMatch(variable, /Tu aides une creatrice a concevoir le bonus/);
+  }
+});
+
+test("le socle part AVANT le variable, et lui seul est marque", () => {
+  // Le cache est un PREFIXE : le stable doit venir en premier, sinon
+  // rien ne s'accroche. Et marquer le variable ecrirait un cache par
+  // creatrice, jamais relu.
+  const route = lire("app/api/me/bonus/route.ts");
+  const i = route.indexOf("function systemBlocks(");
+  assert.ok(i > 0);
+  const bloc = route.slice(i, i + 600);
+  const socle = bloc.indexOf("BONUS_RULES_PREFIX");
+  const marque = bloc.indexOf("cache_control");
+  const varia = bloc.indexOf("text: variable");
+  assert.ok(socle > 0 && marque > socle, "le socle porte la marque de cache");
+  assert.ok(varia > marque, "le variable vient apres, et sans marque");
+  assert.doesNotMatch(bloc.slice(varia), /cache_control/);
+});
+
+test("l'efficacite du cache est TRACEE, pas supposee", () => {
+  // Anthropic ne renvoie aucune erreur quand un prefixe est trop court
+  // ou invalide : il facture plein tarif, en silence. La seule preuve
+  // est dans `usage`.
+  const route = lire("app/api/me/bonus/route.ts");
+  assert.match(route, /cache_creation_input_tokens/);
+  assert.match(route, /cache_read_input_tokens/);
+  assert.match(route, /console\.log\(\s*`\[bonus\] tokens/);
 });

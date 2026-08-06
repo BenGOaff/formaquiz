@@ -101,6 +101,15 @@ const OFFRE_VIDE: BonusOffer = {
 type Step = "library" | "brief" | "pistes" | "produce";
 
 /**
+ * Le nombre de pistes au delà duquel on n'en propose plus.
+ *
+ * Trois au départ, trois de plus au maximum. Au delà, une liste ne fait
+ * plus choisir : elle paralyse, et chaque clic supplémentaire coûte une
+ * génération.
+ */
+const MAX_PISTES = 6;
+
+/**
  * Les trois dossiers de l'écran de production.
  *
  * Même mécanique que "Mes projets" dans Tiquiz : `"folders"` affiche la
@@ -459,6 +468,42 @@ export function BonusLabClient({
       // Des pistes obtenues, c'est du travail : a partir d'ici, un
       // rafraichissement d'onglet ne perd plus rien.
       void save({ pistes: nouvelles, chosen: null, blocks: {} });
+    } catch {
+      toast.error("La génération n'a pas abouti. Réessaie dans un instant.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  /**
+   * UNE PISTE DE PLUS, sur clic seulement.
+   *
+   * Béné, 6 août 2026 : "au cas où l'élève n'est pas convaincu par les
+   * propositions. À générer UNIQUEMENT si l'user clique sur le bouton,
+   * limiter la conso de token."
+   *
+   * Trois choses la limitent, et pas seulement le clic : le serveur rend
+   * UNE piste (pas trois), on lui envoie ce qui est déjà affiché pour ne
+   * pas payer un doublon, et le bouton disparaît au delà de MAX_PISTES.
+   * Sans ce plafond, un clic répété devient une dépense sans fin, et une
+   * liste de quinze pistes ne fait pas choisir : elle paralyse.
+   */
+  async function askOneMore() {
+    if (pistes.length >= MAX_PISTES) return;
+    setBusy("more");
+    try {
+      const data = await call({
+        step: "more",
+        brief,
+        known: pistes.map((p) => ({ format: p.format, title: p.title })),
+      });
+      if (!data?.ok || !data.piste) {
+        toast.error(failureCopy(String(data?.reason ?? "")));
+        return;
+      }
+      const suivantes = [...pistes, data.piste as Piste];
+      setPistes(suivantes);
+      void save({ pistes: suivantes });
     } catch {
       toast.error("La génération n'a pas abouti. Réessaie dans un instant.");
     } finally {
@@ -878,6 +923,31 @@ export function BonusLabClient({
             </Card>
           ))}
         </div>
+
+        {/* AUCUNE NE TE CONVAINC ? (Béné, 6 août 2026)
+            Le bouton dit ce qu'il coûte et ce qu'il rend : une idée, pas
+            une nouvelle fournée. Sans ça, on cliquerait en craignant de
+            perdre les trois qui sont à l'écran. */}
+        {pistes.length < MAX_PISTES && (
+          <div className="flex flex-col items-start gap-1.5">
+            <Button
+              variant="secondary"
+              className="gap-2"
+              disabled={busy !== null}
+              onClick={askOneMore}
+            >
+              {busy === "more" ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Sparkles className="size-4" />
+              )}
+              Aucune ne me convainc, propose-m'en une autre
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Une idée de plus, dans un format différent. Celles du dessus restent.
+            </p>
+          </div>
+        )}
       </Shell>
     );
   }

@@ -40,8 +40,10 @@ import { MAX_ATTEMPTS, retryDelayMs } from "@/lib/generate/retry";
 import { fetchQuizAudit } from "@/lib/integrations/tiquiz";
 import { BONUS_PLANS, analyzeOfferCoverage } from "@/lib/bonus/offers";
 import {
+  BONUS_RULES_PREFIX,
   OFFER_KINDS,
   PRODUCTION_BLOCKS,
+  buildOnePisteSystemPrompt,
   buildPistesSystemPrompt,
   buildProductionSystemPrompt,
   renderBriefForPrompt,
@@ -78,6 +80,17 @@ const briefSchema = z.object({
 
 const schema = z.discriminatedUnion("step", [
   z.object({ step: z.literal("pistes"), brief: briefSchema }),
+  // UNE PISTE DE PLUS, sur clic seulement (Bene, 6 aout 2026). Elle
+  // envoie ce qu'elle a deja sous les yeux pour qu'on ne lui repropose
+  // pas la meme chose : une generation payee pour un doublon serait la
+  // pire depense possible.
+  z.object({
+    step: z.literal("more"),
+    brief: briefSchema,
+    known: z
+      .array(z.object({ format: z.string().max(200), title: z.string().max(300) }))
+      .max(12),
+  }),
   z.object({
     step: z.literal("produce"),
     brief: briefSchema,
@@ -165,6 +178,31 @@ export async function POST(req: NextRequest) {
     // fenetre se rouvre.
     | { ok: false; failure: AiFailure; retryAfter?: string | null };
 
+  /**
+   * LE PROMPT SYSTEME EN DEUX BLOCS, POUR LE CACHE ANTHROPIC.
+   *
+   * Bene, 6 aout 2026 : "il faut bien penser a mettre en cache ou
+   * optimiser tous les trucs qui sont reutilises pour toujours limiter
+   * la conso, conformement aux reco d'Anthropic."
+   *
+   * 1. le SOCLE, identique a l'octet pres pour tout le monde et sur les
+   *    quatre appels d'un bonus (les pistes puis les trois documents),
+   *    marque `cache_control` : facture ~10% du prix normal des la
+   *    deuxieme lecture ;
+   * 2. la partie VARIABLE (le brief de la creatrice), jamais cachee.
+   *
+   * L'ordre n'est pas un detail : le cache d'Anthropic est un PREFIXE
+   * EXACT. Le stable doit venir AVANT le variable, sinon rien ne
+   * s'accroche. Meme mecanique que le coach (app/api/coach/route.ts).
+   */
+  function systemBlocks(variable: string): Array<Record<string, unknown>> {
+    const blocks: Array<Record<string, unknown>> = [
+      { type: "text", text: BONUS_RULES_PREFIX, cache_control: { type: "ephemeral" } },
+    ];
+    if (variable.trim()) blocks.push({ type: "text", text: variable });
+    return blocks;
+  }
+
   async function callOnce(
     system: string,
     user: string,
@@ -184,7 +222,7 @@ export async function POST(req: NextRequest) {
             model,
             max_tokens: maxTokens,
             temperature: 0.7,
-            system,
+            system: systemBlocks(system),
             messages: [{ role: "user", content: user }],
           }),
         ),
@@ -211,7 +249,31 @@ export async function POST(req: NextRequest) {
     const data = (await res.json().catch(() => null)) as {
       content?: Array<{ text?: string }>;
       stop_reason?: string;
+      usage?: {
+        input_tokens?: number;
+        cache_creation_input_tokens?: number;
+        cache_read_input_tokens?: number;
+      };
     } | null;
+
+    // LE CACHE SE VÉRIFIE, IL NE SE SUPPOSE PAS.
+    //
+    // Anthropic ne renvoie AUCUNE erreur quand un préfixe est trop court
+    // pour être caché ou quand quelque chose l'a invalidé : il facture
+    // plein tarif, en silence. La seule preuve est ici.
+    //
+    // Ce qu'on doit voir : `write` non nul au premier appel d'un bonus,
+    // puis `read` non nul sur les suivants. Si `read` reste à 0 sur des
+    // appels rapprochés, c'est que le préfixe a bougé (une valeur du
+    // brief s'est glissée dans le socle) ou qu'il est passé sous le
+    // minimum du modèle. Dans les deux cas on paie l'écriture, 1,25 fois
+    // le prix, sans jamais la relire : pire que pas de cache du tout.
+    const u = data?.usage;
+    if (u) {
+      console.log(
+        `[bonus] tokens entree=${u.input_tokens ?? 0} cache_write=${u.cache_creation_input_tokens ?? 0} cache_read=${u.cache_read_input_tokens ?? 0}`,
+      );
+    }
     const raw = (data?.content ?? []).map((c) => c.text ?? "").join("").trim();
     if (!raw) {
       console.error("[bonus] reponse vide", data?.stop_reason ?? "");
@@ -289,6 +351,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, ...pistes });
   }
 
+  // ── ÉTAPE 1 bis : UNE piste de plus ──
+  //
+  // 800 tokens et pas 2000 : on rend une piste, pas trois. Le budget de
+  // sortie est la moitie du levier demande ("limiter la conso"), l'autre
+  // moitie etant le declenchement au clic.
+  if (input.step === "more") {
+    const out = await callClaude(
+      buildOnePisteSystemPrompt(brief, input.known),
+      renderBriefForPrompt(brief) + "\n\nPropose-moi UNE piste de plus, differente des precedentes.",
+      800,
+    );
+    if (!out.ok) return failed(out.failure);
+    const piste = parseOnePiste(out.text);
+    if (!piste) {
+      console.error("[bonus] piste supplementaire illisible :", out.text.slice(0, 800));
+      return NextResponse.json({ ok: false, reason: "unreadable" }, { status: 502 });
+    }
+    return NextResponse.json({ ok: true, piste });
+  }
+
   // ── ÉTAPE 2 : un bloc de production ──
   const user = [
     renderBriefForPrompt(brief, input.profileIndex),
@@ -342,6 +424,39 @@ type Piste = {
  * texte brut (regle du 3 aout : montrer un livrable illisible et laisser
  * la creatrice le demeler coute plus cher que d'admettre l'echec).
  */
+/**
+ * Une piste seule. Meme tolerance que `parsePistes` (bloc de code,
+ * texte autour) : le modele rend parfois du markdown malgre la consigne,
+ * et une piste jetee pour un backtick, c'est une generation payee pour
+ * rien.
+ */
+function parseOnePiste(raw: string): Piste | null {
+  let jsonStr = raw.trim();
+  const fence = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence) jsonStr = fence[1].trim();
+  if (!jsonStr.startsWith("{")) {
+    const s = jsonStr.indexOf("{");
+    const e = jsonStr.lastIndexOf("}");
+    if (s >= 0 && e > s) jsonStr = jsonStr.slice(s, e + 1);
+  }
+  try {
+    const o = JSON.parse(jsonStr) as Record<string, unknown>;
+    const str = (v: unknown) => (typeof v === "string" ? sanitizeAiText(v.trim()) : "");
+    const piste: Piste = {
+      format: str(o.format),
+      title: str(o.title),
+      punchline: str(o.punchline),
+      why: str(o.why),
+      needsHerTime: str(o.needsHerTime),
+    };
+    // Sans titre ni format, ce n'est pas une piste : mieux vaut le dire
+    // que d'ajouter une carte vide a l'ecran.
+    return piste.title && piste.format ? piste : null;
+  } catch {
+    return null;
+  }
+}
+
 function parsePistes(
   raw: string,
 ): { pistes: Piste[]; recommended: number; recommendedWhy: string } | null {
