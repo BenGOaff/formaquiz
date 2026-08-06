@@ -4,20 +4,21 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LogOut,
+  Award,
   BookOpen,
-  GraduationCap,
-  Trophy,
+  ChevronDown,
   Gift,
+  GraduationCap,
+  LifeBuoy,
+  Link2,
+  LogOut,
+  Rocket,
+  Send,
+  Settings,
   Share2,
   ShieldCheck,
+  Trophy,
   UserCircle,
-  Settings,
-  Award,
-  Link2,
-  ChevronDown,
-  Send,
-  Rocket,
 } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { Logo } from "@/components/Logo";
@@ -189,6 +190,21 @@ export function AppHeader({
                   <MenuLink href="/profil?tab=connexion" icon={Link2}>
                     Connexion Tiquiz / Tipote
                   </MenuLink>
+                  {/* Audit de l'aide, 6 aout 2026 : l'Atelier n'avait AUCUNE
+                      porte de sortie pour un probleme que le coach ne peut
+                      pas resoudre (acces, paiement, compte quiz relie au
+                      mauvais endroit). Jocelyne a mis quatre allers-retours
+                      a faire remonter exactement ca. Le coach et le groupe
+                      Telegram repondent sur le CONTENU ; l'email repond sur
+                      le COMPTE, et c'est une adresse reelle, deja utilisee
+                      par Tiquiz pour les annulations. */}
+                  <a
+                    href="mailto:hello@ethilife.fr?subject=Atelier%20du%20Quiz%20-%20besoin%20d%27aide"
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-muted"
+                  >
+                    <LifeBuoy className="size-4 text-muted-foreground" />
+                    Besoin d&apos;aide ?
+                  </a>
                   <button
                     type="button"
                     onClick={signOut}
