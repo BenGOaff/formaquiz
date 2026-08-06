@@ -20,6 +20,7 @@ import {
   type CoachQuizReadout,
 } from "@/lib/coach/knowledge";
 import { embedQuery } from "@/lib/coach/embedder";
+import { bonusContextBlock, type CoachBonusRow } from "@/lib/coach/bonusContext";
 import { sendEmail } from "@/lib/email/resend";
 import { coachEscalationEmail } from "@/lib/email/templates";
 import { ESCALATION_ALERT_EMAILS } from "@/lib/adminEmails";
@@ -322,6 +323,28 @@ export async function POST(req: NextRequest) {
     }
   } catch {
     // Pas de signaux disponibles : le coach fonctionne normalement.
+  }
+
+  // SES BONUS DEJA CREES (Bene, 6 aout 2026 : "le coach doit voir les
+  // bonus crees, et guider la mise en oeuvre"). Sans ca, le coach
+  // redemandait a chaque fois quel bonus il avait choisi, alors que la
+  // reponse est en base. Best-effort : la table peut ne pas encore
+  // exister en prod, et le coach fonctionne sans.
+  try {
+    const { data: bonusRows } = await supabase
+      .from("bonus_projects")
+      .select("title, quiz_title, chosen, brief, blocks, updated_at")
+      .eq("user_id", viewer.userId)
+      .order("updated_at", { ascending: false })
+      // Trois, pas plus : `blocks` porte le markdown complet des
+      // documents, et on ne s'en sert que pour dire ce qui est ecrit et
+      // ce qui manque. Les relire tous a chaque message du coach serait
+      // payer cher une phrase de resume.
+      .limit(3);
+    const bloc = bonusContextBlock((bonusRows ?? []) as CoachBonusRow[]);
+    if (bloc) dynamicPart += bloc;
+  } catch {
+    // Pas de bonus lisibles : le coach fonctionne normalement.
   }
 
   // RAG : on récupère les passages les plus pertinents de la formation

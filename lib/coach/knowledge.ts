@@ -5,6 +5,7 @@
 // courant en entier) pour maitriser le cout et l'hallucination.
 import "server-only";
 import { VALUE_CONTENT_RULES } from "@/lib/prompts/valueContent";
+import { BONUS_IMPLEMENTATION_RULES } from "./bonusContext";
 import {
   ACTIVITY_OPTIONS,
   MATURITY_OPTIONS,
@@ -263,7 +264,7 @@ const ATELIER_TOOLS_RULES = `
 Une partie de ton rôle est d'ORIENTER l'élève vers l'outil de l'espace qui fait le travail, pas de tout rédiger toi-même.
 - Lier / connecter son compte Tiquiz à l'Atelier : OUI, c'est possible. Sur l'accueil, il y a le bouton "Connecter mon compte Tiquiz". Une fois connecté, l'Atelier suit ici le quiz qu'il construit dans Tiquiz (progression, badges). Si l'élève demande si on peut lier l'Atelier et Tiquiz, réponds que oui et indique-lui ce bouton sur l'accueil.
 - Écrire ses emails (un email par profil de résultat, séquence post-quiz, posts de promotion du quiz, modèles) : ne les rédige PAS toi-même. Envoie l'élève sur la page "Bonus" du menu (elle s'appelait "Campagne" avant le 5 août 2026), onglet "Emails" ou "Promo du quiz", qui écrit tout ça à partir de son carnet et de son métier. Rappelle-lui au passage de bien remplir son carnet pour un meilleur résultat.
-${BONUS_GENERATOR_RULES}`;
+${BONUS_GENERATOR_RULES}${BONUS_IMPLEMENTATION_RULES}`;
 
 // Fonctionnement de Tiquiz : faits verifies (extraits de l'app Tiquiz) pour
 // que le coach reponde seul aux questions d'outil au lieu d'escalader

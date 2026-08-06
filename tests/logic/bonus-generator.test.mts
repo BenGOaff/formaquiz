@@ -296,10 +296,27 @@ test("aucun jargon interne ne fuite dans l'interface", () => {
     new URL("../../app/(app)/labo-bonus/BonusLabClient.tsx", import.meta.url),
     "utf8",
   );
-  // On ne regarde que le JSX rendu, pas les commentaires du fichier.
-  const jsx = client.slice(client.indexOf("return ("));
+  // ON REGARDE CE QUI EST AFFICHE, pas "tout ce qui suit le premier
+  // `return (`". Ce decoupage supposait que le code venait entierement
+  // avant le premier return, ce qui a cesse d'etre vrai le 6 aout : un
+  // `return () => clearTimeout(t)` (le nettoyage d'un effet) est arrive
+  // avant le JSX, et le test a rougi sur un `JSON.stringify` de la
+  // sauvegarde automatique, c'est a dire sur du code que personne ne
+  // voit. Un test qui rougit pour une mauvaise raison finit desactive.
+  //
+  // On extrait donc les deux seules choses qu'un eleve peut lire : le
+  // texte entre balises JSX, et les chaines de caracteres. Un
+  // identifiant comme `JSON.stringify` n'est ni l'un ni l'autre.
+  const sansCommentaires = client
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/^\s*\/\/.*$/gm, " ");
+  const visible = [
+    ...(sansCommentaires.match(/>[^<>{}]+</g) ?? []),
+    ...(sansCommentaires.match(/"[^"]*"/g) ?? []),
+    ...(sansCommentaires.match(/'[^']*'/g) ?? []),
+  ].join(" ");
   for (const mot of ["campagne email", "JSON", "juillet", "en test", "non listée"]) {
-    assert.ok(!jsx.includes(mot), `"${mot}" ne doit pas etre affiche`);
+    assert.ok(!visible.includes(mot), `"${mot}" ne doit pas etre affiche`);
   }
 });
 

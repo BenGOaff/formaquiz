@@ -27,7 +27,7 @@
 // généré est un brouillon, pas un livrable. Chaque bloc s'édite sur
 // place, et l'export reprend le texte corrigé.
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -41,6 +41,7 @@ import {
   Pencil,
   Plus,
   Sparkles,
+  Trash2,
   Wand2,
 } from "lucide-react";
 
@@ -59,6 +60,10 @@ import {
   type BonusPlan,
 } from "@/lib/bonus/offers";
 import { buildPrintableHtml } from "@/lib/bonus/printable";
+import {
+  projectProgress,
+  type BonusProjectSummary,
+} from "@/lib/bonus/project";
 import {
   BLOCK_LABEL,
   OFFER_KINDS,
@@ -90,7 +95,10 @@ const OFFRE_VIDE: BonusOffer = {
   profileIndexes: [],
 };
 
-type Step = "brief" | "pistes" | "produce";
+// `library` est le PREMIER ecran des qu'un bonus existe : Bene, 6 aout
+// 2026, "on ne peut pas retrouver ce qu'on a cree ?". Un eleve qui
+// revient doit tomber sur ce qu'il a fait, pas sur un formulaire vide.
+type Step = "library" | "brief" | "pistes" | "produce";
 
 /**
  * Les trois dossiers de l'écran de production.
@@ -135,12 +143,21 @@ export function BonusLabClient({
   quizTitle,
   profiles,
   viralityEnabled,
+  initialProjects,
 }: {
   quizTitle: string | null;
   profiles: string[];
   viralityEnabled: boolean;
+  /** Ce qu'il a deja cree, charge cote serveur pour eviter le clignotement. */
+  initialProjects: BonusProjectSummary[];
 }) {
-  const [step, setStep] = useState<Step>("brief");
+  const [projects, setProjects] = useState<BonusProjectSummary[]>(initialProjects);
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [opening, setOpening] = useState<string | null>(null);
+  const [toDelete, setToDelete] = useState<BonusProjectSummary | null>(null);
+  // Un premier venu n'a rien a retrouver : on ne lui montre pas une
+  // etagere vide, on l'emmene directement au formulaire.
+  const [step, setStep] = useState<Step>(initialProjects.length > 0 ? "library" : "brief");
   const [brief, setBrief] = useState<Brief>({
     offers: [{ ...OFFRE_VIDE }],
     trigger: "completion",
@@ -230,6 +247,183 @@ export function BonusLabClient({
     return blocks[keyFor(b)] ? "Prêt" : "À générer";
   }
 
+  // ── L'ENREGISTREMENT, SANS QUE PERSONNE N'Y PENSE ──────────────
+  //
+  // Pas de bouton "Enregistrer". Un eleve qui vient d'attendre une
+  // generation ne doit pas avoir a penser a la garder : s'il fallait y
+  // penser, on recreerait le probleme pour tous ceux qui n'y pensent
+  // pas, c'est a dire exactement ceux qui viennent de le vivre.
+  //
+  // Et un echec d'enregistrement ne fait JAMAIS echouer une generation :
+  // perdre la sauvegarde est ennuyeux, perdre le document parce que la
+  // sauvegarde a rate serait absurde.
+  //
+  // `latest` porte l'etat au moment de l'appel : `save()` est declenche
+  // juste apres un `setState`, dont la valeur n'est pas encore lisible.
+  const stateRef = useRef({ brief, pistes, chosen, blocks, projectId });
+  stateRef.current = { brief, pistes, chosen, blocks, projectId };
+
+  const inFlight = useRef<Promise<void> | null>(null);
+
+  const doSave = useCallback(
+    async (patch: Partial<typeof stateRef.current> = {}) => {
+      const st = { ...stateRef.current, ...patch };
+      const piste = st.chosen === null ? null : st.pistes[st.chosen];
+      try {
+        const res = await fetch("/api/me/bonus/projects", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: st.projectId,
+            quizTitle,
+            brief: st.brief,
+            pistes: st.pistes,
+            chosen: piste
+              ? {
+                  index: st.chosen,
+                  format: piste.format,
+                  title: piste.title,
+                  punchline: piste.punchline,
+                }
+              : null,
+            blocks: st.blocks,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (data?.ok && typeof data.id === "string") {
+          setProjectId(data.id);
+          stateRef.current.projectId = data.id;
+        }
+      } catch {
+        // Silencieux et sans consequence : cf. le commentaire ci-dessus.
+      }
+    },
+    [quizTitle],
+  );
+
+  const save = useCallback(
+    async (patch: Partial<typeof stateRef.current> = {}) => {
+      // On attend l'enregistrement precedent : deux appels concurrents
+      // partis avant que le premier ait rendu son id creeraient DEUX
+      // lignes pour le meme bonus.
+      const precedent = inFlight.current;
+      const travail = (async () => {
+        if (precedent) await precedent.catch(() => undefined);
+        await doSave(patch);
+      })();
+      inFlight.current = travail;
+      await travail;
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [quizTitle],
+  );
+
+  // LES CORRECTIONS A LA MAIN SONT ENREGISTREES AUSSI.
+  //
+  // L'editeur emet a chaque frappe : enregistrer a chaque frappe serait
+  // une requete par lettre. On attend que ca se calme. Sans ca, un eleve
+  // qui relit et corrige son document pendant dix minutes, puis ferme
+  // l'onglet, perdrait ses corrections tout en croyant que tout est
+  // enregistre, ce qui est pire que pas d'enregistrement du tout.
+  const firstRun = useRef(true);
+  useEffect(() => {
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
+    if (chosen === null && pistes.length === 0) return;
+    const t = setTimeout(() => void save(), 1500);
+    return () => clearTimeout(t);
+  }, [blocks, chosen, save, pistes.length]);
+
+  // La liste se rafraichit quand on revient dessus, pour que le titre et
+  // l'avancement suivent ce qui vient d'etre genere.
+  const refreshProjects = useCallback(async () => {
+    try {
+      const res = await fetch("/api/me/bonus/projects");
+      const data = await res.json().catch(() => ({}));
+      if (data?.ok && Array.isArray(data.projects)) setProjects(data.projects);
+    } catch {
+      // On garde la liste affichee : mieux vaut une liste d'il y a une
+      // minute qu'un ecran vide.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (step === "library") void refreshProjects();
+  }, [step, refreshProjects]);
+
+  /** Repartir a zero, sans toucher a ce qui est deja enregistre. */
+  function startNew() {
+    setProjectId(null);
+    setBrief({
+      offers: [{ ...OFFRE_VIDE }],
+      trigger: "completion",
+      plan: profiles.length > 1 ? "per_profile" : "shared",
+    });
+    setPistes([]);
+    setChosen(null);
+    setBlocks({});
+    setFolder("folders");
+    setStep("brief");
+  }
+
+  /** Rouvrir un bonus : on remet l'ecran exactement ou il l'avait laisse. */
+  async function openProject(id: string) {
+    setOpening(id);
+    try {
+      const res = await fetch(`/api/me/bonus/projects?id=${encodeURIComponent(id)}`);
+      const data = await res.json().catch(() => ({}));
+      if (!data?.ok || !data.project) {
+        toast.error("Ce bonus n'a pas pu être ouvert. Réessaie dans un instant.");
+        return;
+      }
+      const p = data.project;
+      setProjectId(p.id);
+      setBrief({
+        offers: p.brief?.offers?.length ? p.brief.offers : [{ ...OFFRE_VIDE }],
+        trigger: p.brief?.trigger === "share" ? "share" : "completion",
+        plan: p.brief?.plan ?? "shared",
+      });
+      setPistes(Array.isArray(p.pistes) ? p.pistes : []);
+      setChosen(typeof p.chosen?.index === "number" ? p.chosen.index : null);
+      setBlocks(p.blocks ?? {});
+      setProfileIndex(0);
+      setFolder("folders");
+      // Une piste retenue veut dire qu'il en etait a la production :
+      // le renvoyer choisir sa piste lui ferait refaire un pas en
+      // arriere sans raison.
+      setStep(typeof p.chosen?.index === "number" ? "produce" : "pistes");
+    } catch {
+      toast.error("Ce bonus n'a pas pu être ouvert. Réessaie dans un instant.");
+    } finally {
+      setOpening(null);
+    }
+  }
+
+  async function deleteProject(id: string) {
+    try {
+      const res = await fetch(`/api/me/bonus/projects?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      const data = await res.json().catch(() => ({}));
+      // Un `ok: false` produit TOUJOURS quelque chose a l'ecran : un
+      // echec silencieux envoie chercher au mauvais endroit (drame du
+      // 3 aout sur la suppression de projet).
+      if (!data?.ok) {
+        toast.error("La suppression n'a pas abouti. Réessaie dans un instant.");
+        return;
+      }
+      setProjects((l) => l.filter((p) => p.id !== id));
+      if (projectId === id) setProjectId(null);
+      toast.success("Bonus supprimé.");
+    } catch {
+      toast.error("La suppression n'a pas abouti. Réessaie dans un instant.");
+    } finally {
+      setToDelete(null);
+    }
+  }
+
   async function call(body: Record<string, unknown>) {
     const res = await fetch("/api/me/bonus", {
       method: "POST",
@@ -255,12 +449,16 @@ export function BonusLabClient({
         toast.error(failureCopy(String(data?.reason ?? "")));
         return;
       }
-      setPistes(data.pistes as Piste[]);
+      const nouvelles = data.pistes as Piste[];
+      setPistes(nouvelles);
       setRecommended(Number(data.recommended) || 0);
       setRecommendedWhy(String(data.recommendedWhy ?? ""));
       setChosen(null);
       setBlocks({});
       setStep("pistes");
+      // Des pistes obtenues, c'est du travail : a partir d'ici, un
+      // rafraichissement d'onglet ne perd plus rien.
+      void save({ pistes: nouvelles, chosen: null, blocks: {} });
     } catch {
       toast.error("La génération n'a pas abouti. Réessaie dans un instant.");
     } finally {
@@ -288,7 +486,9 @@ export function BonusLabClient({
         toast.error(failureCopy(String(data?.reason ?? ""), BLOCK_LABEL[block]));
         return;
       }
-      setBlocks((b) => ({ ...b, [key]: String(data.markdown ?? "") }));
+      const suivants = { ...blocks, [key]: String(data.markdown ?? "") };
+      setBlocks(suivants);
+      void save({ blocks: suivants });
       // Un texte coupe a la limite de longueur est utilisable, mais il
       // s'arrete au milieu d'une phrase : on le rend ET on le dit.
       if (data.truncated) {
@@ -343,6 +543,97 @@ export function BonusLabClient({
     win.print();
   }
 
+  // ── Écran 0 : ce qu'il a déjà créé ──
+  //
+  // Béné, 6 août 2026 : "on ne peut pas retrouver ce qu'on a créé ? On
+  // peut faire en sorte que l'étudiant puisse retrouver ce qu'il a créé
+  // directement ? En plus du générateur actuel pour en générer
+  // d'autres." Les deux comptent : la liste, ET le bouton qui en relance
+  // un neuf sans quitter l'écran.
+  if (step === "library") {
+    return (
+      <Shell
+        title="Tes bonus"
+        subtitle="Ils sont enregistrés au fur et à mesure. Rouvre-en un pour le relire, le corriger ou l'exporter, ou lance-en un nouveau."
+      >
+        <Button className="w-fit gap-2" onClick={startNew}>
+          <Plus className="size-4" />
+          Créer un nouveau bonus
+        </Button>
+
+        <div className="grid items-start gap-4 sm:grid-cols-2">
+          {projects.map((p) => (
+            <Card key={p.id}>
+              <CardContent className="flex flex-col gap-3 py-5">
+                <div className="flex flex-col gap-1">
+                  <p className="font-medium leading-snug">{p.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {[p.format, p.quizTitle ? `Quiz : ${p.quizTitle}` : null]
+                      .filter(Boolean)
+                      .join(" . ")}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Modifié le {formatDate(p.updatedAt)}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="gap-1.5"
+                    disabled={opening === p.id}
+                    onClick={() => void openProject(p.id)}
+                  >
+                    {opening === p.id ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <BookOpen className="size-4" />
+                    )}
+                    Ouvrir
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => setToDelete(p)}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive"
+                    aria-label={`Supprimer ${p.title}`}
+                  >
+                    <Trash2 className="size-3.5" />
+                    Supprimer
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* La confirmation est en clair : une suppression sans retour en
+            arriere doit nommer ce qu'elle emporte. */}
+        {toDelete && (
+          <Card className="border-destructive/40">
+            <CardContent className="flex flex-col gap-3 py-5">
+              <p className="text-sm">
+                Supprimer <strong>{toDelete.title}</strong> ? Le brief, les pistes et les
+                documents générés partent avec. C'est définitif.
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => void deleteProject(toDelete.id)}
+                >
+                  Supprimer définitivement
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setToDelete(null)}>
+                  Annuler
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </Shell>
+    );
+  }
+
   // ── Écran 1 : le contexte ──
   if (step === "brief") {
     return (
@@ -353,6 +644,8 @@ export function BonusLabClient({
             ? `On part de ton quiz "${quizTitle}" : son thème, son ton et ses profils sont déjà repris. Il ne reste que ton offre.`
             : "On part de ton quiz relié. Il ne reste que ton offre à décrire."
         }
+        onBack={projects.length > 0 ? () => setStep("library") : undefined}
+        backLabel="Tes bonus"
       >
         <Card>
           <CardContent className="flex flex-col gap-5 py-5">
@@ -603,7 +896,9 @@ export function BonusLabClient({
     return (
       <Shell
         title={piste?.title ?? "Ton bonus"}
-        subtitle={piste?.punchline ?? ""}
+        subtitle={[piste?.punchline, projectProgress(blocks, profiles.length, perResult)]
+          .filter(Boolean)
+          .join(" . ")}
         onBack={() => setStep("pistes")}
       >
         <div className="grid items-start gap-4 sm:grid-cols-3">
@@ -752,6 +1047,19 @@ function Rendered({ markdown }: { markdown: string }) {
 }
 
 /** Le gabarit commun aux trois écrans : titre, sous-titre, retour. */
+/** "6 août 2026", en français, sans dépendance de date. */
+function formatDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString("fr-FR", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  } catch {
+    return "";
+  }
+}
+
 function Shell({
   title,
   subtitle,
