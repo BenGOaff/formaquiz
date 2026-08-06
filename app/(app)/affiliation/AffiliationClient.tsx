@@ -711,7 +711,7 @@ function GainStat({ label, cents, highlight }: { label: string; cents: number; h
 }
 
 // Simulateur de gains. Valeurs indicatives, ajustables (Atelier du Quiz 47€,
-// Tiquiz 9€/mois par défaut). On n'invente aucun chiffre officiel.
+// Tiquiz 17€/mois par défaut). On n'invente aucun chiffre officiel.
 function Estimator() {
   const [quizSales, setQuizSales] = useState(5);
   const [quizPrice, setQuizPrice] = useState(47);
