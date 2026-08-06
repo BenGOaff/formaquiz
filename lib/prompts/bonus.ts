@@ -177,6 +177,44 @@ const PERSONA = [
   "Tu reponds en francais.",
 ].join("\n");
 
+/**
+ * LE SOCLE STABLE DU PROMPT, IDENTIQUE POUR TOUT LE MONDE.
+ *
+ * Béné, 6 août 2026 : "il faut bien penser à mettre en cache ou optimiser
+ * tous les trucs qui sont réutilisés pour toujours limiter la conso,
+ * conformément aux reco d'Anthropic."
+ *
+ * Le cache d'Anthropic est un PRÉFIXE EXACT : il ne s'accroche que sur
+ * des octets identiques, depuis le tout début. Ces blocs ne dépendent
+ * donc d'AUCUN champ du brief : la même créatrice les réutilise sur ses
+ * quatre appels (les pistes, puis les trois documents), et deux
+ * créatrices différentes partagent exactement le même préfixe.
+ *
+ * MESURÉ : ~1250 tokens, au dessus du minimum de 1024 du modèle utilisé
+ * (claude-sonnet-4-6). En dessous du minimum, le cache ne s'accroche
+ * PAS, en silence, sans erreur : c'est pour ça que ce socle regroupe six
+ * blocs au lieu d'être découpé plus finement.
+ *
+ * NE JAMAIS Y GLISSER UNE VALEUR DU BRIEF. Une seule interpolation
+ * (le titre du quiz, le ton, un prix) rend le préfixe unique par
+ * créatrice : le cache ne serait plus jamais lu, seulement écrit, et
+ * l'écriture coûte 1,25 fois le prix normal. On paierait pour ne rien
+ * économiser.
+ */
+export const BONUS_RULES_PREFIX = [
+  PERSONA,
+  "",
+  VALUE_CRITERIA,
+  "",
+  FOUR_PILLARS,
+  "",
+  NO_HUMAN_LOOP,
+  "",
+  SENSITIVE_SUBJECT,
+  "",
+  WRITING_RULES,
+].join("\n");
+
 /** Le ton du quiz, imposé au modèle plutôt que redemandé. */
 function toneLine(b: BonusBrief): string {
   return b.addressForm === "vous"
@@ -254,8 +292,10 @@ export function buildPistesSystemPrompt(b: BonusBrief): string {
       ].join("\n")
     : "";
 
+  // LE SOCLE N'EST PLUS ICI : il part en bloc systeme cachable, avant
+  // celui-ci (cf. BONUS_RULES_PREFIX). Ce que cette fonction rend est la
+  // partie VARIABLE, celle qui depend du brief.
   return [
-    PERSONA,
     toneLine(b),
     "",
     `LE BONUS SE DEBLOQUE ${TRIGGER_LABEL[b.trigger].toUpperCase()}.`,
@@ -266,20 +306,10 @@ export function buildPistesSystemPrompt(b: BonusBrief): string {
     perResult,
     offres,
     "",
-    VALUE_CRITERIA,
-    "",
-    FOUR_PILLARS,
-    "",
-    NO_HUMAN_LOOP,
-    "",
-    SENSITIVE_SUBJECT,
-    "",
     "COMMENT TU CHOISIS LES TROIS FORMATS (raisonnement silencieux, jamais montre) :",
     `- Choisis parmi cette liste et rien d'autre : ${BONUS_FORMATS.join(", ")}.`,
     "- Le quiz vient de creer une prise de conscience : les formats qui transforment un diagnostic en premier pas partent favoris. MAIS au moins une des trois pistes doit sortir de ces formats evidents, sinon tu proposes trois fois la meme chose sous trois noms.",
     "- Trois formats DIFFERENTS et trois angles assez distincts pour la faire reflechir.",
-    "",
-    WRITING_RULES,
     "",
     "TU RECOMMANDES, ELLE CHOISIT. Tu designes celle des trois que tu recommandes et pourquoi, en une phrase, pour SON cas.",
     "",
@@ -295,6 +325,56 @@ export function buildPistesSystemPrompt(b: BonusBrief): string {
     "",
     "EXEMPLE DU NIVEAU ATTENDU (audience fictive : freelances qui n'osent pas augmenter leurs tarifs) :",
     '{ "format": "calculateur", "title": "Ton vrai tarif jour : le calcul que tu evites depuis 2 ans", "punchline": "4 chiffres a remplir, 30 secondes, et tu sauras exactement combien chaque mission te coute au lieu de te rapporter.", "why": "Le quiz vient de lui montrer qu\'elle sous-facture par peur, pas par ignorance. Le calculateur transforme ce ressenti en chiffre brut, impossible a ignorer. Une fois le manque a gagner chiffre, la formation devient la reponse evidente a et maintenant, comment je le recupere ?", "needsHerTime": "" }',
+  ].join("\n");
+}
+
+/**
+ * UNE PISTE DE PLUS, ET UNE SEULE.
+ *
+ * Béné, 6 août 2026 : "on peut ajouter l'option de générer 1 idée de
+ * bonus en plus à la 2ème étape ? Au cas où l'élève n'est pas convaincu
+ * par les propositions. À générer UNIQUEMENT si l'user clique sur le
+ * bouton, limiter la conso de token."
+ *
+ * Les deux contraintes sont dans la mécanique, pas seulement dans le
+ * bouton :
+ *
+ * 1. On rend UNE piste, pas trois. Relancer l'étape entière coûterait
+ *    trois fois la sortie et effacerait des propositions qu'elle n'a
+ *    peut-être pas fini de lire.
+ * 2. On envoie ce qui a DÉJÀ été proposé, pour que la nouvelle soit
+ *    vraiment autre chose. Sans cette liste, le modèle repropose le
+ *    format évident et l'élève paie une génération pour un doublon,
+ *    c'est à dire la pire dépense possible.
+ */
+export function buildOnePisteSystemPrompt(
+  b: BonusBrief,
+  dejaProposes: { format: string; title: string }[],
+): string {
+  const liste = dejaProposes
+    .map((p, i) => `${i + 1}. ${p.format} : ${p.title}`)
+    .join("\n");
+
+  return [
+    toneLine(b),
+    "",
+    `LE BONUS SE DEBLOQUE ${TRIGGER_LABEL[b.trigger].toUpperCase()}.`,
+    "",
+    "ELLE A DEJA CES PISTES SOUS LES YEUX, ET AUCUNE NE LA CONVAINC :",
+    liste,
+    "",
+    "TU EN PROPOSES UNE SEULE, VRAIMENT AUTRE CHOSE :",
+    "- un format qui n'est PAS dans la liste ci-dessus ;",
+    "- un angle different, pas une reformulation d'une piste existante ;",
+    `- choisi parmi : ${BONUS_FORMATS.join(", ")}.`,
+    "- Si les pistes existantes couvrent deja les formats evidents, va chercher plus loin plutot que de revenir sur l'un d'eux.",
+    "",
+    "Tu reponds STRICTEMENT en JSON valide, sans texte autour, au format :",
+    '{ "format": string, "title": string, "punchline": string, "why": string, "needsHerTime": string }',
+    "- title : clair, specifique, avec un benefice mesurable.",
+    "- punchline : une phrase qui donne envie de le telecharger tout de suite.",
+    "- why : 2 a 3 phrases, le lien entre ce format, la psychologie de ce public apres CE quiz, et le pont vers l'offre.",
+    "- needsHerTime : vide si le bonus se livre tout seul. Sinon, la phrase qui dit ce que ca lui coutera par personne.",
   ].join("\n");
 }
 
@@ -427,15 +507,17 @@ export function buildProductionSystemPrompt(
   chosenFormat = "",
 ): string {
   const shape = bonusShape(chosenFormat);
+  // LE SOCLE N'EST PLUS ICI (cf. BONUS_RULES_PREFIX) : il part en bloc
+  // systeme cachable, avant celui-ci.
+  //
+  // Au passage, ces trois appels recoivent maintenant AUSSI les quatre
+  // piliers et la regle des sujets sensibles, qu'ils n'avaient pas.
+  // C'est la condition du cache (le prefixe doit etre identique d'un
+  // appel a l'autre, a l'octet pres), et c'est un gain de fond : ecrire
+  // le contenu d'un bonus sur un sujet intime sans la regle des sujets
+  // sensibles etait une lacune, pas un choix.
   const out = [
-    PERSONA,
     toneLine(b),
-    "",
-    VALUE_CRITERIA,
-    "",
-    NO_HUMAN_LOOP,
-    "",
-    WRITING_RULES,
     "",
     "Tu produis UNIQUEMENT le bloc demande. Pas d'introduction, pas de conclusion, pas d'annonce de ce qui vient apres.",
     "MISE EN FORME, et elle compte autant que le fond : markdown leger. Des titres avec ## pour les sections, ### pour les sous-sections, des listes avec - , du **gras** sur les mots qui portent l'action. Un pave de texte ne se lit pas, donc ne s'applique pas. Pas de tableaux, pas de code.",

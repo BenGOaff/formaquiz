@@ -12,6 +12,7 @@ import { readFileSync } from "node:fs";
 
 import {
   BONUS_FORMATS,
+  BONUS_RULES_PREFIX,
   PRODUCTION_BLOCKS,
   buildPistesSystemPrompt,
   buildProductionSystemPrompt,
@@ -47,7 +48,7 @@ const brief = (over: Partial<BonusBrief> = {}): BonusBrief => ({
 // ── Les 5 critères : ce qui compte le plus pour elle ─────────────────
 
 test("les 5 critères sont un CONTROLE, pas une liste décorative", () => {
-  const p = buildPistesSystemPrompt(brief());
+  const p = recu(buildPistesSystemPrompt(brief()));
   assert.match(p, /Tu les VERIFIES avant de montrer quoi que ce soit/);
   assert.match(p, /REMPLACES ce qui en rate un au lieu de le commenter/);
   for (const c of ["UTILE", "SPECIFIQUE", "CIBLE", "APPLICABLE", "UNIQUE"]) {
@@ -57,9 +58,24 @@ test("les 5 critères sont un CONTROLE, pas une liste décorative", () => {
 
 test("les 5 critères suivent jusque dans la production", () => {
   for (const block of PRODUCTION_BLOCKS) {
-    assert.match(buildProductionSystemPrompt(brief(), block), /LES 5 CRITERES/);
+    assert.match(recu(buildProductionSystemPrompt(brief(), block)), /LES 5 CRITERES/);
   }
 });
+
+/**
+ * CE QUE LE MODÈLE REÇOIT VRAIMENT.
+ *
+ * Depuis le 6 août, le prompt système part en DEUX blocs : le socle
+ * stable (`BONUS_RULES_PREFIX`, marqué pour le cache Anthropic) puis la
+ * partie variable rendue par les constructeurs. Une règle qui vit dans
+ * le socle est donc absente du second, alors qu'elle arrive bien au
+ * modèle.
+ *
+ * Tester un seul des deux blocs testerait la plomberie, pas la règle.
+ * Ces tests portent sur l'assemblage, donc ils survivent au prochain
+ * découpage.
+ */
+const recu = (variable: string) => `${BONUS_RULES_PREFIX}\n${variable}`;
 
 // ── On ne redemande plus ce que le quiz sait déjà ────────────────────
 
@@ -149,7 +165,7 @@ test("le tag change selon le déclencheur", () => {
 // ── La correction de Béné sur l'audit personnalisé ───────────────────
 
 test("personnalisé est encouragé, sur mesure est signalé", () => {
-  const p = buildPistesSystemPrompt(brief());
+  const p = recu(buildPistesSystemPrompt(brief()));
   assert.match(p, /PERSONNALISE, OUI/);
   assert.match(p, /SUR MESURE, NON/);
   assert.match(p, /tu le DIS explicitement dans la piste/);
@@ -170,7 +186,7 @@ test("le bonus de partage et le bonus de fin de quiz ne sont pas le même", () =
 });
 
 test("le sujet intime ne se débloque pas par le partage", () => {
-  const p = buildPistesSystemPrompt(brief({ trigger: "share" }));
+  const p = recu(buildPistesSystemPrompt(brief({ trigger: "share" })));
   assert.match(p, /SUJET INTIME OU STIGMATISANT/);
   assert.match(p, /declenchement A LA COMPLETION/);
 });
