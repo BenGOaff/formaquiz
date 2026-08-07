@@ -264,3 +264,127 @@ export function spotlightAdminEmail({
     html: layout(inner),
   };
 }
+
+/**
+ * "Tes bonus sont ouverts" : l'accès vient de passer de 7 € à 47 €.
+ *
+ * -- POURQUOI PAS L'EMAIL DE BIENVENUE (demande Béné, 7 août 2026) -----
+ *
+ * Jusqu'ici, un élève qui achetait l'upsell recevait exactement le même
+ * email que le jour de son inscription : "Bienvenue dans L'Atelier du
+ * Quiz". Il vient de payer pour DÉBLOQUER quelque chose, et on lui
+ * souhaite la bienvenue dans un produit qu'il a déjà. Rien ne lui
+ * confirme que sa commande a bien ouvert ce qu'il a acheté.
+ *
+ * L'ADRESSE EST ÉCRITE EN TOUTES LETTRES, et ce n'est pas décoratif :
+ * c'est le seul moyen pour lui de voir tout de suite qu'il a commandé
+ * avec une autre adresse que celle de son compte.
+ */
+export function bonusUnlockedEmail({
+  actionUrl,
+  email,
+}: {
+  actionUrl: string;
+  email: string;
+}): BuiltEmail {
+  const inner = `
+    <h1 style="margin:0 0 16px;font-size:22px;line-height:28px;color:${INK};">C'est ouvert, tu as tout.</h1>
+    <p style="margin:0 0 16px;font-size:15px;line-height:23px;color:${INK};">
+      Ta commande est passée et ton accès vient d'être mis à jour. Tu n'as rien d'autre à faire, tout est déjà dans ton espace.
+    </p>
+    <p style="margin:0 0 8px;font-size:15px;line-height:23px;color:${INK};">Ce qui vient de s'ouvrir&nbsp;:</p>
+    <ul style="margin:0 0 20px;padding-left:20px;font-size:15px;line-height:23px;color:${INK};">
+      <li><strong>Les bonus</strong>, dans leur bloc sur ton tableau de bord. Tu les prends quand tu veux, dans l'ordre que tu veux.</li>
+      <li><strong>La Campagne</strong>&nbsp;: 5 emails écrits pour chacun de tes profils de résultat, et le kit pour faire connaître ton quiz.</li>
+      <li><strong>Les modèles Systeme.io</strong>, prêts à importer.</li>
+      <li><strong>15 jours de Tiquiz Plus</strong>, décomptés à partir de ton premier quiz créé (pas d'aujourd'hui, donc tu ne perds rien à prendre ton temps).</li>
+    </ul>
+    ${button(actionUrl, "Voir mes bonus")}
+    ${fallbackLink(actionUrl)}
+    <div style="height:20px;"></div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5fb;border:1px solid #e6e8f4;border-radius:12px;">
+      <tr><td style="padding:16px 20px;">
+        <p style="margin:0;font-size:14px;line-height:21px;color:${INK};">
+          Tout est activé sur cette adresse&nbsp;: <strong>${email}</strong><br />
+          Si ce n'est pas celle que tu utilises pour te connecter à L'Atelier, réponds simplement à cet email en me donnant la bonne, je bascule tout dessus.
+        </p>
+      </td></tr>
+    </table>
+  `;
+  return {
+    subject: "C'est bon, tes bonus sont ouverts",
+    html: layout(inner),
+  };
+}
+
+/**
+ * Le cas de la deuxième chance commandée avec une AUTRE adresse.
+ *
+ * Béné, 7 août 2026 : "il faut aussi anticiper ceux qui vont commander la
+ * mise à jour avec un autre email que celui qu'ils ont utilisé pour
+ * l'atelier, même si je les préviens sur le bon de commande."
+ *
+ * Elle a raison de l'anticiper : la page de deuxième chance s'adresse par
+ * définition à quelqu'un qui A DÉJÀ un compte. Une commande qui arrive sur
+ * une adresse inconnue est donc presque toujours une faute de frappe ou
+ * une deuxième adresse, pas un nouveau client.
+ *
+ * ON OUVRE QUAND MÊME L'ACCÈS sur l'adresse de la commande. Il a payé : le
+ * pire des deux mondes serait de le laisser sans rien pendant qu'on
+ * démêle. Cet email lui dit où sont ses bonus et comment les récupérer sur
+ * son vrai compte.
+ */
+export function bonusEmailMismatchEmail({
+  actionUrl,
+  email,
+}: {
+  actionUrl: string;
+  email: string;
+}): BuiltEmail {
+  const inner = `
+    <h1 style="margin:0 0 16px;font-size:22px;line-height:28px;color:${INK};">Tes bonus sont ouverts, mais vérifie une chose.</h1>
+    <p style="margin:0 0 16px;font-size:15px;line-height:23px;color:${INK};">
+      Ta commande est bien passée, merci. Tes bonus sont actifs sur l'adresse que tu viens d'utiliser&nbsp;: <strong>${email}</strong>
+    </p>
+    <p style="margin:0 0 16px;font-size:15px;line-height:23px;color:${INK};">
+      Sauf que cette adresse n'avait pas encore de compte L'Atelier du Quiz. Deux possibilités.
+    </p>
+    <p style="margin:0 0 12px;font-size:15px;line-height:23px;color:${INK};">
+      <strong>Tu suis déjà l'Atelier avec une autre adresse.</strong> C'est le cas le plus fréquent, et il n'y a rien de grave&nbsp;: réponds à cet email en me donnant l'adresse de ton compte habituel, je bascule tes bonus dessus et tu retrouves tout au même endroit, avec ton avancement.
+    </p>
+    <p style="margin:0 0 20px;font-size:15px;line-height:23px;color:${INK};">
+      <strong>Tu débutes.</strong> Alors tout est prêt, le bouton ci-dessous t'ouvre ton espace.
+    </p>
+    ${button(actionUrl, "Ouvrir mon espace")}
+    ${fallbackLink(actionUrl)}
+  `;
+  return {
+    subject: "Tes bonus sont ouverts (une adresse à vérifier)",
+    html: layout(inner),
+  };
+}
+
+/** L'alerte envoyée à Béné quand une deuxième chance arrive sur une adresse inconnue. */
+export function bonusMismatchAdminEmail({
+  email,
+  source,
+}: {
+  email: string;
+  source: string;
+}): BuiltEmail {
+  const inner = `
+    <h1 style="margin:0 0 16px;font-size:22px;line-height:28px;color:${INK};">Une commande de bonus sur une adresse inconnue</h1>
+    <p style="margin:0 0 16px;font-size:15px;line-height:23px;color:${INK};">
+      <strong>${email}</strong> vient de commander la mise à jour, mais cette adresse n'avait aucun compte L'Atelier.
+    </p>
+    <p style="margin:0 0 16px;font-size:15px;line-height:23px;color:${INK};">
+      L'accès a été ouvert sur cette adresse (il a payé), et un email lui demande de te donner l'adresse de son compte habituel s'il en a un. Si sa réponse arrive, tu peux ouvrir le palier complet sur la bonne adresse depuis l'admin.
+    </p>
+    <p style="margin:0 0 20px;font-size:14px;line-height:21px;color:${MUTED};">Bon de commande&nbsp;: ${source}</p>
+    ${button(`${APP_URL}/admin/students`, "Voir les élèves")}
+  `;
+  return {
+    subject: `Bonus commandés sur une adresse inconnue : ${email}`,
+    html: layout(inner),
+  };
+}

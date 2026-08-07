@@ -513,3 +513,56 @@ Le premier email a un autre travail : il est la trace DURABLE du résultat
 la suite. Il nomme donc le profil en une phrase pour que le lecteur se
 retrouve, puis apporte ce que la page ne disait pas. `RESULT_SEQUENCE[0]`
 le dit maintenant explicitement.
+
+## La deuxième chance : commander les bonus hors de son tunnel (7 août 2026)
+
+Béné : "je suis en train de créer l'upsell atelier augmenté pour mon tunnel
+meta, enfin la deuxième chance, pour qu'ils puissent commander les bonus en
+dehors du tunnel par lequel ils sont arrivés."
+
+Page de vente : `https://www.tipote.fr/atelier-du-quiz-bonus`, à mettre
+dans `ATELIER_UPSELL_URL` (c'est le bouton que voient les élèves à 7 € sur
+les bonus verrouillés, la Campagne et le tableau de bord).
+
+**Webhook, sur l'automatisation "Vente confirmée" :**
+`https://quizing.tipote.com/api/systeme-io/webhook/atelier-bonus?secret=<SYSTEME_IO_WEBHOOK_SECRET>`
+et sur "Vente annulée" du MÊME produit, la même URL + `&event=cancel`.
+
+**Pourquoi une route à elle et pas `atelier-plus`.** Le produit vendu est
+le même, les réglages métier aussi. Une seule chose diffère, et elle
+change tout : à QUI ce bon de commande s'adresse.
+
+`atelier-plus` est l'upsell du tunnel pub, il vend à quelqu'un qui vient
+d'acheter l'Atelier trente secondes plus tôt ; le compte peut ne pas
+exister encore, puisque les deux automatisations Systeme.io arrivent dans
+un ordre non garanti. La deuxième chance, elle, vend à quelqu'un qui a
+DÉJÀ l'Atelier. **Le même signal ("aucun compte pour cette adresse") veut
+donc dire "tout va bien" sur l'une et "quelque chose cloche" sur l'autre.**
+
+C'est le défaut d'Adeline et de Véronique dans une autre famille : une
+logique écrite pour un cas, appliquée telle quelle à un autre. D'où
+`expectsExistingAccount` en PARAMÈTRE, et `isOrphanBonusOrder(mode, état)`
+dans `lib/access/bonusOrder.ts`, qu'on ne peut pas appeler sans avoir dit
+de quel bon de commande on parle.
+
+**Deux façons d'être orphelin**, et la seconde compte autant : le compte a
+dû être créé, OU il existait sans le moindre enrollment. Ne regarder que
+`created` laisse passer le second cas en silence.
+
+**Ce qu'on fait de ce cas : on ouvre l'accès QUAND MÊME**, sur l'adresse
+de la commande. Il a payé. L'email qu'il reçoit nomme l'adresse en toutes
+lettres (c'est le seul moyen pour lui de voir l'erreur) et lui propose de
+répondre avec l'adresse de son compte habituel. Béné reçoit une alerte.
+
+**Et l'email de montée de palier n'est plus l'email de bienvenue.** Un
+élève qui achetait l'upsell recevait exactement le même message que le
+jour de son inscription : on souhaitait la bienvenue à quelqu'un qui a
+déjà le produit, sans jamais lui confirmer que sa commande avait ouvert ce
+qu'il venait de payer. `bonusUnlockedEmail` nomme les quatre choses qui
+s'ouvrent.
+
+**Au passage, `server-only` ne bloque plus les tests.** Le paquet n'est
+pas installé (Next le résout en interne), donc tout module marqué
+`import "server-only"` était intestable, c'est à dire l'essentiel de la
+logique métier : accès, emails, webhooks. Les hooks du runner le
+remplacent par un module vide.
