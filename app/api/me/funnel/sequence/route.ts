@@ -28,12 +28,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: "no_profile" }, { status: 400 });
   }
 
-  const emails = await generateFunnelSequence(gate.userId, profile);
-  if (!emails) {
+  const result = await generateFunnelSequence(gate.userId, profile);
+  if (!result) {
     // 502 et pas 500 : ce n'est pas notre code qui casse, c'est la
     // reponse du modele qui n'est pas exploitable. Le navigateur peut
     // relancer CETTE etape seule, sans reecrire le reste.
     return NextResponse.json({ ok: false, reason: "ai_error" }, { status: 502 });
   }
-  return NextResponse.json({ ok: true, emails });
+  // `complete` dit si les 5 temps sont la. Une sequence partielle est
+  // renvoyee quand meme (mieux qu'un email perdu), mais l'ecran le DIT :
+  // sans ca, un profil a un seul email passe pour un profil reussi, et
+  // c'est ce qui a laisse Fabienne sans information le 7 aout.
+  return NextResponse.json({ ok: true, emails: result.emails, complete: result.complete });
 }

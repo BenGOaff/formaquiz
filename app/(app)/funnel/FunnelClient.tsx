@@ -26,7 +26,13 @@ import {
   type IntentionMap,
   type FunnelIntention,
 } from "@/lib/funnelIntentions";
-import { sequenceBeatTitle, sortSequence } from "@/lib/funnelSequence";
+import {
+  RESULT_SEQUENCE,
+  isSequenceComplete,
+  sequenceBeatTitle,
+  sequenceRank,
+  sortSequence,
+} from "@/lib/funnelSequence";
 
 interface ProfileOption {
   title: string;
@@ -152,10 +158,21 @@ export function FunnelClient({
 
       // On NOMME ce qui manque. "2 profils n'ont pas abouti" oblige à
       // aller comparer soi-même pour savoir lesquels relancer.
-      const missingTitles = titles.filter((_, i) => (sequences[i]?.length ?? 0) === 0);
-      if (missingTitles.length > 0) {
+      //
+      // ET ON COMPTE LES EMAILS, pas seulement les profils (Fabienne,
+      // 7 août 2026 : "il y a toujours un profil qui n'en a qu'un").
+      // On ne signalait que les profils à ZÉRO, donc un profil revenu
+      // avec un seul email sur cinq passait pour une réussite et elle
+      // s'en apercevait toute seule, en lisant.
+      const vides = titles.filter((_, i) => (sequences[i]?.length ?? 0) === 0);
+      const partiels = titles.filter(
+        (_, i) =>
+          (sequences[i]?.length ?? 0) > 0 && !isSequenceComplete(sequences[i] ?? []),
+      );
+      const aRelancer = [...vides, ...partiels];
+      if (aRelancer.length > 0) {
         toast.warning(
-          `C'est écrit, sauf ${missingTitles.map((t) => `"${t}"`).join(" et ")}. ` +
+          `Séquence incomplète pour ${aRelancer.map((t) => `"${t}"`).join(" et ")}. ` +
             `Relance pour compléter : ce qui est déjà écrit est gardé.`,
         );
       } else {
@@ -254,13 +271,27 @@ export function FunnelClient({
           <IntentionsBlock profiles={profiles} intentions={intentions} onChange={saveIntentions} />
         )}
         {byProfile.map(({ profile, emails }) => (
-          <Folder key={profile} icon={Target} title={profile} count={emails.length}>
+          <Folder
+            key={profile}
+            icon={Target}
+            title={profile}
+            count={emails.length}
+            // On AFFICHE le compte attendu, et on dit quand il manque
+            // quelque chose. Une séquence courte se voyait seulement en
+            // ouvrant le dossier et en comptant soi-même.
+            total={RESULT_SEQUENCE.length}
+          >
             {emails.map((e, i) => (
               <EmailRow
                 key={i}
-                n={i + 1}
+                // Le rang RÉEL de l'email, pas sa place dans la liste.
+                // Sur une séquence incomplète, l'index faisait porter à
+                // chaque email le libellé de son voisin : le 3e temps
+                // s'affichait comme le 2e (même défaut que le funnel
+                // d'Adeline, où une position servait d'identité).
+                n={sequenceRank(e, i)}
                 label="Email"
-                note={sequenceBeatTitle(i)}
+                note={sequenceBeatTitle(sequenceRank(e, i) - 1)}
                 subject={e.subject}
                 body={e.body}
               />
@@ -406,17 +437,21 @@ function Folder({
   icon: Icon,
   title,
   count,
+  total,
   defaultOpen = false,
   children,
 }: {
   icon: typeof Mail;
   title: string;
   count: number;
+  /** Le compte ATTENDU, quand il y en a un. Affiche "2 / 5" au lieu de "2". */
+  total?: number;
   defaultOpen?: boolean;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   if (count === 0) return null;
+  const incomplet = typeof total === "number" && count < total;
   return (
     <Card>
       <button
@@ -427,7 +462,14 @@ function Folder({
       >
         <Icon className="size-4 shrink-0 text-primary" />
         <span className="flex-1 font-display text-sm font-semibold">{title}</span>
-        <span className="text-xs text-muted-foreground">{count}</span>
+        {incomplet && (
+          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+            à compléter
+          </span>
+        )}
+        <span className="text-xs text-muted-foreground">
+          {typeof total === "number" ? `${count} / ${total}` : count}
+        </span>
         <ChevronDown className={`size-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && <div className="flex flex-col gap-2 border-t px-4 py-3">{children}</div>}
@@ -527,8 +569,13 @@ function toMarkdown(a: FunnelAssets): string {
     groups.forEach((emails, profile) => {
       lines.push(`### ${profile}`, "");
       sortSequence(emails).forEach((e, i) => {
-        const beat = sequenceBeatTitle(i);
-        lines.push(`#### Email ${i + 1}${beat ? ` : ${beat}` : ""}`, emailMd(e), "");
+        // MEME regle que l'ecran (`sequenceRank`) : sur une sequence
+        // incomplete, numeroter par l'index ferait porter a chaque email
+        // le libelle de son voisin, et le .md ne raconterait plus la
+        // meme sequence que l'ecran.
+        const rang = sequenceRank(e, i);
+        const beat = sequenceBeatTitle(rang - 1);
+        lines.push(`#### Email ${rang}${beat ? ` : ${beat}` : ""}`, emailMd(e), "");
       });
       lines.push("---", "");
     });
