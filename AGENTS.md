@@ -445,3 +445,71 @@ faire). Et il lit le `.env` lui-même, en ne cherchant QUE les deux clés
 dont il a besoin : `set -a; . .env; set +a` demande à bash d'interpréter
 tout le fichier, et une clé d'API sans rapport contenant des caractères
 spéciaux faisait échouer le chargement entier.
+
+## Un profil qui n'a qu'un seul email (drame Fabienne, 7 août 2026)
+
+"J'ai lancé la création des 5 mails pour mes 3 profils. A chaque fois deux
+des profils en ont bien 5 mais il y a toujours un profil qui n'en a qu'un."
+
+Trois causes empilées, et la troisième explique pourquoi elle l'a
+découvert toute seule, en lisant.
+
+**1. Le gabarit du prompt montrait UN email.** Sous le titre "Format
+exact", juste au dessus de "EXACTEMENT 5 emails" :
+
+```
+{"emails": [{"step": 1, "subject": "...", "body": "..."}]}
+```
+
+Un tableau complet, fermé, à une seule entrée. Un modèle qui suit la
+FORME plutôt que la phrase s'arrête à un, et il n'a pas tort : c'est ce
+qu'on lui a montré. **Même défaut que le prompt quiz de Tiquiz le 3 août,
+où l'exemple contredisait sa propre règle. Un prompt est du code : son
+exemple ne doit jamais contredire sa consigne.** Le gabarit est
+maintenant DÉRIVÉ de `RESULT_SEQUENCE` (`sequenceSkeleton()`), donc
+ajouter un temps le met à jour tout seul.
+
+**2. La réparation d'une réponse coupée amputait la séquence.**
+`tryRepairTruncatedJson` remontait à la dernière virgule hors chaîne. Or
+cette virgule est À L'INTÉRIEUR du dernier email conservé (celle qui
+sépare `subject` de `body`) : elle sacrifiait donc un email complet de
+plus et fabriquait un email sans corps. **Mesuré avant correction : une
+coupure au quart de la réponse ne laissait qu'UN email, vide.** La coupe
+se fait maintenant à la dernière FIN D'OBJET COMPLET. Les deux fonctions
+sont sorties dans `lib/generate/aiJson.ts` : privées, elles n'étaient pas
+testables, donc pas testées.
+
+**3. Rien ne vérifiait le COMPTE.** `emails.length > 0` suffisait à
+déclarer la séquence réussie, et le bandeau qui nomme les profils ratés
+ne repérait que les profils à ZÉRO email. Un profil revenu avec un seul
+email sur cinq passait donc pour une réussite complète. Désormais :
+`missingSequenceSteps()` nomme les temps manquants, le serveur REDEMANDE
+une fois en les citant, la réponse porte `complete`, et l'écran affiche
+`2 / 5` avec une pastille "à compléter".
+
+**Un rang en double ne comble pas un trou** : cinq emails dont deux au
+même `step`, ce n'est pas une séquence complète. Compter les emails
+aurait dit oui.
+
+**Et le libellé d'un email suit son RANG, jamais sa place dans la
+liste.** L'écran et le `.md` numérotaient par l'index : tant que la
+séquence est complète ça ne se voit pas, mais dès qu'un temps manque,
+tout ce qui suit porte le nom du temps précédent. C'est le défaut
+d'Adeline sous un autre visage, une POSITION qui sert d'identité. Règle
+unique : `sequenceRank(email, index)`.
+
+## Le premier email n'est pas la copie de la page de résultat (Fabienne, 7 août 2026)
+
+"Lorsque j'ai fait le test du quiz, j'ai bien eu mon profil et la
+définition avec la vignette à partager. Donc ça va faire doublon avec le
+premier mail des 5 créés ?"
+
+Oui, et ce n'était pas une impression : le temps 1 disait "tu lui renvoies
+son profil et ce qu'il veut dire", c'est à dire exactement ce que la page
+de résultat vient d'afficher. On demandait la redite.
+
+Le premier email a un autre travail : il est la trace DURABLE du résultat
+(la page, elle, se ferme), il confirme que l'adresse marche, et il annonce
+la suite. Il nomme donc le profil en une phrase pour que le lecteur se
+retrouve, puis apporte ce que la page ne disait pas. `RESULT_SEQUENCE[0]`
+le dit maintenant explicitement.

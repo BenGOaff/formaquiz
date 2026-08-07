@@ -7,6 +7,7 @@ import { getCarnet } from "@/lib/carnet";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { isRetryableStatus, MAX_ATTEMPTS, retryDelayMs } from "@/lib/generate/retry";
 import { mergeSequencesByProfile } from "@/lib/generate/mergeSequences";
+import { extractJson } from "@/lib/generate/aiJson";
 import { buildClaudeMessageBody } from "@/lib/claudeRequest";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { resolvePersona, personaLabel, PERSONA_VOCAB } from "@/lib/personas";
@@ -19,7 +20,22 @@ import {
 import type { QuizResultProfile } from "@/lib/quizDoctor";
 import { labelOf, MATURITY_OPTIONS, MONETIZATION_OPTIONS } from "@/lib/businessProfile";
 import type { FunnelAssets, FunnelResultEmail } from "@/lib/types";
-import { RESULT_SEQUENCE, sequenceGuidance } from "@/lib/funnelSequence";
+import {
+  RESULT_SEQUENCE,
+  isSequenceComplete,
+  missingSequenceSteps,
+  sequenceGuidance,
+  sequenceSkeleton,
+} from "@/lib/funnelSequence";
+
+/**
+ * Le budget d'écriture d'UNE séquence.
+ *
+ * Cinq emails de 120 à 180 mots tiennent très large dedans. La marge
+ * n'est pas du gaspillage : une réponse coupée en plein email, c'est un
+ * email perdu, et le modèle dépasse parfois la longueur demandée.
+ */
+const SEQUENCE_MAX_TOKENS = 12_000;
 
 // LA CAMPAGNE, C'EST DEUX CHOSES. PAS SEPT.
 //
@@ -112,11 +128,13 @@ function sequenceSystem(): string {
 
 Tu écris la séquence email d'UN SEUL profil de résultat, celui qui t'est donné.
 
-Format exact :
-{"emails": [{"step": 1, "subject": "...", "body": "..."}]}
+Format exact, avec les ${RESULT_SEQUENCE.length} entrées, sans en omettre aucune :
+${sequenceSkeleton()}
 
-EXACTEMENT ${RESULT_SEQUENCE.length} emails, dans cet ordre, "step" allant de 1 à ${RESULT_SEQUENCE.length} :
+Le tableau "emails" contient EXACTEMENT ${RESULT_SEQUENCE.length} entrées, dans cet ordre, "step" allant de 1 à ${RESULT_SEQUENCE.length} :
 ${sequenceGuidance()}
+
+Une réponse qui contient moins de ${RESULT_SEQUENCE.length} emails est inutilisable : ne t'arrête pas avant le ${RESULT_SEQUENCE.length}e.
 
 Chaque email est COURT (120 à 180 mots), a son propre objet, une seule idée et un seul appel à l'action. Les emails se répondent : le 3 reprend le conseil du 2, le 4 s'appuie sur l'objection levée au 3. Tu écris pour CE profil précis, avec ses mots à lui : une séquence qui pourrait servir à n'importe quel autre profil est ratée.
 
@@ -223,74 +241,6 @@ function carnetToText(
       return `Jour ${d.dayNumber} - ${d.title}\n${lines}`;
     })
     .join("\n\n");
-}
-
-function extractJson(text: string): unknown | null {
-  let t = text.trim();
-  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  if (fence) t = fence[1].trim();
-  const s = t.indexOf("{");
-  const e = t.lastIndexOf("}");
-  if (s >= 0 && e > s) t = t.slice(s, e + 1);
-  try {
-    return JSON.parse(t);
-  } catch {
-    // Reponse coupee : on repare les delimiteurs restes ouverts pour
-    // sauver les emails DEJA complets. Mieux vaut trois emails sur six
-    // qu'un ecran de JSON brut.
-    return tryRepairTruncatedJson(t);
-  }
-}
-
-/**
- * Repare un JSON tronque en refermant ce qui reste ouvert.
- *
- * On remonte jusqu'a la derniere position "sure" (la fin du dernier
- * element complet), puis on referme les tableaux et objets encore
- * ouverts. Ce n'est pas un parseur : c'est un filet, et il ne sert que
- * quand le modele a ete coupe.
- */
-function tryRepairTruncatedJson(text: string): unknown | null {
-  let inString = false;
-  let escaped = false;
-  const stack: string[] = [];
-  let lastSafe = -1;
-
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (escaped) { escaped = false; continue; }
-    if (c === "\\") { escaped = true; continue; }
-    if (c === '"') { inString = !inString; continue; }
-    if (inString) continue;
-    if (c === "{" || c === "[") stack.push(c === "{" ? "}" : "]");
-    else if (c === "}" || c === "]") stack.pop();
-    // Une virgule hors chaine termine un element complet : on peut
-    // couper juste avant sans casser ce qui precede.
-    else if (c === ",") lastSafe = i;
-  }
-
-  if (lastSafe < 0) return null;
-  let candidate = text.slice(0, lastSafe);
-  // On recalcule la pile sur le tronçon conservé.
-  const closers: string[] = [];
-  inString = false;
-  escaped = false;
-  for (let i = 0; i < candidate.length; i++) {
-    const c = candidate[i];
-    if (escaped) { escaped = false; continue; }
-    if (c === "\\") { escaped = true; continue; }
-    if (c === '"') { inString = !inString; continue; }
-    if (inString) continue;
-    if (c === "{") closers.push("}");
-    else if (c === "[") closers.push("]");
-    else if (c === "}" || c === "]") closers.pop();
-  }
-  candidate += closers.reverse().join("");
-  try {
-    return JSON.parse(candidate);
-  } catch {
-    return null;
-  }
 }
 
 function clean(s: unknown): string {
@@ -503,7 +453,7 @@ export async function generateFunnelLaunch(userId: string): Promise<FunnelAssets
 export async function generateFunnelSequence(
   userId: string,
   profileTitle: string,
-): Promise<FunnelResultEmail[] | null> {
+): Promise<{ emails: FunnelResultEmail[]; complete: boolean } | null> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return null;
 
@@ -517,11 +467,43 @@ export async function generateFunnelSequence(
     siblings: quizProfiles.filter((p) => p.title.trim() !== profileTitle.trim()).map((p) => p.title),
   };
 
-  const emails = normalizeSequence(
-    await askClaude(apiKey, sequenceSystem(), buildSequencePrompt(context, target, intentions), 8000),
+  const prompt = buildSequencePrompt(context, target, intentions);
+  let emails = normalizeSequence(
+    await askClaude(apiKey, sequenceSystem(), prompt, SEQUENCE_MAX_TOKENS),
     profileTitle,
   );
-  return emails.length > 0 ? emails : null;
+
+  // UNE SÉQUENCE INCOMPLÈTE N'EST PAS UNE SÉQUENCE (Fabienne, 7 août).
+  //
+  // On ne vérifiait que "au moins un email". Un profil qui revenait avec
+  // UN email était donc enregistré comme un succès : aucune alerte, et
+  // le bandeau qui nomme les profils ratés ne le voyait pas non plus,
+  // puisqu'il ne repère que les profils à zéro.
+  //
+  // On redemande UNE fois, en nommant les temps manquants. Une seule
+  // reprise : au delà, on rend ce qu'on a et on le DIT, plutôt que de
+  // faire tourner le modèle en boucle aux frais de Béné.
+  const manquants = missingSequenceSteps(emails);
+  if (manquants.length > 0) {
+    console.warn(
+      `[funnel] "${profileTitle}" : ${emails.length} email(s), manque ${manquants.join(", ")}. Reprise.`,
+    );
+    const seconde = normalizeSequence(
+      await askClaude(
+        apiKey,
+        sequenceSystem(),
+        `${prompt}\n\nTa réponse précédente était incomplète : il manquait ${manquants.length === 1 ? "le temps" : "les temps"} ${manquants.join(", ")}. Récris la séquence ENTIÈRE, avec ses ${RESULT_SEQUENCE.length} emails.`,
+        SEQUENCE_MAX_TOKENS,
+      ),
+      profileTitle,
+    );
+    // On garde la meilleure des deux : une reprise ratée ne doit pas
+    // faire perdre ce que le premier essai avait écrit.
+    if (seconde.length > emails.length) emails = seconde;
+  }
+
+  if (emails.length === 0) return null;
+  return { emails, complete: isSequenceComplete(emails) };
 }
 
 /**
