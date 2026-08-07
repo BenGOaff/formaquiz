@@ -27,6 +27,14 @@ import {
   revokeAccessByEmail,
 } from "@/lib/access/grantAccess";
 import { detectPlusTrialFunnel, maybeGrantPlusTrial } from "@/lib/plusTrial/grant";
+import { sendEmail } from "@/lib/email/resend";
+import {
+  bonusEmailMismatchEmail,
+  bonusMismatchAdminEmail,
+  bonusUnlockedEmail,
+} from "@/lib/email/templates";
+import { ADMIN_EMAILS } from "@/lib/adminEmails";
+import { bonusOrderEmailKind, isOrphanBonusOrder } from "@/lib/access/bonusOrder";
 import { refundCommissionByOrder } from "@/lib/affiliateTracking";
 import { ADS_PLUS_TRIAL_DAYS, ADS_TRIAL_FUNNEL, type AtelierTier } from "@/lib/access/tiers";
 
@@ -61,6 +69,21 @@ export interface SioAtelierOptions {
   trial: "legacy20" | "ads15" | "none";
   /** Écrit dans `enrollments.source` et dans le journal des webhooks. */
   source: string;
+  /**
+   * Ce bon de commande s'adresse-t-il à quelqu'un qui a DÉJÀ un compte ?
+   *
+   * Vrai pour la page de deuxième chance (`tipote.fr/atelier-du-quiz-bonus`),
+   * qui vend les bonus à des élèves déjà inscrits, arrivés par n'importe
+   * quel tunnel. Une commande qui tombe sur une adresse SANS compte y est
+   * donc presque toujours une faute de frappe ou une deuxième adresse,
+   * pas un nouveau client.
+   *
+   * Faux (défaut) pour les tunnels d'acquisition, où un compte inexistant
+   * est le cas NORMAL : les deux automatisations Systeme.io (7 € puis
+   * 47 €) arrivent dans un ordre non garanti, et l'upsell crée
+   * légitimement le compte quand il passe en premier.
+   */
+  expectsExistingAccount?: boolean;
 }
 
 function secretMatches(received: string | null, expected: string | undefined): boolean {
@@ -221,9 +244,51 @@ export async function handleSioAtelierWebhook(
   }
 
   // ── Octroi d'accès (achat confirmé) ──
-  const result = await grantAccessByEmail(email, opts.source, contactId, opts.tier);
+  //
+  // Sur un bon de commande de deuxième chance, c'est NOUS qui envoyons
+  // l'email, parce que le message dépend de ce qu'on découvre juste après :
+  // l'adresse de commande correspond-elle à un compte existant ?
+  const result = await grantAccessByEmail(email, opts.source, contactId, opts.tier, {
+    suppressEmail: opts.expectsExistingAccount === true,
+  });
   if (!result.ok) {
     return NextResponse.json({ ok: false, reason: result.reason });
+  }
+
+  // ── L'ADRESSE QUI NE CORRESPOND À AUCUN COMPTE ──
+  //
+  // Béné, 7 août 2026 : "il faut aussi anticiper ceux qui vont commander
+  // la mise à jour avec un autre email que celui qu'ils ont utilisé pour
+  // l'atelier, même si je les préviens sur le bon de commande."
+  //
+  // ON OUVRE L'ACCÈS QUAND MÊME, sur l'adresse de la commande. Il a payé :
+  // le laisser sans rien pendant qu'on démêle serait le pire des deux
+  // mondes, et la moitié de ces gens sont peut-être de vrais nouveaux
+  // clients. On l'AVERTIT, et on prévient Béné pour qu'elle puisse
+  // basculer le palier sur la bonne adresse.
+  let mismatch = false;
+  if (opts.expectsExistingAccount) {
+    const etat = { created: result.created, previousTier: result.previousTier };
+    mismatch = isOrphanBonusOrder(true, etat);
+    const lien = result.actionUrl ?? null;
+    if (lien) {
+      const { subject, html } =
+        bonusOrderEmailKind(true, etat) === "mismatch"
+          ? bonusEmailMismatchEmail({ actionUrl: lien, email })
+          : bonusUnlockedEmail({ actionUrl: lien, email });
+      await sendEmail({ to: email, subject, html });
+    }
+    if (mismatch) {
+      // Best-effort de bout en bout : une alerte qui n'part pas ne doit
+      // jamais faire échouer une vente encaissée.
+      const alerte = bonusMismatchAdminEmail({ email, source: opts.source });
+      await Promise.all(
+        ADMIN_EMAILS.map((to) =>
+          sendEmail({ to, subject: alerte.subject, html: alerte.html }).catch(() => null),
+        ),
+      ).catch(() => null);
+      console.warn(`[sioAtelier] deuxieme chance sur une adresse inconnue : ${email}`);
+    }
   }
 
   // ── Essai Tiquiz Plus ──
@@ -264,5 +329,8 @@ export async function handleSioAtelierWebhook(
     tier: opts.tier,
     created: result.created,
     plus_trial: trialStatus,
+    // Visible dans le journal des webhooks : c'est la trace qui permet de
+    // retrouver une commande arrivee sur une adresse inconnue.
+    email_mismatch: mismatch,
   });
 }

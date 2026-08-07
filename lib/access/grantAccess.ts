@@ -11,7 +11,7 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendEmail } from "@/lib/email/resend";
-import { welcomeEmail } from "@/lib/email/templates";
+import { bonusUnlockedEmail, welcomeEmail } from "@/lib/email/templates";
 import { mergeTier, resolveTier, type AtelierTier } from "@/lib/access/tiers";
 
 // URL de base des liens d'action (emails). Lue au RUNTIME via APP_URL :
@@ -44,6 +44,19 @@ export interface GrantResult {
   ok: boolean;
   created: boolean;
   reason?: string;
+  /**
+   * Palier AVANT cet octroi. `null` = aucun enrollment, donc cette adresse
+   * n'avait jamais acheté l'Atelier.
+   *
+   * Sert au bon de commande de deuxième chance : il s'adresse par
+   * définition à quelqu'un qui a DÉJÀ un compte, donc un `null` ici veut
+   * dire que la commande est arrivée sur une autre adresse que la sienne.
+   */
+  previousTier?: AtelierTier | null;
+  /** Palier après cet octroi. */
+  tier?: AtelierTier;
+  /** Lien de connexion, rendu uniquement si `suppressEmail` a été demandé. */
+  actionUrl?: string | null;
 }
 
 /**
@@ -60,7 +73,17 @@ export async function grantAccessByEmail(
    * l'invitation manuelle et le webhook d'origine.
    */
   tier: AtelierTier = "plus",
+  /**
+   * `suppressEmail` : l'appelant envoie l'email lui-même.
+   *
+   * Sert au bon de commande de deuxième chance, qui doit choisir entre
+   * deux messages selon que l'adresse de commande correspond ou non à un
+   * compte existant. Le lien d'action est alors rendu dans le résultat :
+   * en régénérer un invaliderait celui qu'on vient de créer.
+   */
+  opts: { suppressEmail?: boolean } = {},
 ): Promise<GrantResult> {
+  const suppressEmail = opts.suppressEmail === true;
   let user = await findUserByEmail(email);
   let created = false;
   // Lien d'action a mettre dans l'email d'accueil (invitation ou magique).
@@ -146,14 +169,41 @@ export async function grantAccessByEmail(
     await supabaseAdmin.from("enrollments").upsert(baseRow, { onConflict: "user_id" });
   }
 
-  // Email d'accueil best-effort : un echec d'envoi ne doit pas annuler
-  // l'octroi d'acces (l'eleve peut toujours passer par /login).
-  if (actionUrl) {
-    const { subject, html } = welcomeEmail({ actionUrl, isNewAccount: created });
+  // ── L'EMAIL DÉPEND DE CE QUI VIENT DE CHANGER ──
+  //
+  // Béné, 7 août 2026 : "il faudrait aussi leur envoyer un mail auto pour
+  // leur confirmer que leur accès a été mis à jour."
+  //
+  // Un élève qui achetait l'upsell recevait jusqu'ici l'email de
+  // BIENVENUE, exactement le même que le jour de son inscription. Il vient
+  // de payer pour débloquer quelque chose et on lui souhaite la bienvenue
+  // dans un produit qu'il a déjà : rien ne lui confirme que sa commande a
+  // ouvert ce qu'il a acheté.
+  //
+  // La montée de palier a donc son propre email. Le reste (création de
+  // compte, renvoi de lien, achat au même palier) ne bouge pas.
+  const monteeDePalier =
+    !created && previousTier === "standard" && effectiveTier === "plus";
+
+  // Best-effort : un echec d'envoi ne doit pas annuler l'octroi d'acces
+  // (l'eleve peut toujours passer par /login).
+  if (actionUrl && !suppressEmail) {
+    const { subject, html } = monteeDePalier
+      ? bonusUnlockedEmail({ actionUrl, email })
+      : welcomeEmail({ actionUrl, isNewAccount: created });
     await sendEmail({ to: email, subject, html });
   }
 
-  return { ok: true, created };
+  return {
+    ok: true,
+    created,
+    previousTier,
+    tier: effectiveTier,
+    // Le lien est rendu à l'appelant UNIQUEMENT quand il a demandé à
+    // envoyer l'email lui-même : sans ça, il devrait en régénérer un, donc
+    // invalider celui qu'on vient d'envoyer.
+    ...(suppressEmail ? { actionUrl } : {}),
+  };
 }
 
 /**

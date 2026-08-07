@@ -29,7 +29,26 @@ function premierFichier(base) {
   return null;
 }
 
+/**
+ * `server-only` et `client-only` : des marqueurs, pas du code.
+ *
+ * Next les résout en interne et ils ne sont pas installés dans
+ * node_modules : le runner natif échoue donc à l'import, et TOUT module
+ * marqué `import "server-only"` restait hors de portée des tests. Or
+ * c'est là que vit l'essentiel de la logique métier (accès, emails,
+ * webhooks), c'est à dire exactement ce qu'on a le plus besoin de tester.
+ *
+ * On les remplace par un module vide. Le marqueur ne sert qu'au bundler ;
+ * dans le runner, il n'y a pas de frontière client à protéger.
+ */
+const MARQUEURS_VIDES = new Set(["server-only", "client-only"]);
+const MODULE_VIDE = "data:text/javascript,";
+
 export async function resolve(specifier, context, next) {
+  if (MARQUEURS_VIDES.has(specifier)) {
+    return { url: MODULE_VIDE, shortCircuit: true };
+  }
+
   if (specifier.startsWith("@/")) {
     const trouve = premierFichier(path.join(ROOT, specifier.slice(2)));
     if (trouve) return next(pathToFileURL(trouve).href, context);
