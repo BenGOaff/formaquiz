@@ -19,6 +19,14 @@ const PUBLIC_PREFIXES = [
   "/api/cron",
   // Tracking affilié : webhooks Systeme.io + tracker JS, appelés sans session.
   "/api/affiliate",
+  // Pages de vente servies par nous. Elles sont PUBLIQUES par nature :
+  // un visiteur qui découvre l'Atelier n'a évidemment pas de session.
+  // Sans cette ligne, le middleware le renverrait vers /login, ce qui
+  // transformerait une page de vente en cul-de-sac.
+  // La porte de l'aperçu n'est pas ici : c'est la clé SALES_PREVIEW_TOKEN
+  // dans l'URL, vérifiée par la route elle-même.
+  "/apercu",
+  "/v",
 ];
 
 // Routes réservées à l'élève connecté (enrollment vérifié plus loin
