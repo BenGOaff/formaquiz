@@ -12,6 +12,18 @@
 // Import relatif avec extension : le runner de tests natif Node ne
 // resout pas l'alias @/ (cf. AGENTS, filet de tests logique).
 import { resolvePersona, type Persona } from "./personas.ts";
+import {
+  COMMISSION_BASE,
+  COMMISSION_RATES,
+  PRICES_TTC_EUR,
+  commissionEur,
+} from "./affiliateCommission.ts";
+
+/** Un montant en euros, écrit comme l'affiliée le lit. */
+function formatEur(value: number): string {
+  const entier = Number.isInteger(value);
+  return `${value.toFixed(entier ? 0 : 2).replace(".", ",")} €`;
+}
 
 // --- Constantes -----------------------------------------------------------
 
@@ -190,7 +202,7 @@ export function getAffiliatePlaybook(activityType: string | null | undefined): A
 export const AFFILIATE_ARGUMENTS: { title: string; body: string }[] = [
   {
     title: "70% sur la vente",
-    body: "Tu touches 70% du prix de chaque Atelier du Quiz vendu via ton lien, soit 32,90 € par vente à 47 €. Une des commissions les plus généreuses du marché.",
+    body: `Tu touches 70% du prix de chaque Atelier du Quiz vendu via ton lien, soit ${formatEur(commissionEur({ ttcEur: PRICES_TTC_EUR.atelier, rate: COMMISSION_RATES.atelier, base: COMMISSION_BASE }))} par vente à ${formatEur(PRICES_TTC_EUR.atelier)}. Les commissions se calculent sur le montant hors taxes. Une des commissions les plus généreuses du marché.`,
   },
   {
     title: "40% récurrent sur Tiquiz",
