@@ -35,7 +35,8 @@ import { notFound } from "next/navigation";
 
 import { LIENS_LEGAUX, LIEN_SUPPORT } from "@/lib/checkout/brand";
 import { findOwnerProduct, formatOwnerPrice } from "@/lib/checkout/catalog";
-import { readOwnerStripe } from "@/lib/checkout/ownerAccount";
+import { readOwnerPaypal, readOwnerStripe } from "@/lib/checkout/ownerAccount";
+import { captureOwnerPaypalOrder } from "@/lib/checkout/paypalOwner";
 import { retrieveOwnerSession } from "@/lib/checkout/stripeCheckout";
 import { isSalesPreviewOpen } from "@/lib/sales/previewGate";
 
@@ -50,18 +51,41 @@ export default async function Page({
   searchParams,
 }: {
   params: Promise<{ produit: string }>;
-  searchParams: Promise<{ session_id?: string; k?: string }>;
+  // `token` est ajouté par PayPal en revenant : c'est l'identifiant de
+  // la commande à encaisser. `session_id` est celui de Stripe.
+  searchParams: Promise<{ session_id?: string; k?: string; token?: string }>;
 }) {
   const { produit } = await params;
-  const { session_id: sessionId, k } = await searchParams;
+  const { session_id: sessionId, k, token: paypalOrderId } = await searchParams;
 
   if (!isSalesPreviewOpen(k, process.env)) notFound();
   const product = findOwnerProduct(produit);
   if (!product) notFound();
 
   const compte = readOwnerStripe(process.env);
-  const session =
+  const parStripe =
     compte && sessionId ? await retrieveOwnerSession(compte.key, sessionId) : null;
+
+  // ── LE RETOUR DE PAYPAL ENCAISSE, MAIS N'OUVRE RIEN ──
+  //
+  // PayPal renvoie une commande APPROUVÉE, pas encaissée : c'est nous qui
+  // devons la capturer. C'est donc le seul endroit du tunnel où la page
+  // de retour a un vrai travail à faire.
+  //
+  // Elle n'ouvre toujours AUCUN accès pour autant : c'est le webhook
+  // `PAYMENT.CAPTURE.COMPLETED` qui s'en charge, parce que beaucoup
+  // d'acheteurs ne voient jamais cette page. Et si personne n'arrive
+  // jamais ici, PayPal annule la commande au bout de 3 jours : personne
+  // n'est débité pour rien.
+  const comptePaypal = readOwnerPaypal(process.env);
+  const parPaypal =
+    comptePaypal && paypalOrderId
+      ? await captureOwnerPaypalOrder({ compte: comptePaypal, orderId: paypalOrderId })
+      : null;
+
+  // Un seul écran pour les deux moyens de paiement : l'acheteur se fiche
+  // de savoir par quel tuyau son argent est passé.
+  const session = parStripe ?? parPaypal;
 
   // Trois états, trois écrans. Le troisième est celui qu'on oublie
   // toujours, et c'est le seul où l'acheteur a besoin qu'on le rassure.

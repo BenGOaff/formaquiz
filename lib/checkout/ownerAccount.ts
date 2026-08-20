@@ -177,3 +177,20 @@ export function readOwnerProviders(env: EnvSource): OwnerProviders {
     mixedModes: modes.length === 2 && modes[0] !== modes[1],
   };
 }
+
+/**
+ * L'identifiant du webhook PayPal, celui qui permet de vérifier qu'un
+ * appel vient vraiment de PayPal.
+ *
+ * Séparé des identifiants du compte pour la même raison que le secret de
+ * webhook Stripe : il peut manquer alors que le compte est branché, et
+ * dans ce cas on peut encaisser sans pouvoir ouvrir l'accès de façon
+ * fiable. Le savoir vaut mieux que de le découvrir sur une vente.
+ */
+export function readOwnerPaypalWebhookId(env: EnvSource): string | null {
+  const id = String(env.PAYPAL_WEBHOOK_ID_OWNER ?? "").trim();
+  // Les identifiants PayPal ressemblent à "1JE12345LM678901N". On ne
+  // valide que la forme générale : une valeur vide ou un reste de
+  // copier-coller ne doit pas passer pour un identifiant.
+  return /^[A-Za-z0-9-]{8,}$/.test(id) ? id : null;
+}

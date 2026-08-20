@@ -34,20 +34,33 @@ const RAISONS: Record<string, string> = {
   invalid_body: "Requête illisible.",
 };
 
+/** Les raisons propres à PayPal, avec la même règle : jamais un cadre muet. */
+const RAISONS_PAYPAL: Record<string, string> = {
+  ...RAISONS,
+  paypal_refused: "PayPal a refusé d'ouvrir le paiement. Rien n'a été débité.",
+  live_without_webhook:
+    "Le paiement PayPal est bloqué tant que l'ouverture automatique des accès n'est pas branchée. Rien n'a été débité.",
+};
+
 export default function CommandeClient({
   produit,
   cle,
   clePublique,
   modesDiscordants = false,
+  paypalDisponible = false,
 }: {
   produit: string;
   cle: string;
   clePublique: string | null;
   /** Clé secrète et clé publiable pas dans le même monde (live vs test). */
   modesDiscordants?: boolean;
+  /** Le compte PayPal de Béné est branché sur ce serveur. */
+  paypalDisponible?: boolean;
 }) {
   const [erreur, setErreur] = useState<string | null>(null);
   const [mode, setMode] = useState<string | null>(null);
+  const [paypalEnCours, setPaypalEnCours] = useState(false);
+  const [erreurPaypal, setErreurPaypal] = useState<string | null>(null);
 
   // La clé publiable est indispensable au navigateur. Sans elle, le cadre
   // resterait vide sans dire pourquoi : on le dit, et on distingue les
@@ -89,6 +102,40 @@ export default function CommandeClient({
     return data.clientSecret;
   }, [produit, cle]);
 
+  // PAYPAL : ON QUITTE LA PAGE, DONC ON DIT CE QUI SE PASSE.
+  //
+  // L'acheteur part approuver chez PayPal et revient sur notre page de
+  // retour. Entre les deux il y a un temps mort, et un bouton qui ne
+  // reagit pas pendant deux secondes se reclique : d'ou l'etat "en
+  // cours", qui evite deux commandes pour un seul achat.
+  const partirSurPaypal = useCallback(async () => {
+    setErreurPaypal(null);
+    setPaypalEnCours(true);
+    try {
+      const r = await fetch("/api/commande/paypal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ produit, k: cle }),
+      });
+      const data = (await r.json().catch(() => ({}))) as {
+        ok?: boolean;
+        approveUrl?: string;
+        reason?: string;
+      };
+      if (!data.ok || !data.approveUrl) {
+        setErreurPaypal(
+          RAISONS_PAYPAL[data.reason ?? ""] ?? "PayPal n'a pas pu ouvrir le paiement.",
+        );
+        setPaypalEnCours(false);
+        return;
+      }
+      window.location.assign(data.approveUrl);
+    } catch {
+      setErreurPaypal("La connexion a coupé avant d'ouvrir PayPal. Rien n'a été débité.");
+      setPaypalEnCours(false);
+    }
+  }, [produit, cle]);
+
   // `loadStripe` rend une NOUVELLE promesse a chaque appel. Appelee dans
   // le JSX, elle en fabriquerait une par rendu, et le fournisseur Stripe
   // se remonterait a chaque fois : formulaire qui clignote, champs vides
@@ -98,16 +145,48 @@ export default function CommandeClient({
     [clePublique],
   );
 
+  // UNE PANNE DE CARTE NE DOIT PAS EMPORTER PAYPAL.
+  //
+  // Le premier jet sortait du composant des que Stripe echouait, donc une
+  // cle Stripe absente faisait disparaitre AUSSI le bouton PayPal, et
+  // l'acheteur se retrouvait devant une page sans aucun moyen de payer
+  // alors qu'il en restait un qui marchait. Deux moyens de paiement, deux
+  // sorts independants : le bloc PayPal est rendu dans TOUTES les
+  // branches, y compris celle de l'erreur.
+  const blocPaypal = paypalDisponible ? (
+    <div className="mt-5">
+      <div className="mb-4 flex items-center gap-3">
+        <span className="h-px flex-1 bg-[#e1e6f7]" />
+        <span className="text-xs font-semibold uppercase tracking-wide text-[#6a6f8c]">ou</span>
+        <span className="h-px flex-1 bg-[#e1e6f7]" />
+      </div>
+      <button
+        type="button"
+        onClick={partirSurPaypal}
+        disabled={paypalEnCours}
+        className="w-full rounded-lg border border-[#e1e6f7] bg-white px-4 py-3 text-sm font-bold text-[#16182e] transition hover:bg-[#f7f9ff] disabled:cursor-wait disabled:opacity-60"
+      >
+        {paypalEnCours ? "Ouverture de PayPal..." : "Payer avec PayPal"}
+      </button>
+      {erreurPaypal && (
+        <p className="mt-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-900">{erreurPaypal}</p>
+      )}
+    </div>
+  ) : null;
+
   if (erreur) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-900">
-        <p className="font-semibold">Le paiement n&apos;a pas pu s&apos;ouvrir.</p>
-        <p className="mt-1">{erreur}</p>
+      <div>
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-900">
+          <p className="font-semibold">Le paiement par carte n&apos;a pas pu s&apos;ouvrir.</p>
+          <p className="mt-1">{erreur}</p>
+        </div>
+        {blocPaypal}
       </div>
     );
   }
 
-  if (!clePublique) return null;
+  if (!clePublique) return <div>{blocPaypal}</div>;
 
   return (
     <div>
@@ -122,6 +201,8 @@ export default function CommandeClient({
       >
         <EmbeddedCheckout />
       </EmbeddedCheckoutProvider>
+
+      {blocPaypal}
     </div>
   );
 }

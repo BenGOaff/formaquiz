@@ -38,7 +38,11 @@
 import { notFound } from "next/navigation";
 
 import { findOwnerProduct, formatOwnerPrice } from "@/lib/checkout/catalog";
-import { readOwnerStripe, readOwnerStripePublishable } from "@/lib/checkout/ownerAccount";
+import {
+  readOwnerPaypal,
+  readOwnerStripe,
+  readOwnerStripePublishable,
+} from "@/lib/checkout/ownerAccount";
 import { isSalesPreviewOpen } from "@/lib/sales/previewGate";
 import CommandeClient from "./CommandeClient";
 
@@ -91,6 +95,11 @@ export default async function Page({
   const publiable = readOwnerStripePublishable(process.env);
   const secrete = readOwnerStripe(process.env);
   const modesDiscordants = !!publiable && !!secrete && publiable.mode !== secrete.mode;
+
+  // PayPal n'apparaît que s'il est vraiment branché sur CE serveur. Un
+  // bouton qui mène à un message d'erreur est pire que pas de bouton :
+  // il fait croire à un choix qui n'existe pas.
+  const paypalDisponible = !!readOwnerPaypal(process.env);
 
   return (
     // Le fond clair est posé ici, pas hérité : cette page est publique et
@@ -152,6 +161,7 @@ export default async function Page({
                 cle={String(k ?? "")}
                 clePublique={modesDiscordants ? null : (publiable?.key ?? null)}
                 modesDiscordants={modesDiscordants}
+                paypalDisponible={paypalDisponible}
               />
             </div>
             <p className="mt-3 text-center text-xs text-[#6a6f8c]">
