@@ -35,6 +35,7 @@ import {
 } from "@/lib/email/templates";
 import { ADMIN_EMAILS } from "@/lib/adminEmails";
 import { bonusOrderEmailKind, isOrphanBonusOrder } from "@/lib/access/bonusOrder";
+import { logWebhookEvent } from "@/lib/webhooks/log";
 import { refundCommissionByOrder } from "@/lib/affiliateTracking";
 import { ADS_PLUS_TRIAL_DAYS, ADS_TRIAL_FUNNEL, type AtelierTier } from "@/lib/access/tiers";
 
@@ -116,28 +117,10 @@ function extractStr(body: unknown, paths: string[]): string | null {
   return null;
 }
 
-async function logWebhook(row: {
-  source: string;
-  event_id: string | null;
-  event_type: string | null;
-  payload: unknown;
-  status: string;
-  error?: string | null;
-}): Promise<{ duplicate: boolean }> {
-  const { error } = await supabaseAdmin.from("webhook_logs").insert({
-    source: row.source,
-    event_id: row.event_id,
-    event_type: row.event_type,
-    payload: row.payload,
-    status: row.status,
-    error: row.error ?? null,
-  });
-  // Conflit sur l'index unique (source, event_id) = event déjà traité.
-  if (error && (error.code === "23505" || /duplicate key/i.test(error.message))) {
-    return { duplicate: true };
-  }
-  return { duplicate: false };
-}
+// Le journal + l'idempotence vivent dans `lib/webhooks/log.ts` : le
+// paiement Stripe fait exactement la même chose, dans la même table, et
+// deux copies d'une règle divergent.
+const logWebhook = logWebhookEvent;
 
 /**
  * Traite un appel Systeme.io pour un bon de commande donné.
