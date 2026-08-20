@@ -388,3 +388,51 @@ export function bonusMismatchAdminEmail({
     html: layout(inner),
   };
 }
+
+/**
+ * L'EMAIL DE REMBOURSEMENT : ON SE QUITTE BIEN.
+ *
+ * Béné, 20 août 2026 : "je voudrais un truc auto qui dit pas de souci si
+ * l'Atelier n'a pas répondu à tes attentes, je reste dans les parages si
+ * je peux t'aider ! N'hésite pas à me dire s'il y a des choses que je
+ * peux améliorer, style on se quitte bons amis."
+ *
+ * Deux choses que cet email fait et que l'email de Stripe ne fait pas :
+ * il dit clairement que l'accès s'arrête (le cacher se paierait en
+ * "pourquoi je ne peux plus me connecter ?"), et il DEMANDE la raison.
+ * Un remboursement est le seul moment où quelqu'un a une raison précise
+ * de te dire ce qui n'allait pas, et où il n'a plus rien à perdre à te
+ * le dire.
+ *
+ * Le délai de 5 à 10 jours ouvrés est celui annoncé par Stripe, pas une
+ * estimation maison : c'est la question numéro un qui arrive au support
+ * après un remboursement.
+ */
+export function refundGoodbyeEmail({ prenom }: { prenom?: string | null } = {}): BuiltEmail {
+  const bonjour = prenom && prenom.trim() ? `Hey ${prenom.trim()} 👋` : "Hey 👋";
+  const inner = `
+    <p style="margin:0 0 16px;font-size:15px;line-height:23px;color:${INK};">${bonjour}</p>
+    <p style="margin:0 0 16px;font-size:15px;line-height:23px;color:${INK};">
+      C'est fait, ton remboursement est parti. Compte 5 à 10 jours ouvrés avant de le voir
+      sur ton relevé, c'est le délai annoncé par Stripe et il ne dépend plus de moi.
+    </p>
+    <p style="margin:0 0 16px;font-size:15px;line-height:23px;color:${INK};">
+      Ton accès à L'Atelier du Quiz s'arrête là, forcément. Mais on se quitte bien.
+    </p>
+    <p style="margin:0 0 16px;font-size:15px;line-height:23px;color:${INK};">
+      Si l'Atelier n'a pas répondu à tes attentes, ça ne me vexe pas (vraiment pas).
+      Ce qui m'intéresse, c'est de savoir pourquoi. Réponds à cet email et dis moi ce qui
+      manquait, ce qui coinçait, ou ce que tu cherchais et que tu n'as pas trouvé. Je lis
+      tout, et je m'en sers pour corriger.
+    </p>
+    <p style="margin:0 0 16px;font-size:15px;line-height:23px;color:${INK};">
+      Et si un jour tu as une question sur les quiz, tu peux m'écrire même sans être à
+      l'Atelier. Je reste dans les parages.
+    </p>
+    <p style="margin:0;font-size:15px;line-height:23px;color:${INK};">Béné</p>
+  `;
+  return {
+    subject: "Ton remboursement est parti",
+    html: layout(inner),
+  };
+}

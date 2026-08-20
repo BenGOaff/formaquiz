@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { isAdminEmail } from "@/lib/adminEmails";
+import { salesSlugForHost } from "@/lib/sales/salesHosts";
 
 // Routes accessibles sans être connecté.
 const PUBLIC_PREFIXES = [
@@ -52,6 +53,17 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Laisse passer les assets et les routes publiques.
+  // NOS DOMAINES DE VENTE (atelierduquiz.fr) : la racine sert la page de
+  // vente. On REECRIT au lieu de rediriger, pour que l'adresse vue par le
+  // visiteur reste atelierduquiz.fr et qu'un lien partage ne fasse pas
+  // apparaitre un chemin technique.
+  const slugDeVente = salesSlugForHost(req.headers.get("host"));
+  if (slugDeVente && pathname === "/") {
+    const url = req.nextUrl.clone();
+    url.pathname = `/apercu/vente/${slugDeVente}`;
+    return NextResponse.rewrite(url);
+  }
+
   if (startsWithAny(pathname, PUBLIC_PREFIXES)) {
     return NextResponse.next();
   }
