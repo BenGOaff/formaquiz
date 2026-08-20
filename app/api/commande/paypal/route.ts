@@ -19,7 +19,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { findOwnerProduct } from "@/lib/checkout/catalog";
 import { readOwnerPaypal, readOwnerPaypalWebhookId } from "@/lib/checkout/ownerAccount";
 import { createOwnerPaypalOrder } from "@/lib/checkout/paypalOwner";
-import { isSalesPreviewOpen } from "@/lib/sales/previewGate";
+import { isSalesOpen } from "@/lib/sales/previewGate";
 import { resolveAppUrl } from "@/lib/appUrl";
 
 export const runtime = "nodejs";
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: false, reason: "invalid_body" }, { status: 400 });
   }
 
-  if (!isSalesPreviewOpen(body.k, process.env)) {
+  if (!isSalesOpen(body.k, req.headers.get("host"), process.env)) {
     return NextResponse.json({ ok: false, reason: "not_found" }, { status: 404 });
   }
 

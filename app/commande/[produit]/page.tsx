@@ -35,6 +35,7 @@
 // lu la page doit retrouver les mêmes mots, sinon il se demande si c'est
 // bien la même offre.
 
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { findOwnerProduct, formatOwnerPrice } from "@/lib/checkout/catalog";
@@ -43,7 +44,7 @@ import {
   readOwnerStripe,
   readOwnerStripePublishable,
 } from "@/lib/checkout/ownerAccount";
-import { isSalesPreviewOpen } from "@/lib/sales/previewGate";
+import { isSalesOpen } from "@/lib/sales/previewGate";
 import CommandeClient from "./CommandeClient";
 
 export const dynamic = "force-dynamic";
@@ -82,7 +83,9 @@ export default async function Page({
   const { produit } = await params;
   const { k } = await searchParams;
 
-  if (!isSalesPreviewOpen(k, process.env)) notFound();
+  // La porte s'ouvre par la cle OU par le domaine public.
+  const host = (await headers()).get("host");
+  if (!isSalesOpen(k, host, process.env)) notFound();
 
   const product = findOwnerProduct(produit);
   if (!product) notFound();

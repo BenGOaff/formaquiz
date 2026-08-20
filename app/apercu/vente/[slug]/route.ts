@@ -26,7 +26,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "node:fs";
 import path from "node:path";
 import { renderSalesPage, type SalesPageMeta } from "@/lib/sales/servePage";
-import { isSalesPreviewOpen } from "@/lib/sales/previewGate";
+import { isSalesOpen } from "@/lib/sales/previewGate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,7 +52,9 @@ const PAGES: Record<string, Omit<SalesPageMeta, "slug">> = {
  * commande en a besoin aussi, et deux copies d'une décision divergent.
  */
 function porteOuverte(req: NextRequest): boolean {
-  return isSalesPreviewOpen(req.nextUrl.searchParams.get("k"), process.env);
+  // La cle OU le domaine public : sur atelierduquiz.fr la page de vente
+  // est ouverte, c'est tout l'interet d'avoir un domaine.
+  return isSalesOpen(req.nextUrl.searchParams.get("k"), req.headers.get("host"), process.env);
 }
 
 export async function GET(

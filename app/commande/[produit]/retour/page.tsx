@@ -31,6 +31,7 @@
 // l'accès arrive, y compris celui où on n'a pas retrouvé la commande.
 
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { LIENS_LEGAUX, LIEN_SUPPORT } from "@/lib/checkout/brand";
@@ -38,7 +39,7 @@ import { findOwnerProduct, formatOwnerPrice } from "@/lib/checkout/catalog";
 import { readOwnerPaypal, readOwnerStripe } from "@/lib/checkout/ownerAccount";
 import { captureOwnerPaypalOrder } from "@/lib/checkout/paypalOwner";
 import { retrieveOwnerSession } from "@/lib/checkout/stripeCheckout";
-import { isSalesPreviewOpen } from "@/lib/sales/previewGate";
+import { isSalesOpen } from "@/lib/sales/previewGate";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +59,9 @@ export default async function Page({
   const { produit } = await params;
   const { session_id: sessionId, k, token: paypalOrderId } = await searchParams;
 
-  if (!isSalesPreviewOpen(k, process.env)) notFound();
+  // La porte s'ouvre par la cle OU par le domaine public.
+  const host = (await headers()).get("host");
+  if (!isSalesOpen(k, host, process.env)) notFound();
   const product = findOwnerProduct(produit);
   if (!product) notFound();
 
