@@ -35,7 +35,12 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { grantAccessByEmail } from "@/lib/access/grantAccess";
+import { readRefundOutcome } from "@/lib/checkout/refund";
+import { retrieveOwnerSessionByPaymentIntent } from "@/lib/checkout/stripeCheckout";
+import { sendEmail } from "@/lib/email/resend";
+import { refundGoodbyeEmail } from "@/lib/email/templates";
+
+import { grantAccessByEmail, revokeAccessByEmail } from "@/lib/access/grantAccess";
 import { findOwnerProduct } from "@/lib/checkout/catalog";
 import { readOwnerStripe, readOwnerStripeWebhookSecret } from "@/lib/checkout/ownerAccount";
 import { retrieveOwnerSession, verifyStripeSignature } from "@/lib/checkout/stripeCheckout";
@@ -73,11 +78,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: false, reason: "bad_signature" }, { status: 401 });
   }
 
-  let event: {
-    id?: string;
-    type?: string;
-    data?: { object?: { id?: string; payment_status?: string } };
-  };
+  let event: RawEvent;
   try {
     event = JSON.parse(raw);
   } catch {
@@ -99,6 +100,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   });
   if (duplicate) {
     return NextResponse.json({ ok: true, duplicate: true });
+  }
+
+  // ── L'ARGENT REPART : ON FERME, ET ON LE DIT BIEN ──
+  //
+  // Béné, 20 août : "si je rembourse les 47 €, l'accès est coupé ou pas ?
+  // L'user reçoit quelle info ?" Avant ce bloc : non, et rien de nous.
+  // Sur un produit à garantie 30 jours, ça voulait dire acheter, se faire
+  // rembourser, et garder l'Atelier à vie.
+  if (eventType === "charge.refunded") {
+    return await surRemboursement(event);
   }
 
   // Les deux événements qui veulent dire "l'argent est là". Le second
@@ -174,4 +185,81 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       `compte ${octroi.created ? "cree" : "existant"}`,
   );
   return NextResponse.json({ ok: true, granted: true });
+}
+
+/** La forme d'un evenement Stripe, reduite a ce qu'on lit. */
+interface RawEvent {
+  id?: string;
+  type?: string;
+  data?: {
+    object?: {
+      id?: string;
+      payment_status?: string;
+      amount?: number | null;
+      amount_refunded?: number | null;
+      refunded?: boolean | null;
+      payment_intent?: string | null;
+      billing_details?: { email?: string | null; name?: string | null } | null;
+    };
+  };
+}
+
+/**
+ * UN REMBOURSEMENT TOTAL FERME L'ACCÈS. UN REMBOURSEMENT PARTIEL, NON.
+ *
+ * La distinction n'est pas theorique : un geste commercial de 10 € sur
+ * une vente à 47 € mettrait dehors quelqu'un qui a payé 37 € pour
+ * rester dedans. La decision vit dans `readRefundOutcome`, testee, et
+ * personne ne la reecrit ici.
+ *
+ * On repond 200 dans tous les cas de figure compris, y compris quand on
+ * ne fait rien : un 500 sur un cas compris et ecarte declencherait des
+ * reessais en boucle. Seule une VRAIE panne merite un 5xx.
+ */
+async function surRemboursement(event: RawEvent): Promise<NextResponse> {
+  const charge = event.data?.object ?? null;
+  const issue = readRefundOutcome(charge);
+  if (issue !== "full") {
+    console.log(`[commande/webhook] remboursement ${issue} : acces conserve`);
+    return NextResponse.json({ ok: true, refund: issue });
+  }
+
+  const compte = readOwnerStripe(process.env);
+  const paymentIntent = String(charge?.payment_intent ?? "").trim();
+
+  // L'adresse de la SESSION d'abord : c'est celle qui a recu les acces.
+  // `billing_details.email` est l'adresse de facturation de la carte, qui
+  // peut etre celle du conjoint, de l'entreprise, ou vide. On ne coupe
+  // pas un acces sur cette base la, on s'en sert seulement en dernier
+  // recours pour ne pas rester muet.
+  const vente =
+    compte && paymentIntent
+      ? await retrieveOwnerSessionByPaymentIntent(compte.key, paymentIntent)
+      : null;
+  const email = vente?.email ?? charge?.billing_details?.email ?? null;
+  const prenom = vente?.name ?? charge?.billing_details?.name ?? null;
+
+  if (!email) {
+    console.error(
+      "[commande/webhook] remboursement TOTAL sans adresse retrouvee : acces NON coupe, " +
+        `paiement ${paymentIntent || "inconnu"}. Intervention necessaire.`,
+    );
+    return NextResponse.json({ ok: true, reason: "no_email" });
+  }
+
+  await revokeAccessByEmail(email);
+
+  // ON SE QUITTE BIEN, ET C'EST NOUS QUI LE DISONS.
+  //
+  // Stripe envoie deja son propre email de remboursement, froid et dans
+  // son gabarit. Best-effort : un echec d'envoi ne doit pas annuler la
+  // revocation, qui est la partie qui compte.
+  const { subject, html } = refundGoodbyeEmail({ prenom });
+  const envoi = await sendEmail({ to: email, subject, html }).catch(() => ({ ok: false }));
+
+  console.log(
+    `[commande/webhook] acces revoque pour ${email} apres remboursement total, ` +
+      `email d'au revoir ${envoi && "ok" in envoi && envoi.ok ? "envoye" : "NON envoye"}`,
+  );
+  return NextResponse.json({ ok: true, revoked: true });
 }
