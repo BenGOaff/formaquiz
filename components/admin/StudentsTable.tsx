@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { UserPlus, Send } from "lucide-react";
+import { UserPlus, Send, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +23,54 @@ export interface StudentRow {
   isAffiliate: boolean;
   /** Personnes distinctes amenées via son lien affilié (conversions). */
   invitedCount: number;
+  /**
+   * CE QU'IL A PAYÉ, s'il a payé chez nous.
+   *
+   * Béné, 20 août : "tu peux pas centraliser ? Je vois les élèves, leurs
+   * infos + le bouton rembourser ? Au lieu d'avoir deux écrans."
+   *
+   * Elle a raison, et l'écran séparé était un contresens : elle ne pense
+   * pas en "ventes", elle pense en PERSONNES. Chercher un email dans un
+   * tableau pour aller le rechercher dans un autre, c'est du travail
+   * qu'on lui donnait sans raison.
+   *
+   * `null` = aucune vente encaissée par nous à cette adresse. Ça ne veut
+   * PAS dire qu'elle n'a pas payé : les achats passés par Systeme.io ne
+   * sont pas dans ce journal, et les accès offerts non plus.
+   */
+  payment: StudentPayment | null;
 }
+
+export interface StudentPayment {
+  /** Ce qu'on rembourse : PaymentIntent chez Stripe, capture chez PayPal. */
+  ref: string;
+  provider: "stripe" | "paypal";
+  amountCents: number;
+  currency: string;
+  paidAt: string;
+  refundedAt: string | null;
+}
+
+/** Le montant, tel qu'on l'affiche. */
+function euros(cents: number, currency: string): string {
+  return new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency: currency.toUpperCase(),
+    minimumFractionDigits: 2,
+  }).format(cents / 100);
+}
+
+/** Les raisons du serveur, traduites ici et nulle part ailleurs. */
+const RAISONS_REMBOURSEMENT: Record<string, string> = {
+  forbidden: "Tu n'as pas les droits pour rembourser.",
+  invalid_body: "Demande illisible.",
+  not_configured: "Le moyen de paiement n'est pas branché sur ce serveur. Rien n'a bougé.",
+  missing_permission:
+    "Ta clé Stripe n'a pas le droit de rembourser. Dans Stripe, ouvre ta clé restreinte et passe Remboursements en Écriture. Rien n'a été remboursé.",
+  provider_refused:
+    "Le fournisseur a refusé le remboursement. Rien n'a été remboursé, regarde le détail dans son tableau de bord.",
+  network: "La connexion a coupé. Rien n'a été remboursé.",
+};
 
 /** "il y a 2 jours", "à l'instant"... FR, sans tiret long. */
 function timeAgo(iso: string | null): string {
@@ -84,6 +131,58 @@ export function StudentsTable({
       r.email.toLowerCase().includes(query.toLowerCase()) ||
       (r.fullName ?? "").toLowerCase().includes(query.toLowerCase()),
   );
+
+  /**
+   * REMBOURSER, DEPUIS LA FICHE DE LA PERSONNE.
+   *
+   * Le bouton ne revoque RIEN lui-meme et n'envoie aucun email : il
+   * demande le remboursement au fournisseur, et c'est le webhook qui
+   * coupe l'acces et envoie le message d'au revoir. Ce webhook part de
+   * toute facon, que le remboursement vienne d'ici ou du tableau de bord
+   * de Stripe. Le faire aussi ici donnerait deux chemins pour une meme
+   * decision, et la contradiction serait un acces coupe sans email, ou
+   * un email envoye deux fois.
+   *
+   * Consequence assumee : quelques secondes entre le clic et la bascule
+   * du statut. D'ou le message qui le DIT, au lieu de laisser Bene se
+   * demander si son clic a pris (regle du 3 aout).
+   */
+  async function rembourser(row: StudentRow) {
+    const p = row.payment;
+    if (!p) return;
+    const qui = row.fullName ?? row.email;
+    if (
+      !window.confirm(
+        `Rembourser ${euros(p.amountCents, p.currency)} à ${qui} ?\n\n` +
+          `Son accès sera coupé automatiquement et elle recevra ton email d'au revoir.`,
+      )
+    ) {
+      return;
+    }
+    setBusyId(row.userId);
+    try {
+      const r = await fetch("/api/admin/ventes/rembourser", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ref: p.ref, provider: p.provider }),
+      });
+      const data = (await r.json().catch(() => ({}))) as { ok?: boolean; reason?: string };
+      if (!data.ok) {
+        toast.error(
+          RAISONS_REMBOURSEMENT[data.reason ?? ""] ?? "Le remboursement n'a pas pu se faire.",
+        );
+        return;
+      }
+      toast.success(
+        `Remboursement envoyé à ${qui}. L'accès se coupe et l'email part dans quelques secondes.`,
+      );
+      router.refresh();
+    } catch {
+      toast.error("La connexion a coupé. Rien n'a été remboursé.");
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   async function setAccess(row: StudentRow, action: "grant" | "revoke") {
     setBusyId(row.userId);
@@ -183,6 +282,18 @@ export function StudentsTable({
                   </span>
                   <span aria-hidden>·</span>
                   <span>Connexion : {timeAgo(r.lastSignInAt)}</span>
+                  {r.payment && (
+                    <>
+                      <span aria-hidden>·</span>
+                      <span>
+                        {r.payment.refundedAt ? "Remboursé" : "Payé"}{" "}
+                        <strong className="text-foreground">
+                          {euros(r.payment.amountCents, r.payment.currency)}
+                        </strong>{" "}
+                        {r.payment.provider === "stripe" ? "par carte" : "en PayPal"}
+                      </span>
+                    </>
+                  )}
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-1">
@@ -196,6 +307,18 @@ export function StudentsTable({
                   <Send className="size-4" />
                   <span className="hidden sm:inline">Renvoyer le lien</span>
                 </Button>
+                {r.payment && !r.payment.refundedAt && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={busyId === r.userId}
+                    onClick={() => rembourser(r)}
+                    title="Rembourser cette vente et couper l'accès"
+                  >
+                    <Undo2 className="size-4" />
+                    <span className="hidden sm:inline">Rembourser</span>
+                  </Button>
+                )}
                 {r.status === "active" ? (
                   <Button
                     variant="ghost"

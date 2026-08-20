@@ -1,4 +1,8 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { buildSales, type EventRow } from "@/lib/checkout/sales";
+import { readOwnerPaypal } from "@/lib/checkout/ownerAccount";
+import { getOwnerPaypalOrder } from "@/lib/checkout/paypalOwner";
+import { VentesOrphelines } from "./VentesOrphelines";
 import { StudentsTable, type StudentRow } from "@/components/admin/StudentsTable";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +24,7 @@ export default async function AdminElevesPage() {
     { data: profiles },
     { count: totalDays },
     { data: conversions },
+    { data: evenementsPaiement },
   ] = await Promise.all([
     supabaseAdmin.from("enrollments").select("user_id, status, granted_at"),
     supabaseAdmin.from("progress").select("user_id, status"),
@@ -28,6 +33,16 @@ export default async function AdminElevesPage() {
     supabaseAdmin.from("days").select("id", { count: "exact", head: true }).eq("status", "published"),
     // Personnes amenées via le lien affilié de chaque élève (conversions).
     supabaseAdmin.from("affiliate_conversions").select("sa, email"),
+    // LES VENTES ENCAISSEES PAR NOUS, pour les poser sur la fiche de la
+    // personne. Bene, 20 aout : "tu peux pas centraliser ? Je vois les
+    // eleves, leurs infos + le bouton rembourser ?" Elle ne pense pas en
+    // "ventes", elle pense en PERSONNES.
+    supabaseAdmin
+      .from("webhook_logs")
+      .select("source, event_type, payload, created_at")
+      .in("source", ["stripe", "paypal"])
+      .order("created_at", { ascending: false })
+      .limit(500),
   ]);
 
   const enrollByUser = new Map((enrollments ?? []).map((e) => [e.user_id as string, e]));
@@ -54,6 +69,38 @@ export default async function AdminElevesPage() {
     invitedBySa.get(sa)!.add(email);
   }
 
+  // ── LES VENTES, RAPPROCHEES DES PERSONNES ──
+  //
+  // La cle du rapprochement est l'EMAIL, en minuscules : c'est la seule
+  // chose que Stripe, PayPal et notre base ont en commun.
+  //
+  // On complete les ventes PayPal au passage : leur evenement ne porte
+  // pas l'adresse de l'acheteur, elle vit sur la COMMANDE. Sans ca, une
+  // vente PayPal ne se rattacherait a personne et tomberait a tort dans
+  // le bloc des ventes sans eleve.
+  const ventes = buildSales((evenementsPaiement ?? []) as EventRow[]);
+  const comptePaypal = readOwnerPaypal(process.env);
+  if (comptePaypal) {
+    await Promise.all(
+      ventes
+        .filter((v) => v.provider === "paypal" && !v.email)
+        .slice(0, 25)
+        .map(async (v) => {
+          const commande = await getOwnerPaypalOrder({ compte: comptePaypal, orderId: v.ref });
+          if (commande?.email) v.email = commande.email;
+        }),
+    );
+  }
+
+  // La vente la PLUS RECENTE gagne : quelqu'un qui rachete apres un
+  // remboursement doit voir son achat en cours, pas l'ancien. `buildSales`
+  // rend deja la liste du plus recent au plus ancien.
+  const venteParEmail = new Map<string, (typeof ventes)[number]>();
+  for (const v of ventes) {
+    const cle = (v.email ?? "").trim().toLowerCase();
+    if (cle && !venteParEmail.has(cle)) venteParEmail.set(cle, v);
+  }
+
   const rows: StudentRow[] = users
     .map((u) => {
       const sa = saByUser.get(u.id) ?? null;
@@ -67,9 +114,23 @@ export default async function AdminElevesPage() {
         lastSignInAt: u.last_sign_in_at ?? null,
         isAffiliate: !!sa,
         invitedCount: sa ? invitedBySa.get(sa)?.size ?? 0 : 0,
+        payment: venteParEmail.get((u.email ?? "").trim().toLowerCase()) ?? null,
       };
     })
     .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+
+  // ── L'ARGENT ENTRE SANS QUE PERSONNE N'APPARAISSE : ON LE CRIE ──
+  //
+  // Une vente qui ne se rattache a aucun compte, c'est quelqu'un qui a
+  // paye et qui n'a peut-etre pas ses acces. C'est le drame Ivan, et le
+  // pire serait de l'ecarter en silence pour garder un tableau propre.
+  // Le bloc n'apparait QUE s'il y a quelque chose dedans.
+  const emailsConnus = new Set(
+    users.map((u) => (u.email ?? "").trim().toLowerCase()).filter(Boolean),
+  );
+  const orphelines = ventes.filter(
+    (v) => !v.email || !emailsConnus.has(v.email.trim().toLowerCase()),
+  );
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
@@ -80,6 +141,7 @@ export default async function AdminElevesPage() {
           Gestion manuelle (remboursement, offre directe) à droite. Ces données restent privées.
         </p>
       </header>
+      <VentesOrphelines ventes={orphelines} />
       <StudentsTable initialRows={rows} totalDays={totalDays ?? 7} />
     </div>
   );
