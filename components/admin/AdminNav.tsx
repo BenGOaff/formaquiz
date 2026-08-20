@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, Users, Sparkles, ScrollText, Languages, Boxes, Inbox, Star, Image, Award, ArrowUpRight, Receipt } from "lucide-react";
+import { CalendarDays, Users, Sparkles, ScrollText, Languages, Boxes, Inbox, Star, Image, Award, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
   { href: "/admin/jours", label: "Jours", icon: CalendarDays },
   { href: "/admin/eleves", label: "Élèves", icon: Users },
-  { href: "/admin/ventes", label: "Ventes", icon: Receipt },
   { href: "/admin/coach", label: "Coach", icon: Sparkles },
   { href: "/admin/coach/journal", label: "Journal", icon: ScrollText },
   { href: "/admin/personas", label: "Personas", icon: Languages },
