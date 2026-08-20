@@ -21,6 +21,7 @@
 import { notFound } from "next/navigation";
 
 import { findOwnerProduct, formatOwnerPrice } from "@/lib/checkout/catalog";
+import { readOwnerStripe, readOwnerStripePublishable } from "@/lib/checkout/ownerAccount";
 import { isSalesPreviewOpen } from "@/lib/sales/previewGate";
 import CommandeClient from "./CommandeClient";
 
@@ -47,6 +48,13 @@ export default async function Page({
   if (!product) notFound();
 
   const prix = formatOwnerPrice(product);
+
+  // Les deux clés doivent parler du MÊME monde. Une clé secrète live avec
+  // une clé publiable test (ou l'inverse) donne un formulaire qui refuse
+  // la session sans dire pourquoi : moitié de configuration, écran muet.
+  const publiable = readOwnerStripePublishable(process.env);
+  const secrete = readOwnerStripe(process.env);
+  const modesDiscordants = !!publiable && !!secrete && publiable.mode !== secrete.mode;
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
@@ -92,7 +100,8 @@ export default async function Page({
           <CommandeClient
             produit={product.id}
             cle={String(k ?? "")}
-            clePublique={process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_OWNER ?? null}
+            clePublique={modesDiscordants ? null : (publiable?.key ?? null)}
+            modesDiscordants={modesDiscordants}
           />
         </section>
       </div>
