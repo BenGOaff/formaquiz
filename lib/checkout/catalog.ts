@@ -64,17 +64,18 @@ export interface OwnerProduct {
 /**
  * LE CATALOGUE.
  *
- * Il ne contient pour l'instant QUE le produit dont Béné a demandé la
- * réplique : l'Atelier complet à 47 €, celui de
- * `tipote.fr/atelier-du-quiz-bene`, qui ouvre le palier `plus` (vérifié
- * dans `app/api/systeme-io/webhook/route.ts`).
+ * **Un seul produit, et c'est une décision, pas un trou.** Béné, 20 août :
+ * "on vend l'Atelier à 47 € uniquement." Notre bon de commande vend donc
+ * l'Atelier complet, celui de `tipote.fr/atelier-du-quiz-bene`, qui ouvre
+ * le palier `plus` (vérifié dans `app/api/systeme-io/webhook/route.ts`).
  *
- * **Deux autres produits existent et n'y sont pas** : l'Atelier du tunnel
- * pub (palier `standard`) et la page de deuxième chance pour les bonus
- * (`tipote.fr/atelier-du-quiz-bonus`). Ils ne sont pas oubliés : leurs
- * prix ne sont écrits nulle part dans ce dépôt, et un prix inventé serait
- * facturé pour de vrai. Ils s'ajouteront ici, en deux lignes chacun, le
- * jour où le montant sera connu.
+ * Ne PAS ajouter ici l'Atelier du tunnel pub (palier `standard`) ni la
+ * page de deuxième chance des bonus (`tipote.fr/atelier-du-quiz-bonus`).
+ * Ces deux là continuent d'exister et de fonctionner : leurs bons de
+ * commande Systeme.io et leurs webhooks (`/webhook/atelier`,
+ * `/webhook/atelier-plus`, `/webhook/atelier-bonus`) sont intacts et ne
+ * sont pas touchés par ce chantier. Ils ne se vendent simplement pas
+ * depuis chez nous.
  */
 export const OWNER_CATALOG: Readonly<Record<OwnerProductId, OwnerProduct>> = {
   atelier: {

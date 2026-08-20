@@ -40,6 +40,18 @@ test("l'Atelier vendu ouvre le palier COMPLET", () => {
   assert.equal(OWNER_CATALOG.atelier.tier, "plus");
 });
 
+test("on ne vend QUE l'Atelier complet, a 47 euros", () => {
+  // Béné, 20 août : "on vend l'Atelier à 47 € uniquement."
+  //
+  // Ce test n'est pas une formalité : le tunnel pub et la page de
+  // deuxième chance des bonus existent toujours côté Systeme.io, et le
+  // réflexe naturel du prochain passage serait de "compléter" le
+  // catalogue avec eux. Ce serait mettre en vente chez nous des offres
+  // qu'elle ne veut pas y vendre.
+  assert.deepEqual(Object.keys(OWNER_CATALOG), ["atelier"]);
+  assert.equal(OWNER_CATALOG.atelier.amountCents, 4700);
+});
+
 test("la source est DISTINCTE de celle de Systeme.io", () => {
   // Chaque bon de commande écrit sa propre source dans `enrollments` et
   // dans les journaux. Partager celle de Systeme.io mélangerait les deux
