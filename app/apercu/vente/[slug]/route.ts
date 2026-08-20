@@ -25,8 +25,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "node:fs";
 import path from "node:path";
-import { timingSafeEqual } from "node:crypto";
 import { renderSalesPage, type SalesPageMeta } from "@/lib/sales/servePage";
+import { isSalesPreviewOpen } from "@/lib/sales/previewGate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,26 +47,12 @@ const PAGES: Record<string, Omit<SalesPageMeta, "slug">> = {
   },
 };
 
-/** Comparaison à durée constante : une clé ne se devine pas à la montre. */
-function memeCle(recue: string, attendue: string): boolean {
-  const a = Buffer.from(recue);
-  const b = Buffer.from(attendue);
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
-}
-
+/**
+ * La porte vit dans `lib/sales/previewGate.ts` et pas ici : le bon de
+ * commande en a besoin aussi, et deux copies d'une décision divergent.
+ */
 function porteOuverte(req: NextRequest): boolean {
-  const attendue = (process.env.SALES_PREVIEW_TOKEN ?? "").trim();
-  // Absence de configuration = fermé. Jamais l'inverse.
-  if (attendue.length < 16) {
-    console.warn(
-      "[apercu/vente] SALES_PREVIEW_TOKEN absent ou trop court : la porte reste fermee.",
-    );
-    return false;
-  }
-  const recue = (req.nextUrl.searchParams.get("k") ?? "").trim();
-  if (!recue) return false;
-  return memeCle(recue, attendue);
+  return isSalesPreviewOpen(req.nextUrl.searchParams.get("k"), process.env);
 }
 
 export async function GET(
