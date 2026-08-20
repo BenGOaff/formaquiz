@@ -27,6 +27,14 @@ const PUBLIC_PREFIXES = [
   // dans l'URL, vérifiée par la route elle-même.
   "/apercu",
   "/v",
+  // Le bon de commande et son retour de paiement. Publics par la même
+  // évidence : quelqu'un qui achète l'Atelier n'a pas encore de compte,
+  // c'est justement l'achat qui le lui crée. Sans cette ligne, le
+  // middleware l'enverrait se connecter avant de pouvoir payer.
+  // Ils restent fermés par la clé SALES_PREVIEW_TOKEN tant que le
+  // chantier n'est pas ouvert, et la page elle-même répond 404 sans elle.
+  "/commande",
+  "/api/commande",
 ];
 
 // Routes réservées à l'élève connecté (enrollment vérifié plus loin
