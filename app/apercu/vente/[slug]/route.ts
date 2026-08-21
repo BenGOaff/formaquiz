@@ -27,6 +27,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { renderSalesPage, type SalesPageMeta } from "@/lib/sales/servePage";
 import { isSalesOpen } from "@/lib/sales/previewGate";
+import { isPublicSalesHost, publicSalesCanonical } from "@/lib/sales/salesHosts";
+import type { OwnerProductId } from "@/lib/checkout/catalog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,13 +39,17 @@ export const dynamic = "force-dynamic";
  * Il vit ICI et pas dans le HTML capturé : le HTML sera remplacé à
  * chaque nouvelle capture, alors que ces textes sont des décisions.
  */
-const PAGES: Record<string, Omit<SalesPageMeta, "slug">> = {
+const PAGES: Record<string, Omit<SalesPageMeta, "slug"> & { produit: OwnerProductId }> = {
   "atelier-du-quiz": {
+    // La canonique d'APERÇU. Sur le domaine public, elle est remplacée
+    // par `publicSalesCanonical()` : voir plus bas.
     canonical: "https://www.tipote.fr/atelier-du-quiz",
     title: "L'Atelier du Quiz : lance ton quiz marketing en 7 jours",
     description:
       "La méthode complète pour créer un quiz qui capture des leads qualifiés et les transforme en clients, en 7 jours, sans compétence technique.",
     locale: "fr_FR",
+    /** Ce que cette page vend, donc où mènent ses boutons. */
+    produit: "atelier",
   },
 };
 
@@ -101,18 +107,55 @@ export async function GET(
     );
   }
 
-  const html = renderSalesPage(fs.readFileSync(fichier, "utf8"), { slug, ...meta }, {
-    // En aperçu, JAMAIS indexable : une page de test qui remonte dans
-    // Google ferait doublon avec l'originale et abîmerait les deux.
-    indexable: false,
-  });
+  // LE DOMAINE PUBLIC N'EST PAS UN APERÇU.
+  //
+  // Sur `atelierduquiz.fr`, la page est la vraie page : elle doit être
+  // indexable, et sa canonique doit désigner ce domaine. Derrière la
+  // clé, elle reste un chantier : `noindex`, canonique vers l'originale.
+  //
+  // L'hôte est un PARAMÈTRE de la décision, jamais deviné ailleurs.
+  const publique = isPublicSalesHost(req.headers.get("host"));
+  const canonique = (publique && publicSalesCanonical(slug)) || meta.canonical;
+
+  const html = renderSalesPage(
+    fs.readFileSync(fichier, "utf8"),
+    { slug, ...meta, canonical: canonique },
+    {
+      indexable: publique,
+      // TOUS les boutons de commande mènent chez nous. Sans ça, ils
+      // ouvrent la popup Systeme.io capturée avec la page, et notre
+      // paiement n'est jamais atteint (trouvé le 21 août, dix minutes
+      // après la mise en ligne du domaine).
+      checkoutHref: `/commande/${meta.produit}`,
+      onRewrite: (info) => {
+        if (info.rewritten.length === 0) {
+          console.error(
+            `[apercu/vente] ${slug} : AUCUN bouton de commande reecrit. ` +
+              `Les visiteurs tombent sur le bon de commande Systeme.io.`,
+          );
+        }
+        if (info.missing.length > 0) {
+          // Le symptôme du 19 août : des identifiants qui ne
+          // correspondent plus à rien parce que les boutons ont été
+          // recréés dans l'éditeur. Ça se dit, ça ne s'avale pas.
+          console.warn(
+            `[apercu/vente] ${slug} : ${info.missing.length} bouton(s) de commande ` +
+              `declares dans la configuration mais absents du HTML : ${info.missing.join(", ")}`,
+          );
+        }
+      },
+    },
+  );
 
   return new NextResponse(html, {
     status: 200,
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "no-store, max-age=0",
-      "X-Robots-Tag": "noindex, nofollow",
+      // L'en-tête suit la même décision que la balise. Les deux se
+      // contredisant, c'est l'en-tête qui gagne : le laisser en dur
+      // aurait rendu `indexable` décoratif.
+      ...(publique ? {} : { "X-Robots-Tag": "noindex, nofollow" }),
     },
   });
 }

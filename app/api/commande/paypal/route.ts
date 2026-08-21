@@ -20,6 +20,7 @@ import { findOwnerProduct } from "@/lib/checkout/catalog";
 import { readOwnerPaypal, readOwnerPaypalWebhookId } from "@/lib/checkout/ownerAccount";
 import { createOwnerPaypalOrder } from "@/lib/checkout/paypalOwner";
 import { isSalesOpen } from "@/lib/sales/previewGate";
+import { checkoutReturnBase } from "@/lib/sales/salesHosts";
 import { resolveAppUrl } from "@/lib/appUrl";
 
 export const runtime = "nodejs";
@@ -65,7 +66,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: false, reason: "live_without_webhook" }, { status: 503 });
   }
 
-  const base = resolveAppUrl(req.nextUrl.origin);
+  // ON RAMENE L'ACHETEUR LA OU IL A ACHETE.
+  //
+  // Sur atelierduquiz.fr il n'a aucune cle dans son URL : le renvoyer
+  // sur le domaine canonique lui donnerait une page 404 juste apres
+  // avoir paye. `checkoutReturnBase` n'accepte que NOS domaines de
+  // vente, donc un Host falsifie ne peut pas detourner le retour.
+  const base = checkoutReturnBase(req.nextUrl.origin, resolveAppUrl(req.nextUrl.origin));
   const cle = encodeURIComponent(String(body.k ?? ""));
   const retour = `${base}/commande/${product.id}/retour?k=${cle}`;
 
