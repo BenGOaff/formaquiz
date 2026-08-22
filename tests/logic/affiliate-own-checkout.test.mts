@@ -103,6 +103,7 @@ test("on paie sur le HT, jamais sur le TTC", () => {
 test("une taxe absente ne fabrique JAMAIS un taux de TVA", () => {
   // C'est le cas de PayPal, qui ne ventile pas. On rend le montant tel
   // quel : la verite de cette vente la, pas une regle de trois.
+  // Decision Bene du 22 aout : "pour paypal : oui on garde le TTC."
   assert.equal(commissionBaseCents(4700, 0), 4700);
   assert.equal(commissionBaseCents(4700, null), 4700);
   assert.equal(commissionBaseCents(4700, undefined), 4700);
@@ -203,6 +204,24 @@ test("le taux n'est ecrit qu'a UN endroit", () => {
       `${f} contient un taux de commission en dur`,
     );
   }
+});
+
+test("PayPal passe une taxe a zero, et personne n'y met 20%", () => {
+  // Decision Bene du 22 aout : la vente PayPal paie sur le TTC. Le jour
+  // ou quelqu'un voudra "corriger" ca en posant un taux francais en dur,
+  // ce test le dira : un taux inventé produit un versement faux qui a
+  // l'air juste, et il serait faux pour toute acheteuse hors de France.
+  const src = fs.readFileSync(
+    path.join(process.cwd(), "app/api/commande/paypal/webhook/route.ts"),
+    "utf8",
+  );
+  assert.ok(/amountTaxCents:\s*0\b/.test(src), "la vente PayPal ne passe plus une taxe a zero");
+  const code = src
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .split("\n")
+    .filter((l) => !l.trim().startsWith("//"))
+    .join("\n");
+  assert.ok(!/0\.2\b/.test(code), "un taux de TVA est apparu en dur sur la vente PayPal");
 });
 
 test("le catalogue nomme sa famille d'affiliation", () => {

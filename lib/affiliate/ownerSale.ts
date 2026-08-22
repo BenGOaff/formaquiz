@@ -47,10 +47,16 @@ export interface VenteACommissionner {
    * La TVA comprise dans le total, quand le fournisseur la dit.
    *
    * Stripe la calcule et la renvoie. **PayPal ne la dit pas** : notre
-   * commande PayPal envoie un montant unique, sans ventilation. La base
-   * y vaut donc le TTC, ce qui paie l'affiliée un peu PLUS que sur une
-   * vente par carte. C'est assumé, dit dans le journal, et jamais
-   * remplacé par un taux de TVA inventé.
+   * commande PayPal envoie un montant unique, sans ventilation.
+   *
+   * DÉCISION BÉNÉ, 22 août 2026 : "pour paypal : oui on garde le TTC."
+   * Une vente PayPal paie donc l'affiliée sur le TTC, soit un peu plus
+   * que la même vente par carte. C'est un choix, pas un défaut, et il
+   * vaut mieux que l'alternative : appliquer un taux de TVA inventé
+   * produirait un versement faux qui a l'air juste.
+   *
+   * **Ne PAS "corriger" ça en posant 0.2 quelque part.** Le jour où
+   * PayPal ventilera la taxe, c'est cette valeur là qu'on lira.
    */
   amountTaxCents: number;
   product: { id: string; label: string; affiliateApp: "quizing" | "tiquiz" };
