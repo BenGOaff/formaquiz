@@ -19,6 +19,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js";
 
+import { readSaFromBrowser } from "@/lib/affiliate/sa";
+
 /** Les raisons du serveur, traduites ici et nulle part ailleurs. */
 const RAISONS: Record<string, string> = {
   not_found: "Ce bon de commande n'est pas ouvert.",
@@ -79,11 +81,30 @@ export default function CommandeClient({
     }
   }, [clePublique, modesDiscordants]);
 
+  // ── L'AFFILIÉE QUI A ENVOYÉ CETTE ACHETEUSE ──
+  //
+  // Lu AU MOMENT DE L'APPEL, pas dans un `useEffect`, et c'est le coeur
+  // du sujet.
+  //
+  // Un effet de CE composant s'exécute APRÈS les effets de ses enfants :
+  // le fournisseur Stripe aurait donc déjà appelé `fetchClientSecret`
+  // avant que l'identifiant soit connu, et la commission serait perdue
+  // sans que rien ne s'affiche de travers. Et le mettre dans un état
+  // changerait l'identité de la fonction, donc remonterait le formulaire
+  // de paiement au premier rendu.
+  //
+  // Ici il n'y a ni état, ni dépendance, ni course : la fonction ne
+  // tourne que dans le navigateur, au moment où on en a besoin.
+  const refAffiliee = useCallback(
+    () => readSaFromBrowser(window.location.search, document.cookie) ?? undefined,
+    [],
+  );
+
   const fetchClientSecret = useCallback(async () => {
     const r = await fetch("/api/commande/session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ produit, k: cle }),
+      body: JSON.stringify({ produit, k: cle, ref: refAffiliee() }),
     });
     const data = (await r.json().catch(() => ({}))) as {
       ok?: boolean;
@@ -100,7 +121,7 @@ export default function CommandeClient({
     }
     if (data.mode) setMode(data.mode);
     return data.clientSecret;
-  }, [produit, cle]);
+  }, [produit, cle, refAffiliee]);
 
   // PAYPAL : ON QUITTE LA PAGE, DONC ON DIT CE QUI SE PASSE.
   //
@@ -115,7 +136,7 @@ export default function CommandeClient({
       const r = await fetch("/api/commande/paypal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ produit, k: cle }),
+        body: JSON.stringify({ produit, k: cle, ref: refAffiliee() }),
       });
       const data = (await r.json().catch(() => ({}))) as {
         ok?: boolean;
@@ -134,7 +155,7 @@ export default function CommandeClient({
       setErreurPaypal("La connexion a coupé avant d'ouvrir PayPal. Rien n'a été débité.");
       setPaypalEnCours(false);
     }
-  }, [produit, cle]);
+  }, [produit, cle, refAffiliee]);
 
   // `loadStripe` rend une NOUVELLE promesse a chaque appel. Appelee dans
   // le JSX, elle en fabriquerait une par rendu, et le fournisseur Stripe

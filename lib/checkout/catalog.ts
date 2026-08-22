@@ -59,6 +59,17 @@ export interface OwnerProduct {
   tier: AtelierTier;
   /** Ce qu'on écrit dans `enrollments.source` et dans les journaux. */
   source: string;
+  /**
+   * La famille d'affiliation, donc le taux de commission.
+   *
+   * Elle est NOMMÉE ici et pas devinée au moment de la vente : une vente
+   * qui passe par notre bon de commande ne porte ni URL de tunnel ni
+   * offer id Systeme.io, donc `detectProduct()` ne peut rien en dire.
+   * Le taux lui même vit dans `lib/affiliateTracking.ts`
+   * (`affiliateMatchFor`), à un seul endroit : un pourcentage recopié
+   * dans un deuxième fichier finit toujours par diverger du premier.
+   */
+  affiliateApp: "quizing" | "tiquiz";
 }
 
 /**
@@ -86,6 +97,7 @@ export const OWNER_CATALOG: Readonly<Record<OwnerProductId, OwnerProduct>> = {
     interval: null,
     tier: "plus",
     source: "stripe",
+    affiliateApp: "quizing",
   },
 } as const;
 

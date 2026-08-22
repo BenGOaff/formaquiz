@@ -45,6 +45,7 @@ import { findOwnerProduct } from "@/lib/checkout/catalog";
 import { readOwnerStripe, readOwnerStripeWebhookSecret } from "@/lib/checkout/ownerAccount";
 import { retrieveOwnerSession, verifyStripeSignature } from "@/lib/checkout/stripeCheckout";
 import { logWebhookEvent } from "@/lib/webhooks/log";
+import { commissionnerVente } from "@/lib/affiliate/ownerSale";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -184,6 +185,27 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     `[commande/webhook] acces ouvert pour ${vente.email} : ${product.id} (${product.tier}), ` +
       `compte ${octroi.created ? "cree" : "existant"}`,
   );
+
+  // ── LA COMMISSION DE L'AFFILIÉE ──
+  //
+  // APRÈS l'accès, et jamais avant : une commission qui échoue ne doit
+  // pas priver une acheteuse de ce qu'elle a payé. On ne renvoie donc
+  // jamais d'erreur ici, on le dit dans le journal.
+  //
+  // Sans ce bloc, une vente faite sur NOTRE bon de commande ne payait
+  // personne. Le tunnel Systeme.io, lui, attribuait bien (via
+  // `/api/affiliate/sio-sale`) : on avait donc déplacé la vente sans
+  // déplacer la commission, et le symptôme était l'absence de symptôme.
+  await commissionnerVente({
+    moyen: "stripe",
+    email: vente.email,
+    reference: vente.paymentRef,
+    affiliateRef: vente.affiliateRef,
+    amountTotalCents: vente.amountTotalCents,
+    amountTaxCents: vente.amountTaxCents,
+    product,
+  });
+
   return NextResponse.json({ ok: true, granted: true });
 }
 
