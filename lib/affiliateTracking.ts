@@ -17,10 +17,25 @@ const ATTRIBUTION_WINDOW_DAYS = 90;
 const QUIZING_RATE = 0.7;
 const TIQUIZ_RATE = 0.4;
 
-// Format Systeme.io : "sa" + 20-80 caractères hex.
-export const SA_RE = /^sa[a-f0-9]{20,80}$/i;
+// Le format du `sa` vit dans lib/affiliate/sa.ts, avec le cookie et la
+// fenetre d'attribution : un seul foyer, parce que ce fichier est
+// `server-only` donc hors de portee du runner de tests.
+import { SA_RE } from "@/lib/affiliate/sa";
+export { SA_RE };
 
-type ProductMatch = { source_app: "quizing" | "tiquiz"; rate: number };
+export type ProductMatch = { source_app: "quizing" | "tiquiz"; rate: number };
+
+/**
+ * Le couple produit + taux, nomme au lieu d'etre devine.
+ *
+ * Sert a notre PROPRE bon de commande : une vente Stripe ne porte ni
+ * URL de tunnel ni offer id Systeme.io, donc `detectProduct()` ne peut
+ * rien en faire. Le catalogue dit a quelle famille appartient le
+ * produit, et le taux sort d'ici, jamais d'un nombre recopie ailleurs.
+ */
+export function affiliateMatchFor(app: "quizing" | "tiquiz"): ProductMatch {
+  return { source_app: app, rate: app === "quizing" ? QUIZING_RATE : TIQUIZ_RATE };
+}
 
 /** Normalise un offer/price id Systeme.io vers son coeur (ex.
  *  "offerprice-b3fe4b38" / "offer-price-b3fe4b38" / "b3fe4b38" -> "b3fe4b38"). */

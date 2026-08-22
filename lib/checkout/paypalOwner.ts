@@ -187,6 +187,22 @@ export interface PaypalCaptureInfo {
   affiliateRef: string | null;
   /** L'identifiant de la capture, celui qu'on rembourse. */
   captureId: string | null;
+  /**
+   * Ce qui a été encaissé, en centimes.
+   *
+   * Sert à la commission de l'affiliée. **PayPal ne ventile pas la TVA**
+   * ici : notre commande envoie un montant unique. C'est donc un TTC
+   * sans taxe connue, et `lib/affiliate/ownerSale.ts` en tire les
+   * conséquences au lieu d'inventer un taux.
+   */
+  amountTotalCents: number;
+}
+
+/** "47.00" -> 4700. Tout ce qui n'est pas un montant vaut zéro. */
+export function paypalAmountToCents(raw: unknown): number {
+  const n = Number(String(raw ?? "").trim().replace(",", "."));
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.round(n * 100);
 }
 
 /** Sépare `atelier|CODEAFFILIE` en ses deux morceaux. */
@@ -209,7 +225,14 @@ interface OrderShape {
   } | null;
   purchase_units?: Array<{
     custom_id?: string | null;
-    payments?: { captures?: Array<{ id?: string; status?: string }> } | null;
+    amount?: { value?: string | null } | null;
+    payments?: {
+      captures?: Array<{
+        id?: string;
+        status?: string;
+        amount?: { value?: string | null } | null;
+      }>;
+    } | null;
   }>;
 }
 
@@ -224,6 +247,11 @@ function readOrder(json: OrderShape): PaypalCaptureInfo {
     productId,
     affiliateRef,
     captureId: capture?.id ?? null,
+    // Ce que la CAPTURE a vraiment pris d'abord (c'est l'argent reel),
+    // le montant demande ensuite. Les deux sont egaux en temps normal ;
+    // quand ils different, c'est la capture qui fait foi.
+    amountTotalCents:
+      paypalAmountToCents(capture?.amount?.value) || paypalAmountToCents(unit?.amount?.value),
   };
 }
 

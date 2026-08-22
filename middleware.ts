@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { isAdminEmail } from "@/lib/adminEmails";
 import { salesSlugForHost } from "@/lib/sales/salesHosts";
+import { readSa, SA_COOKIE, SA_MAX_AGE_SECONDS, SA_PARAM } from "@/lib/affiliate/sa";
 
 // Routes accessibles sans être connecté.
 const PUBLIC_PREFIXES = [
@@ -52,6 +53,33 @@ function startsWithAny(pathname: string, prefixes: string[]): boolean {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // ── LE `?sa=` D'UNE AFFILIÉE, RANGÉ DÈS LA PREMIÈRE PAGE ──
+  //
+  // Sur un tunnel Systeme.io, c'était leur page qui le captait. Sur notre
+  // domaine, personne ne le fait : sans cette ligne, une affiliée qui
+  // envoie du monde sur atelierduquiz.fr n'est payée sur RIEN, et le
+  // symptôme est le pire qui soit puisqu'il n'y en a aucun. Tout marche,
+  // l'argent rentre, et la commission n'existe pas.
+  //
+  // On le pose sur TOUTES les réponses, y compris la réécriture de la
+  // page de vente : c'est justement la page où le lien atterrit.
+  const sa = readSa(req.nextUrl.searchParams.get(SA_PARAM));
+  const poseSa = (res: NextResponse): NextResponse => {
+    if (sa) {
+      res.cookies.set(SA_COOKIE, sa, {
+        maxAge: SA_MAX_AGE_SECONDS,
+        path: "/",
+        sameSite: "lax",
+        // Lisible par le bon de commande : c'est LUI qui doit le
+        // transmettre à Stripe. `httpOnly` le rendrait invisible au
+        // navigateur, donc inutile.
+        httpOnly: false,
+        secure: req.nextUrl.protocol === "https:",
+      });
+    }
+    return res;
+  };
+
   // Laisse passer les assets et les routes publiques.
   // NOS DOMAINES DE VENTE (atelierduquiz.fr) : la racine sert la page de
   // vente. On REECRIT au lieu de rediriger, pour que l'adresse vue par le
@@ -61,17 +89,17 @@ export async function middleware(req: NextRequest) {
   if (slugDeVente && pathname === "/") {
     const url = req.nextUrl.clone();
     url.pathname = `/apercu/vente/${slugDeVente}`;
-    return NextResponse.rewrite(url);
+    return poseSa(NextResponse.rewrite(url));
   }
 
   if (startsWithAny(pathname, PUBLIC_PREFIXES)) {
-    return NextResponse.next();
+    return poseSa(NextResponse.next());
   }
 
   const needsAuth = startsWithAny(pathname, PROTECTED_PREFIXES);
   const needsAdmin = startsWithAny(pathname, ADMIN_PREFIXES);
   if (!needsAuth && !needsAdmin) {
-    return NextResponse.next();
+    return poseSa(NextResponse.next());
   }
 
   // Prépare une réponse mutable pour que Supabase puisse rafraîchir les
@@ -102,15 +130,15 @@ export async function middleware(req: NextRequest) {
   if (!user) {
     const loginUrl = new URL("/login", req.url);
     loginUrl.searchParams.set("next", pathname);
-    return NextResponse.redirect(loginUrl);
+    return poseSa(NextResponse.redirect(loginUrl));
   }
 
   if (needsAdmin && !isAdminEmail(user.email)) {
     // Un élève ne voit jamais l'admin : on le renvoie à son tableau de bord.
-    return NextResponse.redirect(new URL("/dashboard", req.url));
+    return poseSa(NextResponse.redirect(new URL("/dashboard", req.url)));
   }
 
-  return res;
+  return poseSa(res);
 }
 
 export const config = {

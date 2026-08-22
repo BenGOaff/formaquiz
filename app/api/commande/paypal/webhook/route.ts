@@ -23,6 +23,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { grantAccessByEmail, revokeAccessByEmail } from "@/lib/access/grantAccess";
+import { commissionnerVente } from "@/lib/affiliate/ownerSale";
 import { findOwnerProduct, tierForOwnerProduct } from "@/lib/checkout/catalog";
 import { readOwnerPaypal, readOwnerPaypalWebhookId } from "@/lib/checkout/ownerAccount";
 import {
@@ -153,6 +154,26 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     `[commande/paypal/webhook] acces ouvert pour ${email} : ${product.id}, ` +
       `compte ${octroi.created ? "cree" : "existant"}`,
   );
+
+  // ── LA COMMISSION DE L'AFFILIÉE, APRÈS L'ACCÈS ──
+  //
+  // Même fonction que le paiement par carte : deux moyens de paiement
+  // qui calculeraient chacun leur commission finiraient par payer deux
+  // montants différents pour la même vente.
+  //
+  // La référence d'idempotence est la CAPTURE : c'est elle qui identifie
+  // l'encaissement, et c'est elle qu'on rembourse.
+  await commissionnerVente({
+    moyen: "paypal",
+    email,
+    reference: commande?.captureId ?? (String(event.resource?.id ?? "").trim() || null),
+    affiliateRef: commande?.affiliateRef ?? depuisCapture.affiliateRef,
+    amountTotalCents: commande?.amountTotalCents ?? 0,
+    // PayPal ne ventile pas la TVA : voir `VenteACommissionner`.
+    amountTaxCents: 0,
+    product,
+  });
+
   return NextResponse.json({ ok: true, granted: true });
 }
 
