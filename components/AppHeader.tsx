@@ -11,6 +11,7 @@ import {
   GraduationCap,
   LifeBuoy,
   Link2,
+  LineChart,
   LogOut,
   Rocket,
   Send,
@@ -121,6 +122,26 @@ export function AppHeader({
                 <ShieldCheck />
                 <span className="hidden sm:inline">Admin</span>
               </Link>
+            </Button>
+          )}
+
+          {/* LE PILOTAGE VIT DANS TIQUIZ, ET IL N'Y A QU'UN SEUL ECRAN.
+              Ventes, abonnes, departs, affiliees : tout est la-bas. Sans
+              ce raccourci il faudrait retenir une adresse, et un ecran
+              qu'on ne trouve pas n'existe pas (drame Jocelyne, 3 aout).
+              GATE SUR isAdmin : c'est le chiffre d'affaires de Bene, une
+              eleve ne doit jamais voir ce lien. */}
+          {isAdmin && (
+            <Button asChild variant="ghost" size="sm">
+              <a
+                href="https://quiz.tipote.com/admin"
+                target="_blank"
+                rel="noreferrer"
+                title="Ventes, abonnes, affiliees : le tableau de bord unique"
+              >
+                <LineChart />
+                <span className="hidden sm:inline">Pilotage</span>
+              </a>
             </Button>
           )}
 
