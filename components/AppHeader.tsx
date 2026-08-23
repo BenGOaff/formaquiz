@@ -215,12 +215,19 @@ export function AppHeader({
                       porte de sortie pour un probleme que le coach ne peut
                       pas resoudre (acces, paiement, compte quiz relie au
                       mauvais endroit). Jocelyne a mis quatre allers-retours
-                      a faire remonter exactement ca. Le coach et le groupe
-                      Telegram repondent sur le CONTENU ; l'email repond sur
-                      le COMPTE, et c'est une adresse reelle, deja utilisee
-                      par Tiquiz pour les annulations. */}
+                      a faire remonter exactement ca.
+
+                      23 aout : ce n'est plus un mailto. Bene voulait "un
+                      service de ticketing dans le centre d'aide commun a
+                      toutes les app", et un email dans une boite ne se
+                      retrouve jamais sur la fiche de l'eleve. Le centre
+                      d'aide porte le formulaire, et le ticket atterrit
+                      dans la file unique, rattache a son adresse.
+                      `produit=atelier` evite qu'il ait a le preciser. */}
                   <a
-                    href="mailto:hello@ethilife.fr?subject=Atelier%20du%20Quiz%20-%20besoin%20d%27aide"
+                    href="https://app.tipote.com/support?lang=fr&produit=atelier"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-muted"
                   >
                     <LifeBuoy className="size-4 text-muted-foreground" />

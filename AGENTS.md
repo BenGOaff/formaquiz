@@ -748,3 +748,27 @@ Une commande donnée à Béné doit être sûre même mal replacée.
   cosmétique. Sans lui, un build REFUSÉ se déployait quand même, et c'est
   exactement ce qui a mis Tipote par terre. Ne jamais donner ces deux
   commandes sur deux lignes séparées.
+
+## Le support de l'Atelier passe par le centre d'aide commun (23 août 2026)
+
+Béné : "je veux un service de ticketing dans le centre d'aide commun à
+toutes les app, essentiellement pour Tiquiz et L'Atelier qui sont vendus
+en ce moment, avec ticket relié à la fiche client si elle existe."
+
+Le menu "Besoin d'aide ?" était un `mailto:`. Un email dans une boîte ne
+se retrouve jamais sur la fiche de l'élève, et personne ne sait si on y a
+répondu.
+
+**Règle : il mène à `app.tipote.com/support?lang=fr&produit=atelier`.**
+Le centre d'aide porte les articles ET le formulaire ; le ticket part
+dans la file unique (celle de Tiquiz), rattaché à l'adresse de l'élève,
+et s'affiche sur sa fiche à côté de ses accès et de ses paiements.
+
+`produit=atelier` évite qu'il ait à préciser de quoi il parle : sans lui,
+Béné lit "je n'ai pas reçu mes accès" sans savoir s'il s'agit de Tiquiz
+ou de l'Atelier, et répond à côté.
+
+**L'Atelier n'a pas de table de tickets, et n'en aura pas.** Une
+troisième file rejouerait exactement le problème qu'on vient de régler :
+il y en avait deux, dans deux bases, et une demande pouvait attendre dans
+celle qu'on ne regardait pas.
