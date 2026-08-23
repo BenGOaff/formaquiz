@@ -772,3 +772,27 @@ ou de l'Atelier, et répond à côté.
 troisième file rejouerait exactement le problème qu'on vient de régler :
 il y en avait deux, dans deux bases, et une demande pouvait attendre dans
 celle qu'on ne regardait pas.
+
+## Sortir de Systeme.io : l'état des lieux vit dans le dépôt Tiquiz
+
+Béné, 24 août 2026 : "note où on s'arrête et ce qu'il reste à faire pour
+qu'à terme mon système remplace complètement Systeme io pour les ventes
+et l'affiliation sauf pour les emails."
+
+C'est **`ROADMAP_SORTIE_SIO.md`, à la racine du dépôt TIQUIZ**, et il n'y
+en a qu'un exemplaire : trois copies d'un état des lieux divergeraient en
+une semaine.
+
+**Ce qui concerne CE dépôt : l'Atelier n'émet AUCUNE facture.** Il a son
+propre bon de commande (Stripe + PayPal Orders, 47 €), mais pas de
+`lib/facture/`. Or PayPal n'émet pas de facture : il envoie un avis de
+paiement, sans numérotation, sans identité complète du vendeur, sans
+adresse de l'acheteur et sans ventilation de TVA. Une vente PayPal de
+l'Atelier est donc exactement dans l'état où était Tiquiz avant le
+24 août : encaissée, sans pièce comptable.
+
+Le module de Tiquiz est portable presque tel quel (`lib/facture/*`, purs
+et testés, plus la migration `20260824_facturation.sql`). **La seule
+différence de fond : l'Atelier vend un ACHAT UNIQUE**, donc une facture
+par vente et pas une par échéance. Le déclencheur n'est pas
+`PAYMENT.SALE.COMPLETED` mais la capture de la commande.
