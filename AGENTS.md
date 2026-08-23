@@ -682,7 +682,7 @@ laquelle la panne est déjà passée.
 | Quand | Quoi | Ce qu'il attrape |
 |---|---|---|
 | avant le build | `prebuild` -> `scripts/check-build-env.mjs` | le terminal contredit le `.env` du repo : le build est REFUSÉ |
-| après le build | **rien ici** : l'Atelier n'a pas de postbuild | personne n'a encore vérifié comment `formaquiz-prod` est lancé. Commencer par `pm2 describe formaquiz-prod \| grep -i 'script path'`, puis porter le postbuild des deux autres repos. On n'en invente pas un à l'aveugle. |
+| après le build | **rien à copier ici**, et c'est vérifié | `formaquiz-prod` tourne en `npm start` donc en `next start`, PAS sur `.next/standalone/server.js` (mesuré le 23 août : `script args = start`, `exec cwd = /home/tipote/formaquiz`). Next lit donc le `.env` du dossier du repo, il n'y a rien à copier. Le jour où le lancement passerait à `node .next/standalone/server.js`, porter le postbuild des deux autres repos : sans lui l'app ne vivrait plus que sur la mémoire de PM2. |
 | au démarrage | `instrumentation.ts` -> `lib/env/supabaseProject.ts` | la clé ne parle pas du même projet que l'URL : ça CRIE dans `pm2 logs`, à chaque démarrage |
 | à la demande | `npm run check:supabase-keys` | compare le FICHIER, le TERMINAL, le BUILD et le PROCESSUS (`/proc/<pid>/environ`) |
 
