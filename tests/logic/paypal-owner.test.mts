@@ -15,7 +15,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-import { paypalAmount, readCustomId } from "../../lib/checkout/paypalOwner.ts";
+import { buildCustomId, paypalAmount, readCustomId } from "../../lib/checkout/paypalOwner.ts";
 import { OWNER_CATALOG } from "../../lib/checkout/catalog.ts";
 
 test("le montant envoye a PayPal a TOUJOURS deux decimales", () => {
@@ -48,15 +48,47 @@ test("le produit et l'affiliee font l'aller-retour dans custom_id", () => {
   // c'est lui qu'on relit dans le webhook pour savoir QUOI ouvrir et A
   // QUI verser la commission. S'il se lisait mal, l'acces s'ouvrirait
   // sur le mauvais produit ou pas du tout.
-  assert.deepEqual(readCustomId("atelier"), { productId: "atelier", affiliateRef: null });
+  // LES ANCIENNES COMMANDES N'ONT QUE DEUX CHAMPS, et elles doivent se
+  // relire exactement comme avant : une commande en cours le jour du
+  // deploiement ne doit pas perdre son produit ni son affiliee.
+  assert.deepEqual(readCustomId("atelier"), {
+    productId: "atelier", affiliateRef: null, email: null,
+  });
   assert.deepEqual(readCustomId("atelier|GWENN23"), {
-    productId: "atelier",
-    affiliateRef: "GWENN23",
+    productId: "atelier", affiliateRef: "GWENN23", email: null,
+  });
+  // Le 3e champ (25 aout) : l'adresse SAISIE sur le bon de commande.
+  assert.deepEqual(readCustomId("atelier|GWENN23|marie@exemple.fr"), {
+    productId: "atelier", affiliateRef: "GWENN23", email: "marie@exemple.fr",
+  });
+  assert.deepEqual(readCustomId("atelier||marie@exemple.fr"), {
+    productId: "atelier", affiliateRef: null, email: "marie@exemple.fr",
   });
   // Ce qu'on ne sait pas lire n'ouvre rien, plutot que d'ouvrir au hasard.
-  assert.deepEqual(readCustomId(""), { productId: null, affiliateRef: null });
-  assert.deepEqual(readCustomId(null), { productId: null, affiliateRef: null });
-  assert.deepEqual(readCustomId(undefined), { productId: null, affiliateRef: null });
+  for (const vide of ["", null, undefined]) {
+    assert.deepEqual(readCustomId(vide), {
+      productId: null, affiliateRef: null, email: null,
+    });
+  }
+});
+
+test("QUAND CA DEBORDE, ON LACHE LE CODE AFFILIE, JAMAIS L'ADRESSE", () => {
+  // PayPal borne `custom_id` a 127 caracteres. Une attribution perdue se
+  // retrouve par la conversion enregistree a l'email ; un acces ouvert
+  // sur la mauvaise adresse ne se retrouve pas.
+  const longRef = "R".repeat(120);
+  const sortie = buildCustomId("atelier", longRef, "marie@exemple.fr");
+  assert.ok(sortie.length <= 127);
+  assert.equal(readCustomId(sortie).email, "marie@exemple.fr");
+  assert.equal(readCustomId(sortie).affiliateRef, null);
+  assert.equal(readCustomId(sortie).productId, "atelier");
+});
+
+test("l'adresse saisie fait l'aller-retour", () => {
+  const sortie = buildCustomId("atelier", "GWENN23", "Marie@Exemple.FR");
+  // Normalisee des l'ecriture : deux casses differentes ouvriraient deux
+  // comptes pour une seule personne.
+  assert.equal(readCustomId(sortie).email, "marie@exemple.fr");
 });
 
 test("on n'encaisse pas de vrai argent tant que rien n'ouvre l'acces", () => {

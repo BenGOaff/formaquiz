@@ -4,7 +4,7 @@ import { TabBar, TabButton, TabLink } from "@/components/TabBar";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Save, KeyRound, Camera, User, Settings, Link2, Award, Unplug } from "lucide-react";
+import { Save, KeyRound, Camera, User, Settings, Link2, Award, Unplug, ReceiptText } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { Avatar } from "@/components/Avatar";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,8 +23,9 @@ import {
   type Monetization,
   type AdsBudget,
 } from "@/lib/businessProfile";
+import { MesFactures } from "@/components/facturation/MesFactures";
 
-type Tab = "profil" | "reglages" | "connexion";
+type Tab = "profil" | "reglages" | "connexion" | "facturation";
 
 export function ProfileTabs({
   userId,
@@ -211,6 +212,17 @@ export function ProfileTabs({
         <TabButton active={tab === "connexion"} onClick={() => setTab("connexion")} icon={Link2}>
           Connexion
         </TabButton>
+        {/* SES FACTURES, ET SES INFOS DE FACTURATION (25 août 2026).
+            Béné : "lui aussi doit avoir ces infos et pouvoir les mettre
+            à jour." Ici et pas ailleurs : c'est là qu'on vient quand on
+            cherche une facture. */}
+        <TabButton
+          active={tab === "facturation"}
+          onClick={() => setTab("facturation")}
+          icon={ReceiptText}
+        >
+          Facturation
+        </TabButton>
         {/* Le certificat garde sa page dediee (studio complet) : l'onglet
             y mene, pour que tous les reglages partent du meme endroit. */}
         <TabLink href="/certificat" icon={Award}>
@@ -339,6 +351,14 @@ export function ProfileTabs({
                 </Button>
               </div>
             </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {tab === "facturation" && (
+        <Card>
+          <CardContent className="py-5">
+            <MesFactures />
           </CardContent>
         </Card>
       )}

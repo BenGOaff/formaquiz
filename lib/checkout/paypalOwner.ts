@@ -121,6 +121,8 @@ export async function createOwnerPaypalOrder(args: {
   returnUrl: string;
   cancelUrl: string;
   affiliateRef?: string | null;
+  /** L'adresse SAISIE sur le bon de commande. Elle gagne sur celle de PayPal. */
+  email?: string | null;
 }): Promise<PaypalOrderResult> {
   const jeton = await token(args.compte);
   if (!jeton) return { ok: false, reason: "not_configured", detail: "token refuse" };
@@ -132,7 +134,18 @@ export async function createOwnerPaypalOrder(args: {
       {
         // Ce qu'on relit dans le webhook. PayPal le recopie sur la
         // capture, donc il survit à tout le parcours.
-        custom_id: args.affiliateRef ? `${p.id}|${args.affiliateRef}` : p.id,
+        // L'ADRESSE SAISIE VOYAGE ICI, ET ELLE GAGNE.
+        //
+        // PayPal nous rend l'adresse du COMPTE PayPal, qui n'est pas
+        // toujours celle utilisée chez nous (compte du conjoint, adresse
+        // pro). Ouvrir l'accès sur celle-là fabrique un compte orphelin,
+        // ce que l'Atelier a déjà rencontré le 7 août sur les commandes
+        // de bonus.
+        //
+        // **Le champ est AJOUTÉ EN FIN** : une commande en cours le jour
+        // du déploiement se relit exactement comme avant, aux mêmes
+        // positions. C'est la même règle que côté Tiquiz.
+        custom_id: buildCustomId(p.id, args.affiliateRef, args.email),
         description: p.label.slice(0, 127),
         amount: {
           currency_code: p.currency.toUpperCase(),
@@ -205,15 +218,48 @@ export function paypalAmountToCents(raw: unknown): number {
   return Math.round(n * 100);
 }
 
-/** Sépare `atelier|CODEAFFILIE` en ses deux morceaux. */
+/**
+ * `atelier|CODEAFFILIE|adresse@saisie.fr`
+ *
+ * PayPal borne `custom_id` à 127 caractères. Quand ça déborde on lâche
+ * le CODE AFFILIÉ, jamais l'adresse : une attribution perdue se retrouve
+ * par la conversion enregistrée à l'email, un accès ouvert sur la
+ * mauvaise adresse ne se retrouve pas.
+ */
+export function buildCustomId(
+  productId: string,
+  affiliateRef?: string | null,
+  email?: string | null,
+): string {
+  const ref = String(affiliateRef ?? "").trim();
+  const adresse = String(email ?? "").trim().toLowerCase();
+  const complet = `${productId}|${ref}|${adresse}`;
+  if (complet.length <= 127) return complet;
+  const sansRef = `${productId}||${adresse}`;
+  if (sansRef.length <= 127) {
+    console.warn(`[paypal] custom_id trop long : le code affilie est lache pour ${adresse}.`);
+    return sansRef;
+  }
+  console.warn(`[paypal] custom_id trop long pour ${adresse} : adresse tronquee, acces a verifier.`);
+  return sansRef.slice(0, 127);
+}
+
+/** Sépare `atelier|CODEAFFILIE|adresse` en ses morceaux. */
 export function readCustomId(raw: string | null | undefined): {
   productId: string | null;
   affiliateRef: string | null;
+  email: string | null;
 } {
   const s = String(raw ?? "").trim();
-  if (!s) return { productId: null, affiliateRef: null };
-  const [produit, ref] = s.split("|");
-  return { productId: produit || null, affiliateRef: ref || null };
+  if (!s) return { productId: null, affiliateRef: null, email: null };
+  const [produit, ref, adresse] = s.split("|");
+  return {
+    productId: produit || null,
+    affiliateRef: ref || null,
+    // Les anciennes commandes n'ont que deux champs : `email` vaut alors
+    // `null`, et on retombe sur l'adresse du compte PayPal comme avant.
+    email: (adresse ?? "").trim().toLowerCase() || null,
+  };
 }
 
 /** La forme d'une commande PayPal, réduite à ce qu'on lit. */
@@ -239,10 +285,13 @@ interface OrderShape {
 function readOrder(json: OrderShape): PaypalCaptureInfo {
   const unit = json.purchase_units?.[0];
   const capture = unit?.payments?.captures?.[0];
-  const { productId, affiliateRef } = readCustomId(unit?.custom_id);
+  const { productId, affiliateRef, email: saisi } = readCustomId(unit?.custom_id);
   return {
     paid: json.status === "COMPLETED" && capture?.status === "COMPLETED",
-    email: json.payer?.email_address ?? null,
+    // L'ADRESSE SAISIE GAGNE sur celle du compte PayPal. Voir
+    // `buildCustomId`. Sans commande récente, `saisi` vaut null et on
+    // retombe exactement sur le comportement d'avant.
+    email: saisi ?? json.payer?.email_address ?? null,
     name: json.payer?.name?.given_name ?? null,
     productId,
     affiliateRef,

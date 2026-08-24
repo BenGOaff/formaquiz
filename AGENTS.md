@@ -783,16 +783,51 @@ C'est **`ROADMAP_SORTIE_SIO.md`, à la racine du dépôt TIQUIZ**, et il n'y
 en a qu'un exemplaire : trois copies d'un état des lieux divergeraient en
 une semaine.
 
-**Ce qui concerne CE dépôt : l'Atelier n'émet AUCUNE facture.** Il a son
-propre bon de commande (Stripe + PayPal Orders, 47 €), mais pas de
-`lib/facture/`. Or PayPal n'émet pas de facture : il envoie un avis de
-paiement, sans numérotation, sans identité complète du vendeur, sans
-adresse de l'acheteur et sans ventilation de TVA. Une vente PayPal de
-l'Atelier est donc exactement dans l'état où était Tiquiz avant le
-24 août : encaissée, sans pièce comptable.
+## L'Atelier facture, depuis le 25 août 2026
 
-Le module de Tiquiz est portable presque tel quel (`lib/facture/*`, purs
-et testés, plus la migration `20260824_facturation.sql`). **La seule
-différence de fond : l'Atelier vend un ACHAT UNIQUE**, donc une facture
-par vente et pas une par échéance. Le déclencheur n'est pas
-`PAYMENT.SALE.COMPLETED` mais la capture de la commande.
+PayPal n'émet pas de facture. Ce qu'il envoie à l'acheteur est un avis de
+paiement : ni numérotation, ni identité complète du vendeur, ni adresse
+de l'acheteur, ni ventilation de TVA. Un client professionnel ne peut
+rien en faire. Le module vient de Tiquiz (24 août), avec **trois
+différences de fond qu'il ne faut pas gommer** :
+
+**1. Un ACHAT UNIQUE, donc une vente = une facture.** Le déclencheur est
+la CAPTURE (`PAYMENT.CAPTURE.COMPLETED`), jamais l'approbation de la
+commande : une commande approuvée peut ne jamais être capturée.
+
+**2. La série est `AQ-<année>`, jamais `TQ`.** Les deux apps ont leur
+propre base et leur propre compteur : avec le même préfixe, elles
+émettraient chacune un `TQ-2026-0001` pour deux ventes différentes. Une
+société peut tenir plusieurs séries, à condition que chacune soit
+continue.
+
+**3. Le payload n'a NI les mêmes champs NI la même forme de montant.**
+
+| | vente v1 (Tiquiz) | capture v2 (ici) |
+|---|---|---|
+| montant | `amount.total` | `amount.value` |
+| devise | `amount.currency` | `amount.currency_code` |
+| vente d'origine d'un remboursement | `sale_id` | dans `links[].href` |
+
+Recopier l'un sur l'autre donnerait une facture à zéro euro, sans erreur
+nulle part. `lib/facture/paypalVente.ts` n'est donc PAS le jumeau de
+celui de Tiquiz, et le test le fige.
+
+**L'adresse email saisie sur le bon de commande GAGNE** sur celle du
+compte PayPal, et voyage dans le `custom_id` (3e champ, AJOUTÉ EN FIN
+pour qu'une commande en cours se relise à l'identique). Quelqu'un qui
+paie avec le compte de son conjoint recevait ses accès sur une adresse
+qui n'est pas la sienne : c'est le compte orphelin rencontré le 7 août
+sur les commandes de bonus.
+
+**`lib/legal/company.ts` est une RECOPIE** de celui des deux autres
+dépôts : il n'y a pas de paquet partagé, donc ça diverge. Le test fige
+les valeurs, pour qu'un changement d'adresse ou de RCS soit voulu et pas
+subi, et il rougira dans les trois dépôts.
+
+Le reste (les 4 régimes de TVA, la numérotation continue par fonction
+SQL, l'identité recopiée dans la facture, "on émet toujours, on ne
+retient jamais") est décrit dans l'AGENTS.md de Tiquiz et vaut ici mot
+pour mot.
+
+🚨 Migration à appliquer : `supabase/migrations/20260825_facturation.sql`.

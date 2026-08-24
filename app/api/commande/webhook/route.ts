@@ -46,6 +46,7 @@ import { readOwnerStripe, readOwnerStripeWebhookSecret } from "@/lib/checkout/ow
 import { retrieveOwnerSession, verifyStripeSignature } from "@/lib/checkout/stripeCheckout";
 import { logWebhookEvent } from "@/lib/webhooks/log";
 import { commissionnerVente } from "@/lib/affiliate/ownerSale";
+import { completerFacturation } from "@/lib/facture/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -170,6 +171,28 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         `acces NON ouvert, intervention necessaire.`,
     );
     return NextResponse.json({ ok: true, reason: "unknown_product" });
+  }
+
+  // CE QUE STRIPE A COLLECTÉ, GARDÉ CHEZ NOUS.
+  //
+  // Le formulaire carte exige déjà l'adresse et propose la case
+  // entreprise : les redemander serait présenter un formulaire vide à
+  // quelqu'un qui vient de le remplir.
+  //
+  // `completerFacturation` et pas `ecrireFacturation` : cette source ne
+  // connaît ni la société ni un email de facturation distinct, et elle
+  // ne doit rien effacer de ce que la personne a saisi elle même.
+  if (vente.facturation) {
+    const ecrit = await completerFacturation({
+      email: vente.email,
+      acheteur: vente.facturation,
+      source: "stripe",
+    });
+    if (!ecrit.ok) {
+      console.warn(
+        `[commande/webhook] facturation non enregistree pour ${vente.email} (${ecrit.reason})`,
+      );
+    }
   }
 
   const octroi = await grantAccessByEmail(vente.email, product.source, null, product.tier);

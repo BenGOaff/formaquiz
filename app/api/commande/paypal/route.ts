@@ -19,6 +19,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { findOwnerProduct } from "@/lib/checkout/catalog";
 import { readOwnerPaypal, readOwnerPaypalWebhookId } from "@/lib/checkout/ownerAccount";
 import { createOwnerPaypalOrder } from "@/lib/checkout/paypalOwner";
+import { lireAcheteur } from "@/lib/facture/identite";
+import { ecrireFacturation } from "@/lib/facture/store";
 import { isSalesOpen } from "@/lib/sales/previewGate";
 import { checkoutReturnBase } from "@/lib/sales/salesHosts";
 import { resolveAppUrl } from "@/lib/appUrl";
@@ -27,7 +29,13 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  let body: { produit?: string; k?: string; ref?: string };
+  let body: {
+    produit?: string;
+    k?: string;
+    ref?: string;
+    email?: string;
+    facturation?: unknown;
+  };
   try {
     body = await req.json();
   } catch {
@@ -76,6 +84,32 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const cle = encodeURIComponent(String(body.k ?? ""));
   const retour = `${base}/commande/${product.id}/retour?k=${cle}`;
 
+  // L'ADRESSE ET LA FACTURATION, DEMANDÉES AVANT PAYPAL.
+  //
+  // Stripe les collecte dans son formulaire. PayPal ne demande rien et
+  // ne rend rien d'exploitable : sans ce bloc, une vente PayPal de
+  // l'Atelier n'a AUCUNE adresse, donc aucune facture opposable. Et
+  // l'écrire APRÈS le retour serait trop tard : celui qui ferme son
+  // onglet a payé quand même.
+  //
+  // **On n'échoue jamais ici.** Une écriture refusée ne doit pas
+  // empêcher d'encaisser : la facture sortira marquée "à compléter",
+  // ce qui se rattrape, alors qu'une vente perdue ne se rattrape pas.
+  const email = String(body.email ?? "").trim().toLowerCase();
+  if (email && body.facturation) {
+    const ecrit = await ecrireFacturation({
+      email,
+      acheteur: { ...lireAcheteur(body.facturation), email },
+      source: "checkout",
+    });
+    if (!ecrit.ok) {
+      console.error(
+        `[commande/paypal] facturation NON enregistree pour ${email} (${ecrit.reason}) : ` +
+          `la facture sortira incomplete.`,
+      );
+    }
+  }
+
   const result = await createOwnerPaypalOrder({
     compte,
     product,
@@ -85,6 +119,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // Annuler ramène au bon de commande, pas sur un cul-de-sac.
     cancelUrl: `${base}/commande/${product.id}?k=${cle}`,
     affiliateRef: typeof body.ref === "string" ? body.ref.trim().slice(0, 40) : null,
+    // Elle GAGNE sur l'adresse du compte PayPal : voir `buildCustomId`.
+    email: email || null,
   });
 
   if (!result.ok || !result.approveUrl) {
