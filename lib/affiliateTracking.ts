@@ -5,6 +5,7 @@
 // = profiles.sio_affiliate_id (pas de table affiliates séparée ici).
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { memePersonne } from "@/lib/affiliate/memeAdresse";
 
 const ATTRIBUTION_WINDOW_DAYS = 90;
 
@@ -602,8 +603,14 @@ export async function attributeQuizingSale(input: {
     const aff = affProfile as { id: string; email: string | null } | null;
     if (!aff) return { status: "affiliate_not_registered", sa };
 
-    // Anti-auto-affiliation.
-    if ((aff.email ?? "").toLowerCase() === email) {
+    // ANTI-AUTO-AFFILIATION, ALIAS COMPRIS.
+    //
+    // La comparaison etait brute : acheter avec `moi+1@gmail.com`
+    // suffisait a se payer 70 % de son propre achat. La regle qui voit
+    // ces alias existait deja cote Tiquiz, mais elle ne gardait que le
+    // MOIS OFFERT (audit du 26 aout).
+    if (memePersonne(aff.email, email)) {
+      console.log(`[affiliate] self-attribution refused: sa=${sa} email=${email}`);
       return { status: "no_affiliate_match" };
     }
 

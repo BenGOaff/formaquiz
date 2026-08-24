@@ -83,10 +83,14 @@ Des badges sur de vrais jalons (premier jour, quiz publié, communauté lancée,
 Quand un élève atteint un cap réel, le système prépare le brouillon de son étude de cas et alerte l'admin. Une machine à preuve sociale, alimentée par de vrais résultats.
 
 ### L'espace affiliation
-L'élève peut recommander L'Atelier du Quiz et Tiquiz, avec un lien tracké et un kit de promo personnalisé selon son métier. L'affiliation est gérée nativement par Systeme.io.
+L'élève peut recommander L'Atelier du Quiz et Tiquiz, avec un lien tracké et un kit de promo personnalisé selon son métier.
+
+**Le registre des affiliés de l'Atelier est le SIEN** : c'est `profiles.sio_affiliate_id`, pas la table `affiliates` de Tipote. Les deux ne se confondent pas, et une affiliée Tipote qui n'est pas élève de l'Atelier n'y est pas connue. Corollaire à connaître avant d'y toucher : les commissions gagnées sur l'Atelier vivent dans SA base, donc elles ne sont pas dans les lots de versement construits chez Tipote, et elles continuent d'être versées par Systeme.io. Unifier les deux registres est un chantier à part, décrit dans `ROADMAP_SORTIE_SIO.md` (dépôt Tiquiz).
+
+Une vente remboursée ou impayée annule la commission, sur les trois chemins d'encaissement (Systeme.io, carte, PayPal).
 
 ### Accès et accompagnement
-Accès automatique à l'achat (via Systeme.io), email d'accueil brandé, connexion par mot de passe ou lien magique. Un récap doux relance en douceur ceux qui n'ont pas fini, et un bouton "Un blocage ?" permet de dire ce qui coince à tout moment. La formation s'améliore cohorte après cohorte à partir de ces retours.
+Accès automatique à l'achat, email d'accueil brandé, connexion par mot de passe ou lien magique. L'achat se fait sur notre propre bon de commande (carte ou PayPal, facture émise par nous en série `AQ-`) ou sur le tunnel Systeme.io historique. Un récap doux relance en douceur ceux qui n'ont pas fini, et un bouton "Un blocage ?" permet de dire ce qui coince à tout moment. La formation s'améliore cohorte après cohorte à partir de ces retours.
 
 ---
 

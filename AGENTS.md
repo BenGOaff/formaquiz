@@ -772,3 +772,114 @@ ou de l'Atelier, et répond à côté.
 troisième file rejouerait exactement le problème qu'on vient de régler :
 il y en avait deux, dans deux bases, et une demande pouvait attendre dans
 celle qu'on ne regardait pas.
+
+## Sortir de Systeme.io : l'état des lieux vit dans le dépôt Tiquiz
+
+Béné, 24 août 2026 : "note où on s'arrête et ce qu'il reste à faire pour
+qu'à terme mon système remplace complètement Systeme io pour les ventes
+et l'affiliation sauf pour les emails."
+
+C'est **`ROADMAP_SORTIE_SIO.md`, à la racine du dépôt TIQUIZ**, et il n'y
+en a qu'un exemplaire : trois copies d'un état des lieux divergeraient en
+une semaine.
+
+## L'Atelier facture, depuis le 25 août 2026
+
+PayPal n'émet pas de facture. Ce qu'il envoie à l'acheteur est un avis de
+paiement : ni numérotation, ni identité complète du vendeur, ni adresse
+de l'acheteur, ni ventilation de TVA. Un client professionnel ne peut
+rien en faire. Le module vient de Tiquiz (24 août), avec **trois
+différences de fond qu'il ne faut pas gommer** :
+
+**1. Un ACHAT UNIQUE, donc une vente = une facture.** Le déclencheur est
+la CAPTURE (`PAYMENT.CAPTURE.COMPLETED`), jamais l'approbation de la
+commande : une commande approuvée peut ne jamais être capturée.
+
+**2. La série est `AQ-<année>`, jamais `TQ`.** Les deux apps ont leur
+propre base et leur propre compteur : avec le même préfixe, elles
+émettraient chacune un `TQ-2026-0001` pour deux ventes différentes. Une
+société peut tenir plusieurs séries, à condition que chacune soit
+continue.
+
+**3. Le payload n'a NI les mêmes champs NI la même forme de montant.**
+
+| | vente v1 (Tiquiz) | capture v2 (ici) |
+|---|---|---|
+| montant | `amount.total` | `amount.value` |
+| devise | `amount.currency` | `amount.currency_code` |
+| vente d'origine d'un remboursement | `sale_id` | dans `links[].href` |
+
+Recopier l'un sur l'autre donnerait une facture à zéro euro, sans erreur
+nulle part. `lib/facture/paypalVente.ts` n'est donc PAS le jumeau de
+celui de Tiquiz, et le test le fige.
+
+**L'adresse email saisie sur le bon de commande GAGNE** sur celle du
+compte PayPal, et voyage dans le `custom_id` (3e champ, AJOUTÉ EN FIN
+pour qu'une commande en cours se relise à l'identique). Quelqu'un qui
+paie avec le compte de son conjoint recevait ses accès sur une adresse
+qui n'est pas la sienne : c'est le compte orphelin rencontré le 7 août
+sur les commandes de bonus.
+
+**`lib/legal/company.ts` est une RECOPIE** de celui des deux autres
+dépôts : il n'y a pas de paquet partagé, donc ça diverge. Le test fige
+les valeurs, pour qu'un changement d'adresse ou de RCS soit voulu et pas
+subi, et il rougira dans les trois dépôts.
+
+Le reste (les 4 régimes de TVA, la numérotation continue par fonction
+SQL, l'identité recopiée dans la facture, "on émet toujours, on ne
+retient jamais") est décrit dans l'AGENTS.md de Tiquiz et vaut ici mot
+pour mot.
+
+🚨 Migration à appliquer : `supabase/migrations/20260825_facturation.sql`.
+
+## L'audit du 26 août : la fonction existait, elle n'était pas branchée
+
+Béné : "tu peux auditer tout le parcours de vente tiquiz et l'atelier,
+paypal et stripe plus tout le système d'affiliation ?"
+
+**La trouvaille la plus instructive de tout l'audit est ici.**
+`refundCommissionByOrder` vit dans ce dépôt depuis des mois, et elle
+faisait exactement ce qu'il fallait : marquer `refunded` les commissions
+d'une vente remboursée. Elle n'était branchée que sur le remboursement
+SYSTEME.IO (`lib/webhooks/sioAtelier.ts`).
+
+Le jour où l'Atelier a eu son propre bon de commande, personne ne l'a
+rebranchée. Une vente remboursée par carte ou par PayPal continuait donc
+de payer son affilié, alors que la même vente remboursée chez Systeme.io
+ne le payait pas. **Ce n'est pas un oubli d'écriture, c'est le défaut
+signature de ces dépôts : une logique écrite pour un cas, jamais portée
+sur l'autre.**
+
+Les deux webhooks l'appellent maintenant, avec la clé de la CRÉATION
+(`<moyen>:<reference>`). Sur PayPal, la capture d'origine n'est PAS dans
+un champ : la v2 ne porte pas de `sale_id`, le seul fil vers la vente est
+`links[].href`. Quand on ne la retrouve pas, on le DIT.
+
+**`charge.dispute.*` n'était écouté nulle part** : ajouté, avec la même
+règle que côté Tiquiz (on ferme sur `funds_withdrawn`, jamais sur
+`created`).
+
+**L'anti-auto-affiliation comparait les adresses brutes** : acheter avec
+`moi+1@gmail.com` suffisait à se payer 70 % de son propre achat. La règle
+vit maintenant dans `lib/affiliate/memeAdresse.ts`, le même fichier dans
+les trois dépôts.
+
+### Deux choses que l'audit laisse ouvertes
+
+1. **Les commissions de ce dépôt ne sont dans AUCUN lot de versement.**
+   Le registre est `profiles.sio_affiliate_id`, pas la table `affiliates`
+   de Tipote, et `preparerLot` (chez Tipote) ne lit que la sienne. Une
+   vente prise sur NOTRE bon de commande crée donc une commission que
+   Systeme.io ne connaît pas et que notre cycle ne paie pas. L'admin de
+   Tiquiz les AFFICHE (il interroge les deux bases), ce qui rend la dette
+   visible sans la solder.
+2. **`/api/affiliate/sio-sale` accepte les produits TIQUIZ** et les écrit
+   dans la base de l'Atelier, pendant que le webhook Systeme.io de Tiquiz
+   remonte les mêmes ventes chez Tipote. Deux tables, deux contraintes
+   d'unicité, aucune ne voit l'autre, et l'admin ADDITIONNE les deux
+   sources. On ne change pas le routage à l'aveugle (il dépend des
+   automatisations Systeme.io, invisibles depuis le code) : le cas est
+   journalisé en clair, et si la ligne apparaît dans `pm2 logs` il faut
+   débrancher l'une des deux.
+
+Test : `tests/logic/audit-26-aout.test.mts`.

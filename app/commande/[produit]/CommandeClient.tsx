@@ -16,6 +16,12 @@
 // serveur a donc sa phrase, en français, avec ce qu'il y a à faire.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+
+import ChampsFacturation, {
+  ACHETEUR_FORM_VIDE,
+  type ChampsAcheteur,
+} from "@/components/facturation/ChampsFacturation";
+import { manques } from "@/lib/facture/identite";
 import { loadStripe } from "@stripe/stripe-js";
 import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js";
 
@@ -37,6 +43,25 @@ const RAISONS: Record<string, string> = {
 };
 
 /** Les raisons propres à PayPal, avec la même règle : jamais un cadre muet. */
+/**
+ * Ce qui manque, dit en français et pas en noms de champs.
+ *
+ * Le serveur renvoie des RAISONS, l'écran dit comment les dire : même
+ * règle que la suppression d'un quiz et l'import PDF.
+ */
+const MOTS_MANQUES: Record<string, string> = {
+  nom: "ton nom",
+  adresse: "ton adresse",
+  ville: "ton code postal et ta ville",
+  pays: "ton pays",
+};
+
+function LIBELLE_MANQUES(codes: string[]): string {
+  const mots = codes.map((c) => MOTS_MANQUES[c] ?? c);
+  if (mots.length === 1) return mots[0];
+  return `${mots.slice(0, -1).join(", ")} et ${mots[mots.length - 1]}`;
+}
+
 const RAISONS_PAYPAL: Record<string, string> = {
   ...RAISONS,
   paypal_refused: "PayPal a refusé d'ouvrir le paiement. Rien n'a été débité.",
@@ -62,6 +87,19 @@ export default function CommandeClient({
   const [erreur, setErreur] = useState<string | null>(null);
   const [mode, setMode] = useState<string | null>(null);
   const [paypalEnCours, setPaypalEnCours] = useState(false);
+  // L'ADRESSE ET LA FACTURATION, DEMANDÉES AVANT PAYPAL.
+  //
+  // Stripe les collecte lui même (`billing_address_collection: required`
+  // + la case entreprise). PayPal ne demande rien et ne rend rien
+  // d'exploitable : sans ce bloc, une vente PayPal de l'Atelier n'a
+  // AUCUNE adresse, donc aucune facture opposable.
+  //
+  // Et l'adresse email saisie ici GAGNE sur celle du compte PayPal :
+  // c'est elle qui ouvre l'accès. Sans ça, quelqu'un qui paie avec le
+  // compte PayPal de son conjoint reçoit ses accès sur une adresse qui
+  // n'est pas la sienne (rencontré le 7 août sur les commandes de bonus).
+  const [emailPaypal, setEmailPaypal] = useState("");
+  const [facturation, setFacturation] = useState<ChampsAcheteur>(ACHETEUR_FORM_VIDE);
   const [erreurPaypal, setErreurPaypal] = useState<string | null>(null);
 
   // La clé publiable est indispensable au navigateur. Sans elle, le cadre
@@ -130,13 +168,29 @@ export default function CommandeClient({
   // reagit pas pendant deux secondes se reclique : d'ou l'etat "en
   // cours", qui evite deux commandes pour un seul achat.
   const partirSurPaypal = useCallback(async () => {
+    const adresse = emailPaypal.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adresse)) {
+      setErreurPaypal("Indique l'adresse email sur laquelle tu veux recevoir tes accès.");
+      return;
+    }
+    // On vérifie AVANT d'ouvrir PayPal : réclamer une adresse à
+    // quelqu'un qui vient de payer est le meilleur moyen de ne jamais
+    // l'obtenir. `manques()` est la MÊME fonction que celle qui décide,
+    // à l'émission, si la facture est complète.
+    const incomplet = manques({ ...facturation, email: adresse });
+    if (incomplet.length > 0) {
+      setErreurPaypal(
+        "Il manque " + LIBELLE_MANQUES(incomplet) + " : la facture ne serait pas valable sans.",
+      );
+      return;
+    }
     setErreurPaypal(null);
     setPaypalEnCours(true);
     try {
       const r = await fetch("/api/commande/paypal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ produit, k: cle, ref: refAffiliee() }),
+        body: JSON.stringify({ produit, k: cle, ref: refAffiliee(), email: adresse, facturation }),
       });
       const data = (await r.json().catch(() => ({}))) as {
         ok?: boolean;
@@ -155,7 +209,7 @@ export default function CommandeClient({
       setErreurPaypal("La connexion a coupé avant d'ouvrir PayPal. Rien n'a été débité.");
       setPaypalEnCours(false);
     }
-  }, [produit, cle, refAffiliee]);
+  }, [produit, cle, refAffiliee, emailPaypal, facturation]);
 
   // `loadStripe` rend une NOUVELLE promesse a chaque appel. Appelee dans
   // le JSX, elle en fabriquerait une par rendu, et le fournisseur Stripe
@@ -180,6 +234,20 @@ export default function CommandeClient({
         <span className="h-px flex-1 bg-[#e1e6f7]" />
         <span className="text-xs font-semibold uppercase tracking-wide text-[#6a6f8c]">ou</span>
         <span className="h-px flex-1 bg-[#e1e6f7]" />
+      </div>
+      <label className="mb-3 block text-sm font-medium text-[#16182e]">
+        Ton adresse email
+        <input
+          type="email"
+          value={emailPaypal}
+          onChange={(e) => setEmailPaypal(e.target.value)}
+          placeholder="celle qui recevra tes accès"
+          className="mt-1 w-full rounded-lg border border-[#e1e6f7] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#5D6CDB]/30"
+        />
+      </label>
+      <div className="mb-4">
+        <p className="mb-2 text-sm font-semibold text-[#16182e]">Informations de facturation</p>
+        <ChampsFacturation valeur={facturation} onChange={setFacturation} />
       </div>
       <button
         type="button"
