@@ -24,6 +24,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { grantAccessByEmail, revokeAccessByEmail } from "@/lib/access/grantAccess";
 import { commissionnerVente } from "@/lib/affiliate/ownerSale";
+import { refundCommissionByOrder } from "@/lib/affiliateTracking";
 import { findOwnerProduct, tierForOwnerProduct } from "@/lib/checkout/catalog";
 import { readOwnerPaypal, readOwnerPaypalWebhookId } from "@/lib/checkout/ownerAccount";
 import {
@@ -330,6 +331,26 @@ async function surRemboursement(event: PaypalEvent): Promise<NextResponse> {
   }
 
   await revokeAccessByEmail(email);
+
+  // ── LA COMMISSION TOMBE AVEC LA VENTE ──
+  //
+  // La cle est celle de la CREATION : `paypal:<captureId>`. Sur un
+  // remboursement, la capture d'origine se lit dans les `links` du
+  // remboursement (`remboursementDepuisRefund` la sort deja), ou sur la
+  // commande relue.
+  const captureOrigine =
+    commande?.captureId ?? remboursementDepuisRefund(event.resource, event.create_time)?.saleRef ?? null;
+  if (captureOrigine) {
+    const r = await refundCommissionByOrder(`paypal:${captureOrigine}`);
+    if (r.refunded > 0) {
+      console.log(`[commande/paypal/webhook] ${r.refunded} commission(s) annulee(s) apres remboursement`);
+    }
+  } else {
+    console.error(
+      `[commande/paypal/webhook] remboursement de ${email} : capture d'origine introuvable, ` +
+        `commission NON annulee. A verifier a la main.`,
+    );
+  }
 
   // L'AVOIR. On rend l'argent, donc on rend la pièce qui l'annule.
   const remboursement = remboursementDepuisRefund(event.resource, event.create_time);

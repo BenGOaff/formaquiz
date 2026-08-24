@@ -46,6 +46,7 @@ import { readOwnerStripe, readOwnerStripeWebhookSecret } from "@/lib/checkout/ow
 import { retrieveOwnerSession, verifyStripeSignature } from "@/lib/checkout/stripeCheckout";
 import { logWebhookEvent } from "@/lib/webhooks/log";
 import { commissionnerVente } from "@/lib/affiliate/ownerSale";
+import { refundCommissionByOrder } from "@/lib/affiliateTracking";
 import { completerFacturation } from "@/lib/facture/store";
 
 export const runtime = "nodejs";
@@ -111,7 +112,27 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // Sur un produit à garantie 30 jours, ça voulait dire acheter, se faire
   // rembourser, et garder l'Atelier à vie.
   if (eventType === "charge.refunded") {
-    return await surRemboursement(event);
+    return await surRemboursement(event, "remboursement");
+  }
+
+  // ── LA BANQUE REPREND L'ARGENT ──
+  //
+  // `charge.dispute.*` n'etait ecoute nulle part (audit du 26 aout) : un
+  // impaye laissait l'acces ouvert ET la commission en route. On agit sur
+  // `funds_withdrawn` (l'argent est VRAIMENT parti), pas sur `created` :
+  // une contestation se conteste, et couper l'acces de quelqu'un qui va
+  // gagner son litige nous ferait perdre un client pour rien.
+  if (eventType === "charge.dispute.funds_withdrawn") {
+    return await surRemboursement(event, "impaye");
+  }
+  if (eventType === "charge.dispute.created") {
+    const objet = event.data?.object as { charge?: unknown; amount?: unknown } | undefined;
+    console.error(
+      `[commande/webhook] CONTESTATION ouverte sur ${String(objet?.charge ?? "?")} ` +
+        `(${String(objet?.amount ?? "?")} c) : acces conserve. A repondre dans Stripe ` +
+        `avant la date limite.`,
+    );
+    return NextResponse.json({ ok: true, dispute: "opened" });
   }
 
   // Les deux événements qui veulent dire "l'argent est là". Le second
@@ -261,12 +282,23 @@ interface RawEvent {
  * ne fait rien : un 500 sur un cas compris et ecarte declencherait des
  * reessais en boucle. Seule une VRAIE panne merite un 5xx.
  */
-async function surRemboursement(event: RawEvent): Promise<NextResponse> {
+async function surRemboursement(
+  event: RawEvent,
+  motif: "remboursement" | "impaye",
+): Promise<NextResponse> {
   const charge = event.data?.object ?? null;
-  const issue = readRefundOutcome(charge);
-  if (issue !== "full") {
-    console.log(`[commande/webhook] remboursement ${issue} : acces conserve`);
-    return NextResponse.json({ ok: true, refund: issue });
+
+  // UN IMPAYE N'EST JAMAIS PARTIEL, et l'objet recu n'est pas le meme :
+  // sur un litige, `data.object` n'a ni `amount_refunded` ni `refunded`,
+  // donc `readRefundOutcome` y repondrait "aucun remboursement" et on ne
+  // ferait rien. La mecanique est un PARAMETRE, pas une lecture de la
+  // forme recue.
+  if (motif === "remboursement") {
+    const issue = readRefundOutcome(charge);
+    if (issue !== "full") {
+      console.log(`[commande/webhook] remboursement ${issue} : acces conserve`);
+      return NextResponse.json({ ok: true, refund: issue });
+    }
   }
 
   const compte = readOwnerStripe(process.env);
@@ -293,6 +325,23 @@ async function surRemboursement(event: RawEvent): Promise<NextResponse> {
   }
 
   await revokeAccessByEmail(email);
+
+  // ── LA COMMISSION TOMBE AVEC LA VENTE ──
+  //
+  // `refundCommissionByOrder` existe depuis des mois, et n'etait branchee
+  // QUE sur le remboursement Systeme.io (`lib/webhooks/sioAtelier.ts`).
+  // Le jour ou l'Atelier a eu son propre bon de commande, personne ne
+  // l'a rebranchee : une vente remboursee ICI continuait de payer son
+  // affilie. Une logique ecrite pour un cas, pas portee sur l'autre.
+  //
+  // La cle est celle de la CREATION (`<moyen>:<reference>`), sinon on
+  // n'annule rien, en silence.
+  if (paymentIntent) {
+    const r = await refundCommissionByOrder(`stripe:${paymentIntent}`);
+    if (r.refunded > 0) {
+      console.log(`[commande/webhook] ${r.refunded} commission(s) annulee(s) apres remboursement`);
+    }
+  }
 
   // ON SE QUITTE BIEN, ET C'EST NOUS QUI LE DISONS.
   //

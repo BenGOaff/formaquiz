@@ -79,6 +79,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: "not_our_product" }, { status: 200, headers: CORS });
   }
 
+  // DEUX PORTES POUR UNE MEME VENTE TIQUIZ, ET ELLES ECRIVENT DANS DEUX
+  // BASES DIFFERENTES.
+  //
+  // Cette route accepte les produits `tiquiz` et les enregistre dans la
+  // base de l'ATELIER, pendant que le webhook Systeme.io de Tiquiz
+  // remonte les memes ventes chez TIPOTE. Les deux tables portent chacune
+  // leur contrainte d'unicite, donc rien ne les empeche de compter la
+  // meme vente deux fois, et le tableau de bord ADDITIONNE les deux
+  // sources (`lib/admin/affiliateSources.ts`).
+  //
+  // On ne change pas le routage a l'aveugle : il depend des automatisations
+  // Systeme.io, qu'on ne voit pas d'ici. On le rend VISIBLE, et la
+  // verification est notee dans le cahier des charges (audit du 26 aout).
+  if (product.source_app === "tiquiz") {
+    console.warn(
+      `[affiliate/sio-sale] vente TIQUIZ enregistree dans la base de l'Atelier ` +
+        `(order ${orderId}) : verifier qu'elle n'est pas AUSSI remontee par le webhook ` +
+        `Systeme.io de Tiquiz, sinon elle est comptee deux fois.`,
+    );
+  }
+
   const result = await attributeQuizingSale({
     email,
     sio_order_id: orderId,

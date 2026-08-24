@@ -831,3 +831,55 @@ retient jamais") est décrit dans l'AGENTS.md de Tiquiz et vaut ici mot
 pour mot.
 
 🚨 Migration à appliquer : `supabase/migrations/20260825_facturation.sql`.
+
+## L'audit du 26 août : la fonction existait, elle n'était pas branchée
+
+Béné : "tu peux auditer tout le parcours de vente tiquiz et l'atelier,
+paypal et stripe plus tout le système d'affiliation ?"
+
+**La trouvaille la plus instructive de tout l'audit est ici.**
+`refundCommissionByOrder` vit dans ce dépôt depuis des mois, et elle
+faisait exactement ce qu'il fallait : marquer `refunded` les commissions
+d'une vente remboursée. Elle n'était branchée que sur le remboursement
+SYSTEME.IO (`lib/webhooks/sioAtelier.ts`).
+
+Le jour où l'Atelier a eu son propre bon de commande, personne ne l'a
+rebranchée. Une vente remboursée par carte ou par PayPal continuait donc
+de payer son affilié, alors que la même vente remboursée chez Systeme.io
+ne le payait pas. **Ce n'est pas un oubli d'écriture, c'est le défaut
+signature de ces dépôts : une logique écrite pour un cas, jamais portée
+sur l'autre.**
+
+Les deux webhooks l'appellent maintenant, avec la clé de la CRÉATION
+(`<moyen>:<reference>`). Sur PayPal, la capture d'origine n'est PAS dans
+un champ : la v2 ne porte pas de `sale_id`, le seul fil vers la vente est
+`links[].href`. Quand on ne la retrouve pas, on le DIT.
+
+**`charge.dispute.*` n'était écouté nulle part** : ajouté, avec la même
+règle que côté Tiquiz (on ferme sur `funds_withdrawn`, jamais sur
+`created`).
+
+**L'anti-auto-affiliation comparait les adresses brutes** : acheter avec
+`moi+1@gmail.com` suffisait à se payer 70 % de son propre achat. La règle
+vit maintenant dans `lib/affiliate/memeAdresse.ts`, le même fichier dans
+les trois dépôts.
+
+### Deux choses que l'audit laisse ouvertes
+
+1. **Les commissions de ce dépôt ne sont dans AUCUN lot de versement.**
+   Le registre est `profiles.sio_affiliate_id`, pas la table `affiliates`
+   de Tipote, et `preparerLot` (chez Tipote) ne lit que la sienne. Une
+   vente prise sur NOTRE bon de commande crée donc une commission que
+   Systeme.io ne connaît pas et que notre cycle ne paie pas. L'admin de
+   Tiquiz les AFFICHE (il interroge les deux bases), ce qui rend la dette
+   visible sans la solder.
+2. **`/api/affiliate/sio-sale` accepte les produits TIQUIZ** et les écrit
+   dans la base de l'Atelier, pendant que le webhook Systeme.io de Tiquiz
+   remonte les mêmes ventes chez Tipote. Deux tables, deux contraintes
+   d'unicité, aucune ne voit l'autre, et l'admin ADDITIONNE les deux
+   sources. On ne change pas le routage à l'aveugle (il dépend des
+   automatisations Systeme.io, invisibles depuis le code) : le cas est
+   journalisé en clair, et si la ligne apparaît dans `pm2 logs` il faut
+   débrancher l'une des deux.
+
+Test : `tests/logic/audit-26-aout.test.mts`.
