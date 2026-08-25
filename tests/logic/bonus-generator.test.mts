@@ -465,8 +465,15 @@ test("la page produite doit tenir dans un bloc de code de page", () => {
 
 test("un outil se livre par une page, un document par un drive", () => {
   const page = buildProductionSystemPrompt(brief(), "guide", undefined, "calculateur");
-  assert.match(page, /page de blog, ou une page de tunnel/);
+  assert.match(page, /bloc de code d'une page Systeme\.io/);
   assert.doesNotMatch(page, /heberge sur un drive/);
+  // 25 aout 2026 : la phrase disait "une page de blog, ou une page de
+  // tunnel", sans dire LAQUELLE. Un eleve l'a suivie sur une PAGE INFO,
+  // qui ne propose pas le bloc de code, et a cherche pendant une heure
+  // un element qui n'etait pas sur son ecran. Le guide doit nommer le
+  // type qui refuse, et donner celui qui accepte.
+  assert.match(page, /PAGE INFO/);
+  assert.match(page, /PAGE DE REMERCIEMENT/);
 
   const doc = buildProductionSystemPrompt(brief(), "guide", undefined, "checklist");
   assert.match(doc, /heberge sur un drive/);
