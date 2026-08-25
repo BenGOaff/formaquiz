@@ -12,6 +12,7 @@
 // Import relatif avec extension : le runner de tests natif Node ne
 // resout pas l'alias @/ (cf. AGENTS, filet de tests logique).
 import { resolvePersona, type Persona } from "./personas.ts";
+import { SA_RE } from "@/lib/affiliate/sa";
 import {
   COMMISSION_BASE,
   COMMISSION_RATES,
@@ -39,9 +40,10 @@ export const SIO_AFFILIATE_SETTINGS_URL = "https://systeme.io/dashboard/profile/
 
 // --- Identifiant affilié Systeme.io --------------------------------------
 
-// Format Systeme.io : "sa" suivi d'un hash hexadécimal long.
+// La forme vit dans lib/affiliate/sa.ts, et nulle part ailleurs. Elle
+// etait recopiee ici : c'est ainsi que commence une divergence, et une
+// commission se perd la ou personne ne regarde.
 // Ex : sa0007878317200141bbe3de2b6644176621db2c6580
-const SIO_AFFILIATE_ID_RE = /^sa[a-f0-9]{20,80}$/i;
 
 /**
  * Nettoie une saisie : accepte l'ID brut OU un lien complet collé
@@ -58,7 +60,7 @@ export function normalizeAffiliateId(raw: string | null | undefined): string {
 }
 
 export function isValidAffiliateId(value: string | null | undefined): boolean {
-  return SIO_AFFILIATE_ID_RE.test(String(value ?? "").trim());
+  return SA_RE.test(String(value ?? "").trim());
 }
 
 /** Construit le lien affilié tracké vers la page de vente de l'Atelier du Quiz. */
