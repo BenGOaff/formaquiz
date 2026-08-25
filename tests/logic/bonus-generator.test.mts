@@ -458,9 +458,16 @@ test("la page produite doit tenir dans un bloc de code de page", () => {
   // Un seul fichier, aucune dependance externe : c'est la condition pour
   // que ca marche colle dans une page de tunnel.
   const p = buildProductionSystemPrompt(brief(), "guide", undefined, "calculateur");
-  assert.match(p, /UN SEUL fichier HTML autonome/);
-  assert.match(p, /AUCUNE bibliotheque externe/);
-  assert.match(p, /aucune donnee envoyee nulle part/);
+  // 25 aout 2026 : le prompt disait "UN SEUL fichier HTML autonome".
+  // Un fichier HTML autonome commence par <!DOCTYPE html> : colle dans
+  // un bloc de code, c'est une page DANS une page, et son CSS repeint
+  // toute la page de la creatrice. Le code produit est un MORCEAU.
+  assert.match(p, /CE N'EST PAS UNE PAGE, C'EST UN MORCEAU DE PAGE/);
+  assert.match(p, /N'ecris ni <!DOCTYPE>, ni <html>/);
+  assert.match(p, /N'attends ni DOMContentLoaded ni window\.onload/);
+  assert.match(p, /AUCUN SERVEUR/);
+  assert.match(p, /AUCUNE BIBLIOTHEQUE, aucun CDN/);
+  assert.match(p, /aucune donnee ne part nulle part/);
 });
 
 test("un outil se livre par une page, un document par un drive", () => {

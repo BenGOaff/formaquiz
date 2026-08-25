@@ -7,6 +7,7 @@ import "server-only";
 import { VALUE_CONTENT_RULES } from "@/lib/prompts/valueContent";
 import { BONUS_IMPLEMENTATION_RULES } from "./bonusContext";
 import { SYSTEME_IO_BUILD_RULES, SYSTEME_IO_PAGE_TYPES_RULES } from "./systemeIo";
+import { SYSTEME_IO_BLOC_DEPANNAGE } from "@/lib/prompts/systemeIoBloc";
 import {
   ACTIVITY_OPTIONS,
   MATURITY_OPTIONS,
@@ -403,7 +404,7 @@ export function buildCoachSystemPrompt(input: {
 
   // ── Partie STABLE (mise en cache) : persona + regles + faits Tiquiz +
   //    programme + documents de reference admin. ──
-  let cacheablePrefix = `${persona}${VALUE_CONTENT_RULES}${SYSTEME_IO_LINK_RULES}${SYSTEME_IO_PAGE_TYPES_RULES}${SYSTEME_IO_BUILD_RULES}${ATELIER_TOOLS_RULES}${TIQUIZ_FACTS}${STATS_READING_RULES}${ESCALADE_RULES}\n\n=== PROGRAMME (vue d'ensemble des jours) ===\n${index}`;
+  let cacheablePrefix = `${persona}${VALUE_CONTENT_RULES}${SYSTEME_IO_LINK_RULES}${SYSTEME_IO_PAGE_TYPES_RULES}${SYSTEME_IO_BLOC_DEPANNAGE}${SYSTEME_IO_BUILD_RULES}${ATELIER_TOOLS_RULES}${TIQUIZ_FACTS}${STATS_READING_RULES}${ESCALADE_RULES}\n\n=== PROGRAMME (vue d'ensemble des jours) ===\n${index}`;
 
   // Documents de connaissance charges par l'admin (bornes en taille).
   if (docs && docs.length) {

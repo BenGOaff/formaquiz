@@ -44,6 +44,7 @@
 // Import RELATIF avec l'extension : le runner de tests de ce repo ne
 // resout pas l'alias `@/`.
 import { bonusShape, type BonusShape } from "../bonus/shape.ts";
+import { SYSTEME_IO_BLOC_CONTRAINTES } from "@/lib/prompts/systemeIoBloc";
 import {
   hasOfferPerProfile,
   isPerProfile,
@@ -450,7 +451,8 @@ const AI_BUILT_PAGE = [
   "COMMENT ELLE FABRIQUE CET OUTIL : elle ne le code pas, et elle ne le monte pas dans un tableur. Elle le fait ECRIRE par Claude ou ChatGPT, et TU LUI DONNES LE PROMPT TOUT PRET.",
   "INTERDIT de proposer un tableur (Google Sheets, Excel), un service de calculateur en ligne, ou un outil no-code payant. C'est le conseil d'avant : des heures de formules pour un rendu qui ressemble a une feuille de calcul.",
   "Le prompt que tu ecris est COMPLET et se copie tel quel : il contient les champs exacts, la formule exacte, les tranches d'interpretation et le texte affiche pour chaque tranche, le texte du bouton final et l'adresse de l'offre. Celui qui le colle ne doit avoir AUCUNE decision a prendre, sauf sa couleur et son lien.",
-  "Le prompt exige de l'IA : UN SEUL fichier HTML autonome, CSS et JavaScript a l'interieur, AUCUNE bibliotheque externe (il finira dans un bloc de code d'une page, ou rien ne se telecharge de l'exterieur) ; lisible sur telephone d'abord ; TOUT calcule dans le navigateur, aucune donnee envoyee nulle part ; une couleur principale posee en variable CSS en haut du fichier, pour qu'elle la change en une ligne.",
+  "Le prompt RECOPIE MOT POUR MOT les contraintes ci-dessous, dans le bloc de code que tu ecris. Elles ne sont pas negociables : sans elles, le code produit casse la page ou ne demarre jamais.",
+  SYSTEME_IO_BLOC_CONTRAINTES,
   "Tu ecris ce prompt DANS UN BLOC DE CODE markdown (trois backticks avant, trois backticks apres), et rien d'autre dans ce bloc. C'est ce qui lui donne son bouton Copier.",
   "Le temps annonce est le temps REEL de cette methode : coller le prompt, relire, ajuster une fois. Quinze a trente minutes, pas trois heures.",
 ].join("\n");

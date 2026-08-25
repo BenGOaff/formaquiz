@@ -161,3 +161,68 @@ test("aucun accord au feminin dans l'adresse a l'eleve", () => {
   const tout = SYSTEME_IO_PAGE_TYPES_RULES + SYSTEME_IO_BUILD_RULES;
   assert.ok(!/\b(prête|inscrite|connectée|déconnectée)\b/i.test(tout));
 });
+
+// ── Le code collé dans une page Systeme.io ──────────────────────────
+//
+// Béné, 25 août 2026 : "pas de balises html ou body, chargement
+// dynamique des pages etc... il ne doit jamais proposer de créer un
+// serveur ou autre non plus, juste un truc simple."
+//
+// Le prompt disait "UN SEUL fichier HTML autonome", ce qui est par
+// définition un document avec <html> et <body>. Collé dans un bloc de
+// code, son CSS repeint la page de vente autour.
+
+import {
+  SYSTEME_IO_BLOC_CONTRAINTES,
+  SYSTEME_IO_BLOC_DEPANNAGE,
+} from "../../lib/prompts/systemeIoBloc.ts";
+
+const BONUS_PROMPT_SRC = readFileSync(new URL("../../lib/prompts/bonus.ts", import.meta.url), "utf8");
+
+test("les contraintes du bloc de code sont ecrites a UN seul endroit", () => {
+  assert.ok(
+    BONUS_PROMPT_SRC.includes("SYSTEME_IO_BLOC_CONTRAINTES"),
+    "le generateur doit importer la regle, pas en recopier une version",
+  );
+  assert.ok(KNOWLEDGE.includes("${SYSTEME_IO_BLOC_DEPANNAGE}"), "le coach ne voit pas le depannage");
+});
+
+test("le code produit est un MORCEAU de page, jamais un document", () => {
+  assert.ok(SYSTEME_IO_BLOC_CONTRAINTES.includes("CE N'EST PAS UNE PAGE, C'EST UN MORCEAU DE PAGE"));
+  for (const balise of ["<!DOCTYPE>", "<html>", "<head>", "<body>"]) {
+    assert.ok(SYSTEME_IO_BLOC_CONTRAINTES.includes(balise), `balise non interdite : ${balise}`);
+  }
+});
+
+test("le CSS est porte par un identifiant, jamais par une regle nue", () => {
+  assert.ok(SYSTEME_IO_BLOC_CONTRAINTES.includes("CHAQUE REGLE CSS COMMENCE PAR CET IDENTIFIANT"));
+  assert.ok(
+    /bouton d'achat/.test(SYSTEME_IO_BLOC_CONTRAINTES),
+    "dire la CONSEQUENCE (sa page repeinte) fait tenir la regle mieux que la regle seule",
+  );
+});
+
+test("le script ne peut pas attendre un evenement deja passe", () => {
+  // La panne silencieuse : la page charge son contenu dynamiquement,
+  // donc DOMContentLoaded est souvent deja tire quand le bloc s'execute.
+  // Le script ne demarre jamais, sans un mot dans la console.
+  assert.ok(SYSTEME_IO_BLOC_CONTRAINTES.includes("N'attends ni DOMContentLoaded ni window.onload"));
+  assert.ok(SYSTEME_IO_BLOC_DEPANNAGE.includes("DOMContentLoaded"));
+});
+
+test("jamais de serveur, d'API, d'installation ni d'etape de build", () => {
+  for (const interdit of ["AUCUN SERVEUR", "aucune API", "aucune installation", "pas de npm", "pas de terminal"]) {
+    assert.ok(SYSTEME_IO_BLOC_CONTRAINTES.includes(interdit), `pas interdit : ${interdit}`);
+  }
+  assert.ok(SYSTEME_IO_BLOC_DEPANNAGE.includes("monter un serveur"));
+});
+
+test("le depannage part des SYMPTOMES, pas de la liste des regles", () => {
+  // L'eleve arrive par ce qu'il voit, pas par ce qu'il a enfreint.
+  assert.ok(SYSTEME_IO_BLOC_DEPANNAGE.includes("MON ENCART EST VIDE"));
+  assert.ok(SYSTEME_IO_BLOC_DEPANNAGE.includes("MA PAGE EST TOUTE DÉFORMÉE"));
+});
+
+test("aucun tiret cadratin dans ces deux blocs non plus", () => {
+  assert.ok(!/[—–]/.test(SYSTEME_IO_BLOC_CONTRAINTES + SYSTEME_IO_BLOC_DEPANNAGE));
+});
