@@ -7,9 +7,8 @@ import { timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { syncMetrics } from "@/lib/integrations/tiquiz";
 import { checkSpotlights, type NewSpotlight } from "@/lib/spotlight";
-import { sendEmail } from "@/lib/email/resend";
 import { spotlightAdminEmail } from "@/lib/email/templates";
-import { ADMIN_EMAILS } from "@/lib/adminEmails";
+import { alerterAdmins } from "@/lib/email/alerteAdmin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -68,10 +67,11 @@ export async function GET(req: NextRequest) {
       ]),
     );
     const items = created.map((c) => ({ name: nameById.get(c.userId) ?? "Un élève", label: c.label }));
+    // UN SEUL ENVOI (Bene, 25 aout 2026 : "je recois toujours ce genre de
+    // mails en double"). La boucle envoyait un message par adresse admin,
+    // et les deux arrivent dans la meme boite.
     const { subject, html } = spotlightAdminEmail({ items });
-    for (const to of ADMIN_EMAILS) {
-      await sendEmail({ to, subject, html });
-    }
+    await alerterAdmins({ subject, html });
   }
 
   return NextResponse.json({ ok: true, scanned: userIds.length, newCandidates: created.length });
