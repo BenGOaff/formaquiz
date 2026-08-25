@@ -458,9 +458,16 @@ test("la page produite doit tenir dans un bloc de code de page", () => {
   // Un seul fichier, aucune dependance externe : c'est la condition pour
   // que ca marche colle dans une page de tunnel.
   const p = buildProductionSystemPrompt(brief(), "guide", undefined, "calculateur");
-  assert.match(p, /UN SEUL fichier HTML autonome/);
-  assert.match(p, /AUCUNE bibliotheque externe/);
-  assert.match(p, /aucune donnee envoyee nulle part/);
+  // 25 aout 2026 : le prompt disait "UN SEUL fichier HTML autonome".
+  // Un fichier HTML autonome commence par <!DOCTYPE html> : colle dans
+  // un bloc de code, c'est une page DANS une page, et son CSS repeint
+  // toute la page de la creatrice. Le code produit est un MORCEAU.
+  assert.match(p, /CE N'EST PAS UNE PAGE, C'EST UN MORCEAU DE PAGE/);
+  assert.match(p, /N'ecris donc JAMAIS <head> ni <body>/);
+  assert.match(p, /N'attends ni DOMContentLoaded ni window\.onload/);
+  assert.match(p, /AUCUN SERVEUR/);
+  assert.match(p, /AUCUNE BIBLIOTHEQUE, aucun CDN/);
+  assert.match(p, /aucune donnee ne part nulle part/);
 });
 
 test("un outil se livre par une page, un document par un drive", () => {
@@ -468,10 +475,9 @@ test("un outil se livre par une page, un document par un drive", () => {
   assert.match(page, /bloc de code d'une page Systeme\.io/);
   assert.doesNotMatch(page, /heberge sur un drive/);
   // 25 aout 2026 : la phrase disait "une page de blog, ou une page de
-  // tunnel", sans dire LAQUELLE. Un eleve l'a suivie sur une PAGE INFO,
-  // qui ne propose pas le bloc de code, et a cherche pendant une heure
-  // un element qui n'etait pas sur son ecran. Le guide doit nommer le
-  // type qui refuse, et donner celui qui accepte.
+  // tunnel", sans dire LAQUELLE. Une PAGE INFO de tunnel n'accepte pas de
+  // code, et un eleve a cherche longtemps un element qui n'etait pas sur
+  // son ecran. Le guide nomme donc le type qui refuse ET celui qui va.
   assert.match(page, /PAGE INFO/);
   assert.match(page, /PAGE DE REMERCIEMENT/);
 

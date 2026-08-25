@@ -51,10 +51,21 @@ test("le coach demande le type de page avant d'expliquer la manipulation", () =>
   );
 });
 
-test("le cas de la page info est nomme, et la sortie aussi", () => {
-  assert.ok(SYSTEME_IO_PAGE_TYPES_RULES.includes("PAGE INFO"));
+test("le type de page se verifie EN PREMIER, le code colle ensuite", () => {
+  // Deux causes pour un seul symptome ("mon html ne marche pas"), et
+  // elles appellent des corrections opposees. Bene a tranche en deux
+  // temps le meme jour : le TYPE de page decide si le bloc de code
+  // EXISTE, le CONTENU colle decide s'il FONCTIONNE. Les deux doivent
+  // etre la, dans cet ordre.
+  const src = SYSTEME_IO_PAGE_TYPES_RULES;
+  assert.ok(src.includes("la PAGE INFO d'un tunnel de vente N'ACCEPTE PAS DE CODE"));
+  assert.ok(src.includes("<head> et <body>"), "la deuxieme cause manque");
   assert.ok(
-    SYSTEME_IO_PAGE_TYPES_RULES.includes("PAGE DE REMERCIEMENT"),
+    src.indexOf("PAGE INFO") < src.indexOf("<head> et <body>"),
+    "le type se regarde en premier : c'est le seul cas ou aucune manipulation n'aide",
+  );
+  assert.ok(
+    src.includes("PAGE DE REMERCIEMENT"),
     "nommer le blocage sans donner la sortie laisse l'eleve au meme endroit",
   );
 });
@@ -137,14 +148,15 @@ test("il fait tester le parcours complet, avec une autre adresse", () => {
 // sans corriger le guide qu'il a en main laisserait deux marches a
 // suivre contradictoires, et c'est la version ecrite qu'on suit.
 
-test("le guide du bonus ne renvoie plus vers n'importe quelle page de tunnel", () => {
+test("le guide du bonus nomme la vraie contrainte du code colle", () => {
   for (const [nom, src] of [["lib/prompts/bonus.ts", BONUS_PROMPT], ["lib/coach/bonusContext.ts", BONUS_CTX]] as const) {
-    assert.ok(
-      /page info/i.test(src),
-      `${nom} envoie encore coller du HTML sans nommer le type de page qui refuse le bloc de code`,
-    );
     assert.ok(/remerciement/i.test(src), `${nom} ne donne pas la sortie`);
   }
+  // Les DEUX contraintes, parce qu'il y a deux causes : le type de page
+  // qui refuse le code, et le code qui contient un document entier.
+  assert.ok(/page info/i.test(BONUS_CTX), "le contexte bonus ne dit pas quel type refuse le code");
+  assert.ok(/<head>/.test(BONUS_CTX), "le contexte bonus ne dit pas ce qui casse");
+  assert.ok(/SYSTEME_IO_BLOC_CONTRAINTES/.test(BONUS_PROMPT), "le generateur n'impose plus les contraintes");
 });
 
 // ── Ce que le coach a sous les yeux finit chez l'eleve ───────────────
@@ -160,4 +172,69 @@ test("aucun accord au feminin dans l'adresse a l'eleve", () => {
   // aucune forme accordee ne doit trainer.
   const tout = SYSTEME_IO_PAGE_TYPES_RULES + SYSTEME_IO_BUILD_RULES;
   assert.ok(!/\b(prête|inscrite|connectée|déconnectée)\b/i.test(tout));
+});
+
+// ── Le code collé dans une page Systeme.io ──────────────────────────
+//
+// Béné, 25 août 2026 : "pas de balises html ou body, chargement
+// dynamique des pages etc... il ne doit jamais proposer de créer un
+// serveur ou autre non plus, juste un truc simple."
+//
+// Le prompt disait "UN SEUL fichier HTML autonome", ce qui est par
+// définition un document avec <html> et <body>. Collé dans un bloc de
+// code, son CSS repeint la page de vente autour.
+
+import {
+  SYSTEME_IO_BLOC_CONTRAINTES,
+  SYSTEME_IO_BLOC_DEPANNAGE,
+} from "../../lib/prompts/systemeIoBloc.ts";
+
+const BONUS_PROMPT_SRC = readFileSync(new URL("../../lib/prompts/bonus.ts", import.meta.url), "utf8");
+
+test("les contraintes du bloc de code sont ecrites a UN seul endroit", () => {
+  assert.ok(
+    BONUS_PROMPT_SRC.includes("SYSTEME_IO_BLOC_CONTRAINTES"),
+    "le generateur doit importer la regle, pas en recopier une version",
+  );
+  assert.ok(KNOWLEDGE.includes("${SYSTEME_IO_BLOC_DEPANNAGE}"), "le coach ne voit pas le depannage");
+});
+
+test("le code produit est un MORCEAU de page, jamais un document", () => {
+  assert.ok(SYSTEME_IO_BLOC_CONTRAINTES.includes("CE N'EST PAS UNE PAGE, C'EST UN MORCEAU DE PAGE"));
+  for (const balise of ["<!DOCTYPE>", "<html>", "<head>", "<body>"]) {
+    assert.ok(SYSTEME_IO_BLOC_CONTRAINTES.includes(balise), `balise non interdite : ${balise}`);
+  }
+});
+
+test("le CSS est porte par un identifiant, jamais par une regle nue", () => {
+  assert.ok(SYSTEME_IO_BLOC_CONTRAINTES.includes("CHAQUE REGLE CSS COMMENCE PAR CET IDENTIFIANT"));
+  assert.ok(
+    /bouton d'achat/.test(SYSTEME_IO_BLOC_CONTRAINTES),
+    "dire la CONSEQUENCE (sa page repeinte) fait tenir la regle mieux que la regle seule",
+  );
+});
+
+test("le script ne peut pas attendre un evenement deja passe", () => {
+  // La panne silencieuse : la page charge son contenu dynamiquement,
+  // donc DOMContentLoaded est souvent deja tire quand le bloc s'execute.
+  // Le script ne demarre jamais, sans un mot dans la console.
+  assert.ok(SYSTEME_IO_BLOC_CONTRAINTES.includes("N'attends ni DOMContentLoaded ni window.onload"));
+  assert.ok(SYSTEME_IO_BLOC_DEPANNAGE.includes("DOMContentLoaded"));
+});
+
+test("jamais de serveur, d'API, d'installation ni d'etape de build", () => {
+  for (const interdit of ["AUCUN SERVEUR", "aucune API", "aucune installation", "pas de npm", "pas de terminal"]) {
+    assert.ok(SYSTEME_IO_BLOC_CONTRAINTES.includes(interdit), `pas interdit : ${interdit}`);
+  }
+  assert.ok(SYSTEME_IO_BLOC_DEPANNAGE.includes("monter un serveur"));
+});
+
+test("le depannage part des SYMPTOMES, pas de la liste des regles", () => {
+  // L'eleve arrive par ce qu'il voit, pas par ce qu'il a enfreint.
+  assert.ok(SYSTEME_IO_BLOC_DEPANNAGE.includes("MON ENCART EST VIDE"));
+  assert.ok(SYSTEME_IO_BLOC_DEPANNAGE.includes("MA PAGE EST TOUTE DÉFORMÉE"));
+});
+
+test("aucun tiret cadratin dans ces deux blocs non plus", () => {
+  assert.ok(!/[—–]/.test(SYSTEME_IO_BLOC_CONTRAINTES + SYSTEME_IO_BLOC_DEPANNAGE));
 });

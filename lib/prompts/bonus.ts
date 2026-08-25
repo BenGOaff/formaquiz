@@ -44,6 +44,7 @@
 // Import RELATIF avec l'extension : le runner de tests de ce repo ne
 // resout pas l'alias `@/`.
 import { bonusShape, type BonusShape } from "../bonus/shape.ts";
+import { SYSTEME_IO_BLOC_CONTRAINTES } from "@/lib/prompts/systemeIoBloc";
 import {
   hasOfferPerProfile,
   isPerProfile,
@@ -450,7 +451,8 @@ const AI_BUILT_PAGE = [
   "COMMENT ELLE FABRIQUE CET OUTIL : elle ne le code pas, et elle ne le monte pas dans un tableur. Elle le fait ECRIRE par Claude ou ChatGPT, et TU LUI DONNES LE PROMPT TOUT PRET.",
   "INTERDIT de proposer un tableur (Google Sheets, Excel), un service de calculateur en ligne, ou un outil no-code payant. C'est le conseil d'avant : des heures de formules pour un rendu qui ressemble a une feuille de calcul.",
   "Le prompt que tu ecris est COMPLET et se copie tel quel : il contient les champs exacts, la formule exacte, les tranches d'interpretation et le texte affiche pour chaque tranche, le texte du bouton final et l'adresse de l'offre. Celui qui le colle ne doit avoir AUCUNE decision a prendre, sauf sa couleur et son lien.",
-  "Le prompt exige de l'IA : UN SEUL fichier HTML autonome, CSS et JavaScript a l'interieur, AUCUNE bibliotheque externe (il finira dans un bloc de code d'une page, ou rien ne se telecharge de l'exterieur) ; lisible sur telephone d'abord ; TOUT calcule dans le navigateur, aucune donnee envoyee nulle part ; une couleur principale posee en variable CSS en haut du fichier, pour qu'elle la change en une ligne.",
+  "Le prompt RECOPIE MOT POUR MOT les contraintes ci-dessous, dans le bloc de code que tu ecris. Elles ne sont pas negociables : sans elles, le code produit casse la page ou ne demarre jamais.",
+  SYSTEME_IO_BLOC_CONTRAINTES,
   "Tu ecris ce prompt DANS UN BLOC DE CODE markdown (trois backticks avant, trois backticks apres), et rien d'autre dans ce bloc. C'est ce qui lui donne son bouton Copier.",
   "Le temps annonce est le temps REEL de cette methode : coller le prompt, relire, ajuster une fois. Quinze a trente minutes, pas trois heures.",
 ].join("\n");
@@ -472,7 +474,7 @@ function deliveryFacts(b: BonusBrief, shape: BonusShape): string {
   const hosting: Record<BonusShape, string> = {
     document:
       "1. Le fichier est heberge sur un drive (Google Drive, Notion, ou l'espace Systeme.io). ATTENTION : le partage du fichier doit etre regle sur \"tout le monde avec le lien\", en LECTURE. Un lien restreint donne une page d'erreur au visiteur, et la creatrice ne le verra jamais puisque, elle, y a acces.",
-    page: "1. Le fichier HTML produit par l'IA est colle dans un bloc de code d'une page Systeme.io. ATTENTION AU TYPE DE PAGE : le bloc de code n'existe pas sur tous les types, et notamment pas sur une PAGE INFO de tunnel. Une page de blog convient, et dans un tunnel c'est une PAGE DE REMERCIEMENT qu'elle cree, qu'elle renomme ensuite comme elle veut (le nom ne change ni le type ni les elements). Elle publie la page et copie son adresse. Rien a installer, rien a heberger ailleurs, et l'adresse est sur son domaine.",
+    page: "1. Le fichier HTML produit par l'IA est colle dans un bloc de code d'une page Systeme.io. ATTENTION AU TYPE DE PAGE : une PAGE INFO de tunnel n'accepte pas de code. Une page de blog convient, et dans un tunnel c'est une PAGE DE REMERCIEMENT qu'elle cree, qu'elle renomme ensuite comme elle veut (le nom d'une page ne change ni son type ni ses elements). Elle publie la page et copie son adresse. Rien a installer, rien a heberger ailleurs, et l'adresse est sur son domaine.",
     acces:
       "1. Il n'y a pas de fichier a heberger : ce bonus est un acces. Elle prepare l'adresse qui l'ouvre (le lien de l'atelier, le flux prive, la page d'inscription au challenge) et verifie qu'elle fonctionne depuis une fenetre de navigation privee.",
   };
