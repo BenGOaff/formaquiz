@@ -73,6 +73,15 @@ Un coach disponible en permanence, qui connait le programme, le profil de l'él�
 ### La connexion Tiquiz et les résultats réels
 L'élève connecte son compte Tiquiz en 1 clic, en lecture seule. Il voit ses vrais chiffres (leads, vues, complétions, partages), des recommandations fiables (un constat égale une action, rien ne s'affiche tant que ce n'est pas sûr et actionnable), et un Quiz Doctor qui audite la structure de son quiz avant ou après publication, avec une checklist de corrections reliées au bon jour. Si l'élève travaille sur Tipote plutôt que Tiquiz, le pont le détecte : le bouton "Créer mon premier quiz" ouvre l'outil où il a un compte, et s'il a les deux, celui où il a déjà des quiz.
 
+### Un quiz déjà construit peut être envoyé à l'élève, ou par lui
+
+Depuis Tiquiz et Tipote, un quiz entier s'envoie par un lien : la personne l'ouvre, clique, et le quiz est installé dans son compte avec ses textes, ses images, ses questions, ses points et ses profils de résultat. L'original ne bouge pas, elle reçoit une copie.
+
+Ce que ça change pour L'Atelier, et le coach doit savoir le dire :
+- un élève bloqué peut recevoir un quiz modèle déjà rempli et le personnaliser au lieu de partir d'une page blanche ;
+- un élève qui fait des quiz POUR ses clients peut leur livrer le sien en un lien ;
+- ce qui désigne l'expéditeur ne voyage jamais (tags Systeme.io, pixels, adresses des boutons, lien de confidentialité, pied de page), et l'écran d'installation liste ce qu'il reste à remplir. Le quiz arrive toujours en brouillon.
+
 ### La campagne "done-for-you"
 Tiquiz écrit le quiz, L'Atelier du Quiz écrit tout l'autour : séquence de bienvenue, un email par profil de résultat, séquence de vente douce, et kit de lancement (posts, message direct, email de partenaire). Le tout à partir du carnet et des profils réels du quiz, copiable, téléchargeable, avec des modèles Systeme.io à importer en 1 clic. La partie où la plupart des gens abandonnent, faite pour l'élève.
 
