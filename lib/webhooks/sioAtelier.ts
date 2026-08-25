@@ -33,7 +33,7 @@ import {
   bonusMismatchAdminEmail,
   bonusUnlockedEmail,
 } from "@/lib/email/templates";
-import { ADMIN_EMAILS } from "@/lib/adminEmails";
+import { alerterAdmins } from "@/lib/email/alerteAdmin";
 import { bonusOrderEmailKind, isOrphanBonusOrder } from "@/lib/access/bonusOrder";
 import { logWebhookEvent } from "@/lib/webhooks/log";
 import { refundCommissionByOrder } from "@/lib/affiliateTracking";
@@ -265,11 +265,9 @@ export async function handleSioAtelierWebhook(
       // Best-effort de bout en bout : une alerte qui n'part pas ne doit
       // jamais faire échouer une vente encaissée.
       const alerte = bonusMismatchAdminEmail({ email, source: opts.source });
-      await Promise.all(
-        ADMIN_EMAILS.map((to) =>
-          sendEmail({ to, subject: alerte.subject, html: alerte.html }).catch(() => null),
-        ),
-      ).catch(() => null);
+      // UN SEUL ENVOI : le `map` en faisait un par adresse admin, et les
+      // deux arrivent dans la meme boite (Bene, 25 aout 2026).
+      await alerterAdmins({ subject: alerte.subject, html: alerte.html });
       console.warn(`[sioAtelier] deuxieme chance sur une adresse inconnue : ${email}`);
     }
   }

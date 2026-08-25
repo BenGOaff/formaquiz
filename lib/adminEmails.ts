@@ -8,13 +8,30 @@ export const ADMIN_EMAILS: readonly string[] = [
   "hello@ethilife.fr",
 ];
 
-// Destinataires des ALERTES d'escalade du coach. Volontairement distinct de
-// ADMIN_EMAILS : les deux adresses admin arrivent dans la meme boite, donc
-// alerter les deux = Bene recevait 2 emails pour une seule demande. On
-// n'alerte donc que l'adresse principale. Pour notifier aussi
-// hello@ethilife.fr (si c'est une personne differente a prevenir), ajoute-la
-// ici : l'email est envoye en UN SEUL envoi groupe (cf. app/api/coach/route).
-export const ESCALATION_ALERT_EMAILS: readonly string[] = [
+// QUI ON PRÉVIENT, ET C'EST UNE AUTRE QUESTION QUE "QUI A LE DROIT".
+//
+// `ADMIN_EMAILS` dit qui peut ENTRER dans le back-office. Ça ne dit rien
+// de qui doit être PRÉVENU : les deux adresses ci-dessus arrivent dans la
+// même boîte, donc alerter les deux, c'est deux emails pour un seul
+// évènement.
+//
+// -- BÉNÉ, 25 AOÛT 2026 -----------------------------------------------
+//
+// "Je reçois toujours ce genre de mails en double c'est normal ?"
+//
+// Non. Cette distinction avait été écrite le jour où le coach envoyait
+// ses escalades en double, et elle n'a été appliquée QU'À CET
+// ENDROIT-LÀ. Deux autres chemins bouclaient encore sur `ADMIN_EMAILS`
+// (les candidats à mettre en avant, l'alerte de bonus non attribué), et
+// ils envoyaient donc toujours deux messages.
+//
+// D'où le renommage : ce n'est pas une liste "d'escalade", c'est LA
+// liste des alertes. Et `alerterAdmins()` (lib/email/alerteAdmin.ts) est
+// le SEUL chemin : il fait UN envoi, donc plus personne ne peut boucler.
+//
+// Pour prévenir une autre personne, ajoute son adresse ici : elle
+// recevra le même et unique message.
+export const ADMIN_ALERT_EMAILS: readonly string[] = [
   "blagardette@gmail.com",
 ];
 

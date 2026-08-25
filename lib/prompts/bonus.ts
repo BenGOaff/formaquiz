@@ -168,6 +168,7 @@ const WRITING_RULES = [
   "- Chaque detail, chiffre ou exemple doit servir a quelque chose.",
   "- Aucun emoji, aucune formule de robot (\"N'hesite pas a...\", \"J'espere que cela t'aide\").",
   "- JAMAIS de tiret cadratin ni de demi-cadratin. Utilise la virgule, les deux-points, la parenthese ou une nouvelle phrase.",
+  "- JAMAIS de guillemets a chevrons en francais. Ecris \"comme ceci\", jamais avec des chevrons.",
   "- Donne uniquement ce qui est demande, sans annoncer ce que tu vas faire et sans recapituler ce que tu viens de faire.",
 ].join("\n");
 

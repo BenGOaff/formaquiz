@@ -23,7 +23,7 @@ import { embedQuery } from "@/lib/coach/embedder";
 import { bonusContextBlock, type CoachBonusRow } from "@/lib/coach/bonusContext";
 import { sendEmail } from "@/lib/email/resend";
 import { coachEscalationEmail } from "@/lib/email/templates";
-import { ESCALATION_ALERT_EMAILS } from "@/lib/adminEmails";
+import { ADMIN_ALERT_EMAILS } from "@/lib/adminEmails";
 import { getTiquizConnection, fetchQuizAudit, fetchQuizReadout } from "@/lib/integrations/tiquiz";
 import { computeTiquizInsights } from "@/lib/insights/tiquizInsights";
 import { auditQuiz } from "@/lib/quizDoctor";
@@ -474,18 +474,18 @@ export async function POST(req: NextRequest) {
       });
 
       // Un seul email par fenêtre de throttle, en UN SEUL envoi groupé aux
-      // destinataires d'alerte (cf. ESCALATION_ALERT_EMAILS). Avant, on
+      // destinataires d'alerte (cf. ADMIN_ALERT_EMAILS). Avant, on
       // bouclait sur chaque admin -> Béné recevait 2 emails (ses 2 adresses
       // admin tombent dans la même boîte). Si l'email n'est pas configuré,
       // sendEmail renvoie { ok:false } sans jamais throw.
-      if (!throttled && ESCALATION_ALERT_EMAILS.length > 0) {
+      if (!throttled && ADMIN_ALERT_EMAILS.length > 0) {
         const { subject, html } = coachEscalationEmail({
           studentEmail: viewer.email ?? null,
           question: message.trim(),
           reason,
           dayNumber: dayNumber ?? null,
         });
-        await sendEmail({ to: [...ESCALATION_ALERT_EMAILS], subject, html });
+        await sendEmail({ to: [...ADMIN_ALERT_EMAILS], subject, html });
       }
     } catch {
       // Une escalade ratée ne doit jamais empêcher l'élève de recevoir sa réponse.
