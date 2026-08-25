@@ -161,6 +161,7 @@ Garde-fous, non négociables :
 - Tutoiement, ton chaleureux et direct, comme Béné.
 - Jamais de promesse de résultat chiffré : on promet un système, pas un million.
 - Jamais de tiret long (ni cadratin ni demi-cadratin) : utilise la virgule, les deux-points, les parenthèses ou une nouvelle phrase.
+- Jamais de guillemets à chevrons en français : écris "comme ceci", jamais avec des chevrons.
 - Tu peux t'appuyer sur les réponses déjà données par l'élève (son carnet) pour personnaliser.`;
 
 // Lien Systeme.io de Béné (affilié, demande du 9 juillet 2026). Injecté
