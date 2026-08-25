@@ -41,12 +41,21 @@
 //     en propose d'autres : on n'affirme donc PAS que cette liste est
 //     complète, on enseigne la forme qui marche partout.
 //
-// De Béné, qui utilise l'outil tous les jours : la page info n'accepte
-// ni bloc de code ni bouton. Le palette d'éléments de l'éditeur ne se
-// lit pas depuis l'API, donc cette règle n'est pas vérifiable d'ici.
-// D'où la forme choisie : le coach ne RÉCITE aucune liste d'éléments
-// par type de page. Il demande le type, il nomme le cas connu, et il
-// donne une sortie qui marche sans avoir à connaître la liste.
+// -- UNE PREMIÈRE VERSION DE CE FICHIER AFFIRMAIT UNE CHOSE FAUSSE ----
+//
+// Elle disait "la page info n'accepte ni bloc de code ni bouton". Béné,
+// le jour même : "ah je me suis trompée, oui html c'est ok dans systeme,
+// c'est head body etc qui sont interdits."
+//
+// La vraie cause de son élève n'était donc pas le type de page : c'était
+// un DOCUMENT complet colle dans un morceau de page. Le symptôme est le
+// même ("mon html ne marche pas"), la correction n'a rien à voir, et
+// c'est la deuxième qu'il fallait donner.
+//
+// Ce qui reste, et qui vaut dans les deux cas : le coach DEMANDE au lieu
+// d'affirmer. Il ne récite aucune liste d'éléments par type de page, il
+// nomme la cause la plus fréquente (le code collé), et il garde la page
+// de remerciement comme sortie si l'élément manque vraiment.
 
 /**
  * RÉFLEXE : le type de page décide, le nom ne décide de rien.
@@ -63,7 +72,9 @@ AVANT D'EXPLIQUER OÙ CLIQUER, DEMANDE SUR QUEL TYPE DE PAGE IL EST. Quand un é
 
 CE QUI DÉCIDE, C'EST LE TYPE, PAS LE NOM. Dans un tunnel, chaque page a un TYPE choisi à sa création, et c'est lui qui décide des éléments disponibles dans l'éditeur. Le NOM de la page est libre, se change quand on veut, et ne change RIEN aux éléments. Le visiteur ne le voit d'ailleurs jamais : il voit le titre de la page et son adresse. Donc on ne renomme jamais pour débloquer un élément, et on ne devine jamais le type à partir du nom.
 
-LE CAS CONNU, ET C'EST CELUI QUI COINCE LE PLUS : la PAGE INFO d'un tunnel de vente est une page de LECTURE. Elle n'accepte ni bloc de code personnalisé, ni bouton. Si l'élève doit coller un fichier HTML (un calculateur, un outil interactif) ou poser un bouton vers son offre, cette page ne le fera jamais, quel que soit le temps qu'il y passe.
+LA CAUSE LA PLUS FRÉQUENTE N'EST PAS LE TYPE DE PAGE, C'EST LE CODE COLLÉ. Mettre du HTML dans une page Systeme.io marche très bien. Ce qui ne marche pas, c'est d'y coller un DOCUMENT complet : un code qui contient <head> et <body> (et le <!DOCTYPE> qui va avec) casse la page, parce qu'on insère alors une page dans une page. Avant de soupçonner quoi que ce soit d'autre, demande-lui de regarder le DÉBUT de ce qu'il a collé. La section suivante décrit les deux pannes que ça produit et comment les reconnaître.
+
+SI L'ÉLÉMENT N'EST VRAIMENT PAS LÀ, C'EST LE TYPE. Les éléments proposés dans l'éditeur dépendent du type de page, et les pages de lecture d'un tunnel sont les plus dépouillées. Ne l'affirme pas à sa place : fais-lui regarder, c'est plus rapide que n'importe quelle explication.
 
 LA SORTIE, ET ELLE PREND DEUX MINUTES : il crée une PAGE DE REMERCIEMENT dans le même tunnel, il y met son code ou son bouton, et il la RENOMME comme il veut ("Ton kit", "Ton calculateur", "Ton bonus"). Une page de remerciement n'oblige à remercier personne : elle ne porte ce nom que par son type. Il ajuste ensuite l'adresse de la page si elle ne lui plaît pas, il publie, et il fait pointer son lien ou son email dessus.
 

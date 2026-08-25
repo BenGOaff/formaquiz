@@ -51,12 +51,35 @@ test("le coach demande le type de page avant d'expliquer la manipulation", () =>
   );
 });
 
-test("le cas de la page info est nomme, et la sortie aussi", () => {
-  assert.ok(SYSTEME_IO_PAGE_TYPES_RULES.includes("PAGE INFO"));
+test("la cause la plus frequente est nommee AVANT le type de page", () => {
+  // Bene, le jour meme : "ah je me suis trompee, oui html c'est ok dans
+  // systeme, c'est head body etc qui sont interdits." La panne de son
+  // eleve n'etait donc pas le type de page, c'etait un DOCUMENT complet
+  // colle dans un morceau de page. Meme symptome, autre correction.
+  const src = SYSTEME_IO_PAGE_TYPES_RULES;
+  assert.ok(src.includes("LA CAUSE LA PLUS FRÉQUENTE N'EST PAS LE TYPE DE PAGE, C'EST LE CODE COLLÉ"));
+  assert.ok(src.indexOf("<head> et <body>") < src.indexOf("SI L'ÉLÉMENT N'EST VRAIMENT PAS LÀ"),
+    "le code colle se regarde en premier : c'est la cause la plus frequente");
   assert.ok(
-    SYSTEME_IO_PAGE_TYPES_RULES.includes("PAGE DE REMERCIEMENT"),
-    "nommer le blocage sans donner la sortie laisse l'eleve au meme endroit",
+    src.includes("PAGE DE REMERCIEMENT"),
+    "la sortie reste, pour le cas ou l'element manque vraiment",
   );
+});
+
+test("le coach n'affirme plus qu'un type de page refuse le code", () => {
+  // Une affirmation fausse dite avec aplomb envoie l'eleve refaire une
+  // page pour rien, et lui fait perdre confiance quand il decouvre que
+  // c'etait faux.
+  for (const [nom, src] of [
+    ["coach", SYSTEME_IO_PAGE_TYPES_RULES],
+    ["guide du bonus", BONUS_PROMPT],
+    ["contexte bonus", BONUS_CTX],
+  ] as const) {
+    assert.ok(
+      !/n'accepte ni bloc de code|jamais une page info|ne le propose pas/.test(src),
+      `${nom} affirme encore qu'un type de page refuse le code`,
+    );
+  }
 });
 
 test("le type decide, le nom ne decide de rien", () => {
@@ -137,14 +160,13 @@ test("il fait tester le parcours complet, avec une autre adresse", () => {
 // sans corriger le guide qu'il a en main laisserait deux marches a
 // suivre contradictoires, et c'est la version ecrite qu'on suit.
 
-test("le guide du bonus ne renvoie plus vers n'importe quelle page de tunnel", () => {
+test("le guide du bonus nomme la vraie contrainte du code colle", () => {
   for (const [nom, src] of [["lib/prompts/bonus.ts", BONUS_PROMPT], ["lib/coach/bonusContext.ts", BONUS_CTX]] as const) {
-    assert.ok(
-      /page info/i.test(src),
-      `${nom} envoie encore coller du HTML sans nommer le type de page qui refuse le bloc de code`,
-    );
     assert.ok(/remerciement/i.test(src), `${nom} ne donne pas la sortie`);
   }
+  // La contrainte qui compte vraiment est celle du CODE, pas de la page.
+  assert.ok(/<head>/.test(BONUS_CTX), "le contexte bonus ne dit pas ce qui casse");
+  assert.ok(/SYSTEME_IO_BLOC_CONTRAINTES/.test(BONUS_PROMPT), "le generateur n'impose plus les contraintes");
 });
 
 // ── Ce que le coach a sous les yeux finit chez l'eleve ───────────────

@@ -49,7 +49,7 @@
  * créatrice, c'est le modèle qui écrira le code.
  */
 export const SYSTEME_IO_BLOC_CONTRAINTES = [
-  "CE N'EST PAS UNE PAGE, C'EST UN MORCEAU DE PAGE. N'ecris ni <!DOCTYPE>, ni <html>, ni <head>, ni <body>, ni <meta>, ni <title>. Ton code sera colle A L'INTERIEUR d'une page qui existe deja : le navigateur deplace ou ignore ces balises, et la mise en page autour est abimee.",
+  "CE N'EST PAS UNE PAGE, C'EST UN MORCEAU DE PAGE. Ton code sera colle A L'INTERIEUR d'une page qui existe deja. N'ecris donc JAMAIS <head> ni <body> (ni le <!DOCTYPE> qui les accompagne) : ce sont eux qui cassent la mise en page autour. N'ecris pas non plus <html>, <meta> ni <title>, qui n'ont aucun effet au milieu d'une page et ne servent qu'a tromper celui qui relira le code.",
   "TOUT TIENT DANS UN SEUL <div> qui porte un identifiant unique, par exemple <div id=\"outil-k7x2\">. Le <style> et le <script> vivent dans ce meme bloc.",
   "CHAQUE REGLE CSS COMMENCE PAR CET IDENTIFIANT (#outil-k7x2 h2 { ... }, #outil-k7x2 button { ... }). Aucune regle nue sur body, html, h1, h2, p, a, button, input, *, ni sur une classe generique comme .card ou .container : elle repeindrait toute la page de la creatrice, y compris son menu et son bouton d'achat.",
   "LE JAVASCRIPT S'EXECUTE TOUT DE SUITE. N'attends ni DOMContentLoaded ni window.onload : la page charge son contenu dynamiquement, donc cet evenement est souvent DEJA passe quand ton bloc s'execute, et un code qui l'attend ne demarre jamais, sans aucun message d'erreur. Enveloppe tout dans une fonction anonyme appelee immediatement, et sors sans rien faire si le div n'est pas trouve.",

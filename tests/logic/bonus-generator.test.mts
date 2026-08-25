@@ -463,7 +463,7 @@ test("la page produite doit tenir dans un bloc de code de page", () => {
   // un bloc de code, c'est une page DANS une page, et son CSS repeint
   // toute la page de la creatrice. Le code produit est un MORCEAU.
   assert.match(p, /CE N'EST PAS UNE PAGE, C'EST UN MORCEAU DE PAGE/);
-  assert.match(p, /N'ecris ni <!DOCTYPE>, ni <html>/);
+  assert.match(p, /N'ecris donc JAMAIS <head> ni <body>/);
   assert.match(p, /N'attends ni DOMContentLoaded ni window\.onload/);
   assert.match(p, /AUCUN SERVEUR/);
   assert.match(p, /AUCUNE BIBLIOTHEQUE, aucun CDN/);
@@ -474,12 +474,9 @@ test("un outil se livre par une page, un document par un drive", () => {
   const page = buildProductionSystemPrompt(brief(), "guide", undefined, "calculateur");
   assert.match(page, /bloc de code d'une page Systeme\.io/);
   assert.doesNotMatch(page, /heberge sur un drive/);
-  // 25 aout 2026 : la phrase disait "une page de blog, ou une page de
-  // tunnel", sans dire LAQUELLE. Un eleve l'a suivie sur une PAGE INFO,
-  // qui ne propose pas le bloc de code, et a cherche pendant une heure
-  // un element qui n'etait pas sur son ecran. Le guide doit nommer le
-  // type qui refuse, et donner celui qui accepte.
-  assert.match(page, /PAGE INFO/);
+  // 25 aout 2026 : le guide doit nommer une destination CONCRETE. Il
+  // disait "une page de blog, ou une page de tunnel", ce qui laisse
+  // l'eleve arbitrer entre des types de page qu'il ne connait pas.
   assert.match(page, /PAGE DE REMERCIEMENT/);
 
   const doc = buildProductionSystemPrompt(brief(), "guide", undefined, "checklist");
