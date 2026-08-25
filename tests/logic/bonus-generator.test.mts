@@ -474,9 +474,11 @@ test("un outil se livre par une page, un document par un drive", () => {
   const page = buildProductionSystemPrompt(brief(), "guide", undefined, "calculateur");
   assert.match(page, /bloc de code d'une page Systeme\.io/);
   assert.doesNotMatch(page, /heberge sur un drive/);
-  // 25 aout 2026 : le guide doit nommer une destination CONCRETE. Il
-  // disait "une page de blog, ou une page de tunnel", ce qui laisse
-  // l'eleve arbitrer entre des types de page qu'il ne connait pas.
+  // 25 aout 2026 : la phrase disait "une page de blog, ou une page de
+  // tunnel", sans dire LAQUELLE. Une PAGE INFO de tunnel n'accepte pas de
+  // code, et un eleve a cherche longtemps un element qui n'etait pas sur
+  // son ecran. Le guide nomme donc le type qui refuse ET celui qui va.
+  assert.match(page, /PAGE INFO/);
   assert.match(page, /PAGE DE REMERCIEMENT/);
 
   const doc = buildProductionSystemPrompt(brief(), "guide", undefined, "checklist");

@@ -51,35 +51,23 @@ test("le coach demande le type de page avant d'expliquer la manipulation", () =>
   );
 });
 
-test("la cause la plus frequente est nommee AVANT le type de page", () => {
-  // Bene, le jour meme : "ah je me suis trompee, oui html c'est ok dans
-  // systeme, c'est head body etc qui sont interdits." La panne de son
-  // eleve n'etait donc pas le type de page, c'etait un DOCUMENT complet
-  // colle dans un morceau de page. Meme symptome, autre correction.
+test("le type de page se verifie EN PREMIER, le code colle ensuite", () => {
+  // Deux causes pour un seul symptome ("mon html ne marche pas"), et
+  // elles appellent des corrections opposees. Bene a tranche en deux
+  // temps le meme jour : le TYPE de page decide si le bloc de code
+  // EXISTE, le CONTENU colle decide s'il FONCTIONNE. Les deux doivent
+  // etre la, dans cet ordre.
   const src = SYSTEME_IO_PAGE_TYPES_RULES;
-  assert.ok(src.includes("LA CAUSE LA PLUS FRÉQUENTE N'EST PAS LE TYPE DE PAGE, C'EST LE CODE COLLÉ"));
-  assert.ok(src.indexOf("<head> et <body>") < src.indexOf("SI L'ÉLÉMENT N'EST VRAIMENT PAS LÀ"),
-    "le code colle se regarde en premier : c'est la cause la plus frequente");
+  assert.ok(src.includes("la PAGE INFO d'un tunnel de vente N'ACCEPTE PAS DE CODE"));
+  assert.ok(src.includes("<head> et <body>"), "la deuxieme cause manque");
+  assert.ok(
+    src.indexOf("PAGE INFO") < src.indexOf("<head> et <body>"),
+    "le type se regarde en premier : c'est le seul cas ou aucune manipulation n'aide",
+  );
   assert.ok(
     src.includes("PAGE DE REMERCIEMENT"),
-    "la sortie reste, pour le cas ou l'element manque vraiment",
+    "nommer le blocage sans donner la sortie laisse l'eleve au meme endroit",
   );
-});
-
-test("le coach n'affirme plus qu'un type de page refuse le code", () => {
-  // Une affirmation fausse dite avec aplomb envoie l'eleve refaire une
-  // page pour rien, et lui fait perdre confiance quand il decouvre que
-  // c'etait faux.
-  for (const [nom, src] of [
-    ["coach", SYSTEME_IO_PAGE_TYPES_RULES],
-    ["guide du bonus", BONUS_PROMPT],
-    ["contexte bonus", BONUS_CTX],
-  ] as const) {
-    assert.ok(
-      !/n'accepte ni bloc de code|jamais une page info|ne le propose pas/.test(src),
-      `${nom} affirme encore qu'un type de page refuse le code`,
-    );
-  }
 });
 
 test("le type decide, le nom ne decide de rien", () => {
@@ -164,7 +152,9 @@ test("le guide du bonus nomme la vraie contrainte du code colle", () => {
   for (const [nom, src] of [["lib/prompts/bonus.ts", BONUS_PROMPT], ["lib/coach/bonusContext.ts", BONUS_CTX]] as const) {
     assert.ok(/remerciement/i.test(src), `${nom} ne donne pas la sortie`);
   }
-  // La contrainte qui compte vraiment est celle du CODE, pas de la page.
+  // Les DEUX contraintes, parce qu'il y a deux causes : le type de page
+  // qui refuse le code, et le code qui contient un document entier.
+  assert.ok(/page info/i.test(BONUS_CTX), "le contexte bonus ne dit pas quel type refuse le code");
   assert.ok(/<head>/.test(BONUS_CTX), "le contexte bonus ne dit pas ce qui casse");
   assert.ok(/SYSTEME_IO_BLOC_CONTRAINTES/.test(BONUS_PROMPT), "le generateur n'impose plus les contraintes");
 });

@@ -474,7 +474,7 @@ function deliveryFacts(b: BonusBrief, shape: BonusShape): string {
   const hosting: Record<BonusShape, string> = {
     document:
       "1. Le fichier est heberge sur un drive (Google Drive, Notion, ou l'espace Systeme.io). ATTENTION : le partage du fichier doit etre regle sur \"tout le monde avec le lien\", en LECTURE. Un lien restreint donne une page d'erreur au visiteur, et la creatrice ne le verra jamais puisque, elle, y a acces.",
-    page: "1. Le fichier HTML produit par l'IA est colle dans un bloc de code d'une page Systeme.io. Une page de blog convient, et dans un tunnel une PAGE DE REMERCIEMENT, qu'elle renomme ensuite comme elle veut (le nom d'une page ne change ni son type ni ses elements). Si le bloc de code n'est pas propose sur le type de page qu'elle a ouvert, elle en cree une autre plutot que de chercher. Elle publie la page et copie son adresse. Rien a installer, rien a heberger ailleurs, et l'adresse est sur son domaine.",
+    page: "1. Le fichier HTML produit par l'IA est colle dans un bloc de code d'une page Systeme.io. ATTENTION AU TYPE DE PAGE : une PAGE INFO de tunnel n'accepte pas de code. Une page de blog convient, et dans un tunnel c'est une PAGE DE REMERCIEMENT qu'elle cree, qu'elle renomme ensuite comme elle veut (le nom d'une page ne change ni son type ni ses elements). Elle publie la page et copie son adresse. Rien a installer, rien a heberger ailleurs, et l'adresse est sur son domaine.",
     acces:
       "1. Il n'y a pas de fichier a heberger : ce bonus est un acces. Elle prepare l'adresse qui l'ouvre (le lien de l'atelier, le flux prive, la page d'inscription au challenge) et verifie qu'elle fonctionne depuis une fenetre de navigation privee.",
   };
