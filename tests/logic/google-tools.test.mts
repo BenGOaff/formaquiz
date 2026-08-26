@@ -26,6 +26,9 @@ import {
   GA_MEASUREMENT_ID,
   GOOGLE_SITE_VERIFICATION,
   scriptAnalyticsGoogle,
+  MEMOIRE_CONSENTEMENT_JOURS,
+  CLE_CONSENTEMENT,
+  scriptConsentementGoogle,
 } from "@/lib/analytics/google";
 
 const lire = (f: string) => fs.readFileSync(path.join(process.cwd(), f), "utf8");
@@ -105,4 +108,44 @@ test("la page de vente pose la balise ENTIERE, pas seulement le src", () => {
   const src = lire("lib/sales/servePage.ts");
   assert.match(src, /opts\.analytics \? scriptAnalyticsGoogle\(\) : ""/);
   assert.doesNotMatch(src, /remplacerIdMesure/, "on ne reecrit plus le bandeau de Bene");
+});
+
+// -- LE CONSENTEMENT (26 août 2026) -----------------------------------
+
+test("la balise ne dépose RIEN avant accord", () => {
+  const c = scriptConsentementGoogle();
+  assert.match(c, /gtag\('consent', 'default'/, "l'état par défaut doit être posé");
+  assert.match(c, /analytics_storage: 'denied'/, "refusé par défaut");
+  assert.match(c, /gtag\('consent', 'update', \{ analytics_storage: 'granted' \}\)/);
+});
+
+test("le consentement est posé AVANT la balise, jamais après", () => {
+  // `consent default` arrivé après le chargement de la balise ne sert à
+  // rien : elle a déjà écrit ses cookies.
+  const page = [scriptConsentementGoogle(), scriptAnalyticsGoogle()].join("\n");
+  assert.ok(
+    page.indexOf("consent', 'default'") < page.indexOf("googletagmanager.com/gtag/js"),
+    "l'ordre est inversé",
+  );
+});
+
+test("on relit la clé et la mémoire du bandeau, pas les nôtres", () => {
+  const c = scriptConsentementGoogle();
+  assert.match(c, new RegExp(`var CLE = '${CLE_CONSENTEMENT}'`));
+  assert.match(c, new RegExp(`var MEMOIRE = ${MEMOIRE_CONSENTEMENT_JOURS}`));
+  // Un accord expiré côté bandeau doit expirer chez nous aussi.
+  assert.match(c, /Date\.now\(\) - o\.t > MEMOIRE \* 864e5/);
+});
+
+test("tout ce qui n'est pas un OUI franc est un NON", () => {
+  const c = scriptConsentementGoogle();
+  assert.match(c, /o\.mesure === true/, "une valeur approchante ne suffit pas");
+  assert.match(c, /catch \(e\) \{ return false; \}/, "stockage bloqué = pas de mesure");
+});
+
+test("la balise elle même reste INTACTE", () => {
+  // Le mode Consentement existe précisément pour ne pas y toucher.
+  const b = scriptAnalyticsGoogle();
+  assert.match(b, /<!-- Google tag \(gtag\.js\) -->/);
+  assert.match(b, new RegExp(`gtag\\('config', '${GA_MEASUREMENT_ID}'\\);`));
 });

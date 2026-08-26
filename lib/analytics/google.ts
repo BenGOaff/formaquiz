@@ -76,6 +76,88 @@ export function baliseVerificationGoogle(): string {
  * Le bandeau cookies de la page n'est PAS touché : c'est sa page, et on
  * n'y modifie pas ce qu'elle a écrit sans qu'elle le demande.
  */
+/** Là où le bandeau cookies range le choix de la personne. */
+export const CLE_CONSENTEMENT = "aq_consent_v1";
+
+/** Combien de jours le bandeau mémorise ce choix (`CFG.memoire`). */
+export const MEMOIRE_CONSENTEMENT_JOURS = 182;
+
+/**
+ * LE MODE CONSENTEMENT DE GOOGLE, POSÉ AVANT LA BALISE.
+ *
+ * Béné, 26 août 2026 : "faut mettre ce qu'il faut là où il faut
+ * qu'est-ce que j'en sais moi ?"
+ *
+ * -- LE VRAI DÉFAUT N'ÉTAIT PAS CELUI QU'ON CROYAIT ------------------
+ *
+ * La page de vente portait DEUX propriétés GA4 : la nôtre, chargée
+ * toujours, et celle du bandeau cookies, chargée après accord. Deux
+ * chiffres pour la même page, donc aucun des deux n'est croyable.
+ *
+ * Mais le plus grave était l'autre moitié : **un bandeau qui demande la
+ * permission et une balise qui ne l'attend pas**. La personne clique
+ * "refuser" et on la mesure quand même. Ce n'est pas un détail
+ * juridique, c'est un bandeau qui ment à qui vient de cliquer.
+ *
+ * -- POURQUOI LE MODE CONSENTEMENT, ET PAS UN GATE MAISON ------------
+ *
+ * C'est exactement ce que l'écran de Google indique ("si vous avez des
+ * utilisateurs finaux dans l'EEE, configurez le mode Consentement"), et
+ * c'est la seule solution qui **laisse la balise INTACTE**. Elle reste
+ * au caractère près celle que Google donne ; ce qui change, c'est
+ * qu'elle ne dépose rien tant que l'accord n'est pas là.
+ *
+ * Le bandeau de Béné écrit `{mesure, pub, video, t}` dans
+ * `aq_consent_v1` et oublie le choix au bout de `CFG.memoire` jours. On
+ * relit SA règle, sinon on mesurerait encore quelqu'un dont l'accord a
+ * expiré de son côté.
+ *
+ * Il n'émet aucun événement, et `storage` ne se déclenche pas dans
+ * l'onglet qui écrit : on se raccroche au clic, puisqu'un consentement
+ * est toujours donné par un clic. L'écouteur se retire dès qu'il a sa
+ * réponse.
+ */
+export function scriptConsentementGoogle(): string {
+  return [
+    "<script>",
+    "  window.dataLayer = window.dataLayer || [];",
+    "  function gtag(){dataLayer.push(arguments);}",
+    "  gtag('consent', 'default', {",
+    "    ad_storage: 'denied',",
+    "    ad_user_data: 'denied',",
+    "    ad_personalization: 'denied',",
+    "    analytics_storage: 'denied',",
+    "    wait_for_update: 500",
+    "  });",
+    "  (function(){",
+    `    var CLE = '${CLE_CONSENTEMENT}';`,
+    `    var MEMOIRE = ${MEMOIRE_CONSENTEMENT_JOURS};`,
+    "    function accepte(){",
+    "      try {",
+    "        var o = JSON.parse(localStorage.getItem(CLE));",
+    "        if (!o || typeof o.t !== 'number') return false;",
+    "        if (Date.now() - o.t > MEMOIRE * 864e5) return false;",
+    "        return o.mesure === true;",
+    "      } catch (e) { return false; }",
+    "    }",
+    "    function accorder(){",
+    "      gtag('consent', 'update', { analytics_storage: 'granted' });",
+    "    }",
+    "    if (accepte()) { accorder(); return; }",
+    "    function surClic(){",
+    "      setTimeout(function(){",
+    "        if (accepte()) {",
+    "          accorder();",
+    "          document.removeEventListener('click', surClic, true);",
+    "        }",
+    "      }, 0);",
+    "    }",
+    "    document.addEventListener('click', surClic, true);",
+    "  })();",
+    "</script>",
+  ].join("\n");
+}
+
 export function scriptAnalyticsGoogle(): string {
   return [
     `<!-- Google tag (gtag.js) -->`,
