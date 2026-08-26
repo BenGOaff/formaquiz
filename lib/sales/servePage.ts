@@ -20,6 +20,7 @@
 // peut plus servir une page de vente sans avoir dit où elle vend.
 
 import { rewriteOrderButtons, type OrderButtonRewrite } from "@/lib/sales/salesPageLinks";
+import { baliseVerificationGoogle } from "@/lib/analytics/google";
 
 /** Ce qu'on sait d'une page de vente, indépendamment de son HTML. */
 export type SalesPageMeta = {
@@ -90,6 +91,12 @@ function attr(value: string): string {
  */
 export function buildHeadTags(meta: SalesPageMeta): string {
   const balises = [
+    // LE JETON DE PROPRIÉTÉ GOOGLE. Il vit ici et pas seulement dans
+    // `app/layout.tsx` : cette page ne passe JAMAIS par le layout, elle
+    // est servie telle quelle par un route handler. Poser la balise dans
+    // le seul layout ne l'aurait donc jamais mise sur atelierduquiz.fr,
+    // c'est à dire sur le domaine qu'on cherche à vérifier.
+    baliseVerificationGoogle(),
     `<title>${attr(meta.title)}</title>`,
     `<meta name="description" content="${attr(meta.description)}">`,
     `<link rel="canonical" href="${attr(meta.canonical)}">`,
