@@ -122,6 +122,10 @@ export async function GET(
     { slug, ...meta, canonical: canonique },
     {
       indexable: publique,
+      // La mesure d'audience ne tourne que sur le domaine PUBLIC :
+      // derrière la clé d'aperçu, la page est un chantier qu'on relit
+      // nous-mêmes, et compter ces visites fausserait ses chiffres.
+      analytics: publique,
       // TOUS les boutons de commande mènent chez nous. Sans ça, ils
       // ouvrent la popup Systeme.io capturée avec la page, et notre
       // paiement n'est jamais atteint (trouvé le 21 août, dix minutes

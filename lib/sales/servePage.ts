@@ -20,7 +20,12 @@
 // peut plus servir une page de vente sans avoir dit où elle vend.
 
 import { rewriteOrderButtons, type OrderButtonRewrite } from "@/lib/sales/salesPageLinks";
-import { baliseVerificationGoogle } from "@/lib/analytics/google";
+import {
+  baliseVerificationGoogle,
+  GA_MEASUREMENT_ID,
+  remplacerIdMesure,
+  scriptAnalyticsGoogle,
+} from "@/lib/analytics/google";
 
 /** Ce qu'on sait d'une page de vente, indépendamment de son HTML. */
 export type SalesPageMeta = {
@@ -129,6 +134,19 @@ export function renderSalesPage(
   opts: {
     indexable: boolean;
     /**
+     * Charge-t-on la mesure d'audience sur cette page ?
+     *
+     * **Obligatoire, jamais déduit de `indexable`.** Les deux disent des
+     * choses différentes : `indexable` parle de Google Search, celui-ci
+     * parle de Google Analytics. Les confondre marcherait aujourd'hui,
+     * parce que les deux valent `true` sur le domaine public, et
+     * casserait au premier cas où l'on veut mesurer sans indexer.
+     *
+     * Derrière la clé d'aperçu il vaut `false` : compter ses propres
+     * visites de relecture fausserait ses chiffres.
+     */
+    analytics: boolean;
+    /**
      * Où mènent les boutons de commande de la page.
      *
      * **Obligatoire, jamais deviné.** Sans lui, tous les boutons de la
@@ -154,11 +172,29 @@ export function renderSalesPage(
     opts.onRewrite?.(info);
   }
 
+  // LA MESURE : on réécrit l'identifiant DANS le bandeau cookies de la
+  // page quand elle en porte un, et on n'ajoute une balise brute que
+  // s'il n'y en a pas. Ajouter par dessus contournerait le consentement
+  // que la page demande (cf. lib/analytics/google.ts).
+  let baliseBrute = "";
+  if (opts.analytics) {
+    const rec = remplacerIdMesure(sortie, GA_MEASUREMENT_ID);
+    sortie = rec.html;
+    if (!rec.remplace) {
+      baliseBrute = scriptAnalyticsGoogle();
+      console.warn(
+        `[apercu/vente] ${meta.slug} : aucun bandeau cookies dans la page, ` +
+          `la mesure est posee SANS consentement. A verifier.`,
+      );
+    }
+  }
+
   const tetes = [
     buildHeadTags(meta),
     opts.indexable
       ? ""
       : `<meta name="robots" content="noindex, nofollow">`,
+    baliseBrute,
   ]
     .filter(Boolean)
     .join("\n");

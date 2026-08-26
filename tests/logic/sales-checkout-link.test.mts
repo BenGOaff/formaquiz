@@ -163,10 +163,10 @@ test("en apercu on ferme, sur le domaine public on ouvre", () => {
     description: "D",
     locale: "fr_FR",
   };
-  const apercu = renderSalesPage(html, meta, { indexable: false, checkoutHref: null });
+  const apercu = renderSalesPage(html, meta, { indexable: false, analytics: false, checkoutHref: null });
   assert.ok(apercu.includes('name="robots" content="noindex, nofollow"'));
 
-  const enLigne = renderSalesPage(html, meta, { indexable: true, checkoutHref: null });
+  const enLigne = renderSalesPage(html, meta, { indexable: true, analytics: false, checkoutHref: null });
   assert.ok(!enLigne.includes("noindex"), "la page publique reste bloquee au referencement");
 });
 
