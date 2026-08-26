@@ -8,6 +8,7 @@ import { createServerClient } from "@supabase/ssr";
 import { isAdminEmail } from "@/lib/adminEmails";
 import { salesSlugForHost } from "@/lib/sales/salesHosts";
 import { readSa, SA_COOKIE, SA_MAX_AGE_SECONDS, SA_PARAM } from "@/lib/affiliate/sa";
+import { readRef, REF_COOKIE, REF_MAX_AGE_SECONDS, REF_PARAM } from "@/lib/affiliate/refLien";
 
 // Routes accessibles sans être connecté.
 const PUBLIC_PREFIXES = [
@@ -63,20 +64,28 @@ export async function middleware(req: NextRequest) {
   //
   // On le pose sur TOUTES les réponses, y compris la réécriture de la
   // page de vente : c'est justement la page où le lien atterrit.
+  //
+  // -- ET LE `?ref=` DE NOS LIENS ACTUELS (26 août 2026) --
+  //
+  // `sa` est l'identifiant de Systeme.io, `ref` est NOTRE code public.
+  // Les deux voyagent dans des champs SÉPARÉS et ne se devinent jamais
+  // l'un l'autre : deviner à la forme marcherait aujourd'hui et
+  // casserait le jour où un affilié choisit un code qui ressemble à un
+  // `sa`. Le nom du paramètre dit à lui seul la génération du lien.
   const sa = readSa(req.nextUrl.searchParams.get(SA_PARAM));
+  const ref = readRef(req.nextUrl.searchParams.get(REF_PARAM));
   const poseSa = (res: NextResponse): NextResponse => {
-    if (sa) {
-      res.cookies.set(SA_COOKIE, sa, {
-        maxAge: SA_MAX_AGE_SECONDS,
-        path: "/",
-        sameSite: "lax",
-        // Lisible par le bon de commande : c'est LUI qui doit le
-        // transmettre à Stripe. `httpOnly` le rendrait invisible au
-        // navigateur, donc inutile.
-        httpOnly: false,
-        secure: req.nextUrl.protocol === "https:",
-      });
-    }
+    // Lisibles par le bon de commande : c'est LUI qui doit les
+    // transmettre à Stripe et à PayPal. `httpOnly` les rendrait
+    // invisibles au navigateur, donc inutiles.
+    const options = {
+      path: "/",
+      sameSite: "lax" as const,
+      httpOnly: false,
+      secure: req.nextUrl.protocol === "https:",
+    };
+    if (sa) res.cookies.set(SA_COOKIE, sa, { ...options, maxAge: SA_MAX_AGE_SECONDS });
+    if (ref) res.cookies.set(REF_COOKIE, ref, { ...options, maxAge: REF_MAX_AGE_SECONDS });
     return res;
   };
 

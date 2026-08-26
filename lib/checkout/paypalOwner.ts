@@ -121,6 +121,8 @@ export async function createOwnerPaypalOrder(args: {
   returnUrl: string;
   cancelUrl: string;
   affiliateRef?: string | null;
+  /** Le CODE PUBLIC de nos liens (`?ref=`), distinct du `sa`. */
+  affiliateCode?: string | null;
   /** L'adresse SAISIE sur le bon de commande. Elle gagne sur celle de PayPal. */
   email?: string | null;
 }): Promise<PaypalOrderResult> {
@@ -145,7 +147,7 @@ export async function createOwnerPaypalOrder(args: {
         // **Le champ est AJOUTÉ EN FIN** : une commande en cours le jour
         // du déploiement se relit exactement comme avant, aux mêmes
         // positions. C'est la même règle que côté Tiquiz.
-        custom_id: buildCustomId(p.id, args.affiliateRef, args.email),
+        custom_id: buildCustomId(p.id, args.affiliateRef, args.email, args.affiliateCode),
         description: p.label.slice(0, 127),
         amount: {
           currency_code: p.currency.toUpperCase(),
@@ -198,6 +200,8 @@ export interface PaypalCaptureInfo {
   name: string | null;
   productId: string | null;
   affiliateRef: string | null;
+  /** Le code public de nos liens, quand la commande en portait un. */
+  affiliateCode: string | null;
   /** L'identifiant de la capture, celui qu'on rembourse. */
   captureId: string | null;
   /**
@@ -219,43 +223,60 @@ export function paypalAmountToCents(raw: unknown): number {
 }
 
 /**
- * `atelier|CODEAFFILIE|adresse@saisie.fr`
+ * `atelier|SA|adresse@saisie.fr|CODE`
  *
- * PayPal borne `custom_id` à 127 caractères. Quand ça déborde on lâche
- * le CODE AFFILIÉ, jamais l'adresse : une attribution perdue se retrouve
- * par la conversion enregistrée à l'email, un accès ouvert sur la
- * mauvaise adresse ne se retrouve pas.
+ * **Le 4e champ est AJOUTÉ EN FIN, et ce n'est pas cosmétique** : une
+ * commande PayPal déjà en cours le jour du déploiement se relit
+ * exactement comme avant, aux mêmes positions. C'est la règle appliquée
+ * côté Tiquiz le 24 août, et elle est testée.
+ *
+ * PayPal borne `custom_id` à 127 caractères. **L'ORDRE DES SACRIFICES
+ * COMPTE** : on lâche d'abord le `sa` d'un ancien lien, puis le code
+ * public, JAMAIS l'adresse. Une attribution perdue peut se retrouver par
+ * la conversion enregistrée à l'email ; un accès ouvert sur la mauvaise
+ * adresse ne se retrouve pas.
  */
 export function buildCustomId(
   productId: string,
   affiliateRef?: string | null,
   email?: string | null,
+  affiliateCode?: string | null,
 ): string {
   const ref = String(affiliateRef ?? "").trim();
+  const code = String(affiliateCode ?? "").trim();
   const adresse = String(email ?? "").trim().toLowerCase();
-  const complet = `${productId}|${ref}|${adresse}`;
+  const complet = `${productId}|${ref}|${adresse}|${code}`;
   if (complet.length <= 127) return complet;
-  const sansRef = `${productId}||${adresse}`;
+  const sansRef = `${productId}||${adresse}|${code}`;
   if (sansRef.length <= 127) {
-    console.warn(`[paypal] custom_id trop long : le code affilie est lache pour ${adresse}.`);
+    console.warn(`[paypal] custom_id trop long : le sa est lache pour ${adresse}.`);
     return sansRef;
   }
+  const sansRien = `${productId}||${adresse}|`;
+  if (sansRien.length <= 127) {
+    console.warn(`[paypal] custom_id trop long : sa ET code laches pour ${adresse}.`);
+    return sansRien;
+  }
   console.warn(`[paypal] custom_id trop long pour ${adresse} : adresse tronquee, acces a verifier.`);
-  return sansRef.slice(0, 127);
+  return sansRien.slice(0, 127);
 }
 
-/** Sépare `atelier|CODEAFFILIE|adresse` en ses morceaux. */
+/** Sépare `atelier|SA|adresse|CODE` en ses morceaux. */
 export function readCustomId(raw: string | null | undefined): {
   productId: string | null;
   affiliateRef: string | null;
+  affiliateCode: string | null;
   email: string | null;
 } {
   const s = String(raw ?? "").trim();
-  if (!s) return { productId: null, affiliateRef: null, email: null };
-  const [produit, ref, adresse] = s.split("|");
+  if (!s) return { productId: null, affiliateRef: null, affiliateCode: null, email: null };
+  const [produit, ref, adresse, code] = s.split("|");
   return {
     productId: produit || null,
     affiliateRef: ref || null,
+    // Absent des commandes antérieures au 26 août : `null`, et
+    // l'attribution retombe sur le `sa` et l'email, comme avant.
+    affiliateCode: (code ?? "").trim() || null,
     // Les anciennes commandes n'ont que deux champs : `email` vaut alors
     // `null`, et on retombe sur l'adresse du compte PayPal comme avant.
     email: (adresse ?? "").trim().toLowerCase() || null,
@@ -285,7 +306,7 @@ interface OrderShape {
 function readOrder(json: OrderShape): PaypalCaptureInfo {
   const unit = json.purchase_units?.[0];
   const capture = unit?.payments?.captures?.[0];
-  const { productId, affiliateRef, email: saisi } = readCustomId(unit?.custom_id);
+  const { productId, affiliateRef, affiliateCode, email: saisi } = readCustomId(unit?.custom_id);
   return {
     paid: json.status === "COMPLETED" && capture?.status === "COMPLETED",
     // L'ADRESSE SAISIE GAGNE sur celle du compte PayPal. Voir
@@ -295,6 +316,7 @@ function readOrder(json: OrderShape): PaypalCaptureInfo {
     name: json.payer?.name?.given_name ?? null,
     productId,
     affiliateRef,
+    affiliateCode,
     captureId: capture?.id ?? null,
     // Ce que la CAPTURE a vraiment pris d'abord (c'est l'argent reel),
     // le montant demande ensuite. Les deux sont egaux en temps normal ;

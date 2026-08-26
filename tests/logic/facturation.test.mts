@@ -457,9 +457,12 @@ describe("Les règles qui ne se voient pas dans un écran", () => {
     // Une commande en cours le jour du déploiement doit se relire
     // exactement comme avant, aux mêmes positions.
     const src = lire("lib/checkout/paypalOwner.ts");
-    assert.match(src, /const \[produit, ref, adresse\] = s\.split\("\|"\)/);
+    // Le 4e champ (le code public, 26 août) est venu APRÈS l'adresse :
+    // les trois premières positions n'ont pas bougé d'un cran.
+    assert.match(src, /const \[produit, ref, adresse, code\] = s\.split\("\|"\)/);
     // Et une ancienne forme à deux champs ne casse pas.
     assert.match(src, /Les anciennes commandes n'ont que deux champs/);
+    assert.match(src, /Absent des commandes antérieures au 26 août/);
   });
 
   test("le formulaire carte exige toujours l'adresse et propose l'entreprise", () => {

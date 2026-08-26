@@ -23,7 +23,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { grantAccessByEmail, revokeAccessByEmail } from "@/lib/access/grantAccess";
-import { commissionnerVente } from "@/lib/affiliate/ownerSale";
+import { annulerCommissionChezTipote, commissionnerVente } from "@/lib/affiliate/ownerSale";
 import { refundCommissionByOrder } from "@/lib/affiliateTracking";
 import { findOwnerProduct, tierForOwnerProduct } from "@/lib/checkout/catalog";
 import { readOwnerPaypal, readOwnerPaypalWebhookId } from "@/lib/checkout/ownerAccount";
@@ -205,6 +205,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     email,
     reference: commande?.captureId ?? (String(event.resource?.id ?? "").trim() || null),
     affiliateRef: commande?.affiliateRef ?? depuisCapture.affiliateRef,
+    affiliateCode: commande?.affiliateCode ?? depuisCapture.affiliateCode,
     amountTotalCents: commande?.amountTotalCents ?? 0,
     // PayPal ne ventile pas la TVA : voir `VenteACommissionner`.
     amountTaxCents: 0,
@@ -342,6 +343,10 @@ async function surRemboursement(event: PaypalEvent): Promise<NextResponse> {
     commande?.captureId ?? remboursementDepuisRefund(event.resource, event.create_time)?.saleRef ?? null;
   if (captureOrigine) {
     const r = await refundCommissionByOrder(`paypal:${captureOrigine}`);
+    // ET dans le registre CENTRAL (Tipote), ou la commission vit depuis
+    // le 26 aout. N'annuler que localement laisserait la ligne centrale
+    // murir puis partir en virement sur une vente remboursee.
+    await annulerCommissionChezTipote(`paypal:${captureOrigine}`);
     if (r.refunded > 0) {
       console.log(`[commande/paypal/webhook] ${r.refunded} commission(s) annulee(s) apres remboursement`);
     }

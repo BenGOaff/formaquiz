@@ -26,6 +26,7 @@ import { loadStripe } from "@stripe/stripe-js";
 import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js";
 
 import { readSaFromBrowser } from "@/lib/affiliate/sa";
+import { readRefFromBrowser } from "@/lib/affiliate/refLien";
 
 /** Les raisons du serveur, traduites ici et nulle part ailleurs. */
 const RAISONS: Record<string, string> = {
@@ -138,11 +139,21 @@ export default function CommandeClient({
     [],
   );
 
+  // LE CODE PUBLIC DE NOS LIENS ACTUELS (`?ref=jocelyne`), à côté du
+  // `?sa=` des anciens tunnels et JAMAIS confondu avec lui. Le client
+  // NOMME le champ, le serveur lit celui qu'on lui donne : deviner à la
+  // forme casserait le jour où un affilié choisit un code qui ressemble
+  // à un identifiant Systeme.io.
+  const codeAffilie = useCallback(
+    () => readRefFromBrowser(window.location.search, document.cookie) ?? undefined,
+    [],
+  );
+
   const fetchClientSecret = useCallback(async () => {
     const r = await fetch("/api/commande/session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ produit, k: cle, ref: refAffiliee() }),
+      body: JSON.stringify({ produit, k: cle, ref: refAffiliee(), code: codeAffilie() }),
     });
     const data = (await r.json().catch(() => ({}))) as {
       ok?: boolean;
@@ -159,7 +170,7 @@ export default function CommandeClient({
     }
     if (data.mode) setMode(data.mode);
     return data.clientSecret;
-  }, [produit, cle, refAffiliee]);
+  }, [produit, cle, refAffiliee, codeAffilie]);
 
   // PAYPAL : ON QUITTE LA PAGE, DONC ON DIT CE QUI SE PASSE.
   //
@@ -190,7 +201,7 @@ export default function CommandeClient({
       const r = await fetch("/api/commande/paypal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ produit, k: cle, ref: refAffiliee(), email: adresse, facturation }),
+        body: JSON.stringify({ produit, k: cle, ref: refAffiliee(), code: codeAffilie(), email: adresse, facturation }),
       });
       const data = (await r.json().catch(() => ({}))) as {
         ok?: boolean;
@@ -209,7 +220,7 @@ export default function CommandeClient({
       setErreurPaypal("La connexion a coupé avant d'ouvrir PayPal. Rien n'a été débité.");
       setPaypalEnCours(false);
     }
-  }, [produit, cle, refAffiliee, emailPaypal, facturation]);
+  }, [produit, cle, refAffiliee, codeAffilie, emailPaypal, facturation]);
 
   // `loadStripe` rend une NOUVELLE promesse a chaque appel. Appelee dans
   // le JSX, elle en fabriquerait une par rendu, et le fournisseur Stripe

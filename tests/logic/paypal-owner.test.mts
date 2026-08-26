@@ -52,22 +52,27 @@ test("le produit et l'affiliee font l'aller-retour dans custom_id", () => {
   // relire exactement comme avant : une commande en cours le jour du
   // deploiement ne doit pas perdre son produit ni son affiliee.
   assert.deepEqual(readCustomId("atelier"), {
-    productId: "atelier", affiliateRef: null, email: null,
+    productId: "atelier", affiliateRef: null, affiliateCode: null, email: null,
   });
   assert.deepEqual(readCustomId("atelier|GWENN23"), {
-    productId: "atelier", affiliateRef: "GWENN23", email: null,
+    productId: "atelier", affiliateRef: "GWENN23", affiliateCode: null, email: null,
   });
   // Le 3e champ (25 aout) : l'adresse SAISIE sur le bon de commande.
   assert.deepEqual(readCustomId("atelier|GWENN23|marie@exemple.fr"), {
-    productId: "atelier", affiliateRef: "GWENN23", email: "marie@exemple.fr",
+    productId: "atelier", affiliateRef: "GWENN23", affiliateCode: null, email: "marie@exemple.fr",
   });
   assert.deepEqual(readCustomId("atelier||marie@exemple.fr"), {
-    productId: "atelier", affiliateRef: null, email: "marie@exemple.fr",
+    productId: "atelier", affiliateRef: null, affiliateCode: null, email: "marie@exemple.fr",
+  });
+  // Le 4e champ (26 aout) : NOTRE code public. Ajoute EN FIN, donc tout
+  // ce qui precede se relit aux memes positions.
+  assert.deepEqual(readCustomId("atelier||marie@exemple.fr|jocelyne"), {
+    productId: "atelier", affiliateRef: null, affiliateCode: "jocelyne", email: "marie@exemple.fr",
   });
   // Ce qu'on ne sait pas lire n'ouvre rien, plutot que d'ouvrir au hasard.
   for (const vide of ["", null, undefined]) {
     assert.deepEqual(readCustomId(vide), {
-      productId: null, affiliateRef: null, email: null,
+      productId: null, affiliateRef: null, affiliateCode: null, email: null,
     });
   }
 });
