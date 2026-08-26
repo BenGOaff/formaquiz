@@ -46,18 +46,13 @@ test("LA PAGE DE VENTE le porte, alors qu'elle ignore le layout", () => {
   );
 });
 
-test("l'espace membre le porte aussi", () => {
-  const src = lire("app/layout.tsx");
-  assert.match(src, /verification: \{ google: GOOGLE_SITE_VERIFICATION \}/);
-});
-
-test("le `noindex` de l'espace membre n'empêche pas la vérification", () => {
-  // Google doit pouvoir LIRE la page pour vérifier, pas l'indexer. Les
-  // deux ne se confondent pas, et retirer le `noindex` "pour que ça
-  // marche" ouvrirait l'espace membre aux moteurs.
+test("l'espace membre, lui, ne le porte PAS", () => {
+  // Béné : "je m'en fous de faire ranker les app." L'espace membre est
+  // derrière une connexion et déjà en `noindex` : le jeton n'y sert à
+  // rien, et il n'a rien à faire dans le HTML d'un écran de travail.
   const src = lire("app/layout.tsx");
   assert.match(src, /robots: \{ index: false, follow: false \}/);
-  assert.match(src, /verification:/);
+  assert.doesNotMatch(src, /verification:/);
 });
 
 test("aucune mesure d'audience n'est posée ici", () => {

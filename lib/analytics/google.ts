@@ -5,9 +5,14 @@
 // Béné, 26 août 2026 : "tu peux ajouter ça pour que je puisse suivre les
 // performances sur les outils Google ?"
 //
-// -- POURQUOI IL FAUT LE POSER À DEUX ENDROITS -------------------------
+// -- SUR LA PAGE DE VENTE, ET NULLE PART AILLEURS ----------------------
 //
-// Cette app sert son HTML par DEUX chemins qui n'ont rien en commun :
+// Béné, 26 août 2026 : "juste tiquiz.fr et atelierduquiz.fr : je m'en
+// fous de faire ranker les app, je veux faire ranker les pages de
+// vente."
+//
+// Et c'est justement le piège, parce que cette app sert son HTML par
+// DEUX chemins qui n'ont rien en commun :
 //
 //   1. les écrans de l'espace membre, rendus par React, dont le `<head>`
 //      vient de `app/layout.tsx` ;
@@ -15,10 +20,11 @@
 //      handler** qui renvoie le HTML capturé, sans jamais passer par ce
 //      layout (`app/apercu/vente/[slug]/route.ts`).
 //
-// Poser la balise dans le seul layout, le réflexe évident, ne l'aurait
-// donc JAMAIS mise sur le domaine qu'on cherche à vérifier. Et le
-// symptôme aurait été le pire qui soit : Search Console qui répond
-// "balise introuvable" sur une page où l'on croit l'avoir mise.
+// Poser la balise dans le layout, le réflexe évident, l'aurait mise sur
+// le SEUL des deux qui ne sert à rien ici, et jamais sur le domaine
+// qu'on cherche à vérifier. Le symptôme aurait été le pire qui soit :
+// Search Console qui répond "balise introuvable" sur une page où l'on
+// croit l'avoir mise.
 //
 // -- LE JETON N'EST PAS UN SECRET --------------------------------------
 //
