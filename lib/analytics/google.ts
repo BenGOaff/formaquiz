@@ -57,58 +57,35 @@ export function baliseVerificationGoogle(): string {
 }
 
 /**
- * LA MESURE SUR LA PAGE DE VENTE : ON RÉÉCRIT, ON N'AJOUTE PAS.
+ * LA BALISE GOOGLE, EXACTEMENT CELLE QUE GOOGLE DONNE.
  *
- * -- CE QU'ON A TROUVÉ EN ALLANT LIRE LA PAGE EN PROD (26 août 2026) --
+ * Béné, 26 août 2026 : "tu vois bien que ce qui est demandé n'est pas ce
+ * que tu as mis ???"
  *
- * `atelierduquiz.fr` porte **déjà le bandeau cookies de Béné**
- * (`__AQ_COOKIES__` / `aqc-banniere`), qui ne charge GA4 qu'APRÈS
- * consentement, avec `anonymize_ip` et une durée de cookie bornée.
+ * Elle a raison. La version précédente réécrivait l'identifiant DANS le
+ * bandeau cookies de la page au lieu de poser la balise, parce que le
+ * bandeau charge déjà GA4 après consentement et que Google demande une
+ * seule balise par page. C'était défendable, et ce n'était pas ce qui
+ * était demandé.
  *
- * Ajouter notre balise par dessus, ce que faisait la première version,
- * avait deux conséquences que personne n'aurait vues : elle
- * **contournait son propre bandeau** (la mesure partait avant tout
- * consentement, sur la page même où elle en demande un), et elle mettait
- * **deux balises Google sur une page**, ce que Google interdit
- * explicitement dans ses propres instructions.
+ * **Le bloc ci-dessous est celui de Google, au caractère près**, y
+ * compris son commentaire d'ouverture et sa ligne vide : c'est ce qui
+ * permet de comparer d'un coup d'oeil ce que Google affiche et ce que la
+ * page sert.
  *
- * **Règle : on remplace l'identifiant DANS son bandeau.** Une seule
- * balise, la sienne, sous son consentement, avec le nouvel identifiant.
- */
-export const ID_MESURE_HISTORIQUE = "G-HRCMDXGTQD";
-
-/**
- * Remplace l'identifiant GA4 du bandeau cookies de la page.
- *
- * Rend `remplace: false` quand la page ne porte PAS de bandeau :
- * l'appelant sait alors qu'il n'y a rien à réécrire, et il ne doit
- * surtout pas le déduire d'une chaîne inchangée (une page dont
- * l'identifiant est déjà le bon rendrait exactement le même HTML).
- */
-export function remplacerIdMesure(
-  html: string,
-  id: string,
-): { html: string; remplace: boolean } {
-  const source = String(html ?? "");
-  const motif = /(\bga\s*:\s*)'(G-[A-Z0-9]+)'/;
-  if (!motif.test(source)) return { html: source, remplace: false };
-  return { html: source.replace(motif, `$1'${id}'`), remplace: true };
-}
-
-/**
- * La balise brute, pour une page SANS bandeau cookies.
- *
- * Son usage est journalisé fort : poser une mesure sans consentement sur
- * une page publique est une décision, pas un défaut de configuration.
+ * Le bandeau cookies de la page n'est PAS touché : c'est sa page, et on
+ * n'y modifie pas ce qu'elle a écrit sans qu'elle le demande.
  */
 export function scriptAnalyticsGoogle(): string {
   return [
+    `<!-- Google tag (gtag.js) -->`,
     `<script async src="https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}"></script>`,
     `<script>`,
-    `window.dataLayer = window.dataLayer || [];`,
-    `function gtag(){dataLayer.push(arguments);}`,
-    `gtag('js', new Date());`,
-    `gtag('config', '${GA_MEASUREMENT_ID}');`,
+    `  window.dataLayer = window.dataLayer || [];`,
+    `  function gtag(){dataLayer.push(arguments);}`,
+    `  gtag('js', new Date());`,
+    ``,
+    `  gtag('config', '${GA_MEASUREMENT_ID}');`,
     `</script>`,
   ].join("\n");
 }
