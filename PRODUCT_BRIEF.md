@@ -92,9 +92,13 @@ Des badges sur de vrais jalons (premier jour, quiz publié, communauté lancée,
 Quand un élève atteint un cap réel, le système prépare le brouillon de son étude de cas et alerte l'admin. Une machine à preuve sociale, alimentée par de vrais résultats.
 
 ### L'espace affiliation
-L'élève peut recommander L'Atelier du Quiz et Tiquiz, avec un lien tracké et un kit de promo personnalisé selon son métier.
+L'élève peut recommander L'Atelier du Quiz (70 %) et Tiquiz (40 %, versés chaque mois tant que la personne reste abonnée), avec un lien tracké et un kit de promo personnalisé selon son métier.
 
-**Le registre des affiliés de l'Atelier est le SIEN** : c'est `profiles.sio_affiliate_id`, pas la table `affiliates` de Tipote. Les deux ne se confondent pas, et une affiliée Tipote qui n'est pas élève de l'Atelier n'y est pas connue. Corollaire à connaître avant d'y toucher : les commissions gagnées sur l'Atelier vivent dans SA base, donc elles ne sont pas dans les lots de versement construits chez Tipote, et elles continuent d'être versées par Systeme.io. Unifier les deux registres est un chantier à part, décrit dans `ROADMAP_SORTIE_SIO.md` (dépôt Tiquiz).
+**Le registre est UNIQUE depuis le 26 août 2026, et c'est celui de Tipote.** L'Atelier avait le sien (`profiles.sio_affiliate_id`), et il ne parlait à personne : les deux ne se confondaient pas, une affiliée Tipote qui n'était pas élève n'y était pas connue, et les commissions gagnées sur l'Atelier vivaient dans une base que les lots de versement n'allaient jamais lire. L'onglet demande maintenant son code public à Tipote (`POST /api/affiliate/code`), le crée au premier passage, et le lien porte `?ref=` vers `atelierduquiz.fr`.
+
+- **Ce qu'il faut dire à un élève** : son lien est prêt sans qu'il ait rien à configurer, et il n'a pas besoin d'un compte Systeme.io. Ne jamais présenter l'identifiant Systeme.io comme un prérequis : c'est ce que faisait l'écran, et ça fait renoncer quelqu'un qui n'a pas de compte chez eux.
+- **Ce qui reste de l'ancien système** : `profiles.sio_affiliate_id` survit comme repli, et il sert à rattacher les ventes arrivées par les anciens tunnels Systeme.io. Ces commissions là continuent d'être versées par Systeme.io ; les nouvelles partent des lots construits chez Tipote (virement ou PayPal, entre le 10 et le 13, dès 20 € cumulés, facture écrite à la place de l'affilié).
+- L'état d'avancement de la sortie de Systeme.io vit dans `ROADMAP_SORTIE_SIO.md` (dépôt Tiquiz), à un seul endroit.
 
 Une vente remboursée ou impayée annule la commission, sur les trois chemins d'encaissement (Systeme.io, carte, PayPal).
 
