@@ -144,7 +144,18 @@ Une fois tout le parcours terminé, l'élève peut passer un **examen de certifi
 
 ## 10. L'espace Affiliation
 
-L'élève peut recommander L'Atelier du Quiz et Tiquiz. L'affiliation est **native Systeme.io** : l'élève renseigne son identifiant affilié, l'app construit son **lien tracké** vers la page de vente, et propose un **kit de promo personnalisé** selon son métier (angle, idées de quiz à créer pour vendre l'Atelier à SON audience, niches à cibler, arguments, visuels déposés par l'admin). Les **gains** affichés proviennent des commissions attribuées par les webhooks Systeme.io. Le suivi et le paiement restent gérés par Systeme.io, source de vérité.
+L'élève peut recommander L'Atelier du Quiz (70 %) et Tiquiz (40 %, récurrent chaque mois tant que la personne reste abonnée).
+
+**L'affiliation est la NÔTRE depuis le 26 août 2026.** Elle était native Systeme.io : l'élève devait aller chercher un identifiant dans leur tableau de bord, et l'app fabriquait un lien vers leur tunnel. Le jour où l'Atelier est passé sur notre bon de commande, ce lien a cessé de pouvoir commissionner chez nous, parce qu'une page Systeme.io ne transmet rien de ce qu'on ajoute à l'URL.
+
+- **Le lien est déjà là** quand l'élève ouvre l'onglet : `atelierduquiz.fr/?ref=<code>`. Le code public est demandé au registre central (Tipote, `POST /api/affiliate/code`) et créé au premier passage. Trois étapes ont disparu de l'écran.
+- **Un seul registre.** La table `affiliates` vit chez Tipote et porte les clics, les conversions, les commissions et les versements. L'Atelier ne garde pas de copie : deux registres donneraient deux codes pour la même personne, donc deux liens et des statistiques coupées en deux, ce qui était exactement l'état d'avant.
+- **L'identifiant Systeme.io reste, et il est facultatif.** Il ne sert plus qu'à rattacher les ventes arrivées par leurs anciens tunnels. Il vit dans un dépliant, avec ce qu'il fait écrit en toutes lettres.
+- **Pas de code, pas de lien**, et l'écran dit pourquoi (compte suspendu, adresse déjà affiliée sous un autre identifiant, registre injoignable). Jamais un lien muet : il se partagerait exactement comme l'autre, et chaque partage serait une vente perdue que personne ne pourrait retrouver. Seule exception assumée, le QR d'un certificat : il est imprimé, donc il doit mener quelque part.
+- **Le lien vit à UN endroit** (`lib/affiliate/lienEleve.ts`) : l'onglet, le kit de contenu, le QR du certificat et sa vérification l'y demandent tous. Quatre appelants passaient auparavant un identifiant Systeme.io à une fonction qui attend un code public, ce qui n'aurait rien fait planter mais aurait produit des emails et des posts partagés sans aucun suivi.
+- **Le versement se règle dans l'espace affilié** (`affiliate.tipote.com/paiement`) : virement ou PayPal au choix, entre le 10 et le 13 du mois, dès 20 € cumulés, 30 jours après le paiement du client, avec la facture écrite à la place de l'affilié. L'onglet envoyait encore régler ses coordonnées chez Systeme.io, où elles n'auraient rien payé de nos ventes.
+- Le **kit de promo personnalisé** selon le métier (angle, idées de quiz à créer pour vendre l'Atelier à SON audience, niches, arguments, visuels déposés par l'admin) est inchangé, avec le lien injecté dedans.
+- Le compteur de **gains** de cet onglet suit les ventes arrivées par les anciens tunnels Systeme.io. Celles passées par le nouveau lien sont comptées dans l'espace affilié, qui fait référence pour le versement, et l'écran le dit.
 
 ---
 
@@ -194,7 +205,7 @@ Accès admin réservé aux comptes admin, vérifié côté serveur (middleware e
 - Emails transactionnels via **Resend** (domaine d'envoi vérifié).
 - Coach IA et générateurs (campagne, étude de cas) via l'**API Anthropic (Claude)**, avec garde-fous anti-hallucination et nettoyage du texte (dont la suppression des tirets longs).
 - **Intégration Tiquiz** en lecture seule, via l'API partenaire de Tiquiz (jeton durable après consentement de l'élève, secret partagé entre apps). L'app ne modifie jamais Tiquiz.
-- **Intégration Systeme.io** : webhook entrant (achat, remboursement) signé ou à secret partagé et idempotent ; affiliation native.
+- **Intégration Systeme.io** : webhook entrant (achat, remboursement) signé ou à secret partagé et idempotent. L'affiliation n'est plus la leur : elle passe par le registre central de Tipote, l'identifiant Systeme.io ne servant plus qu'à rattacher les ventes de leurs anciens tunnels.
 - **Tâches planifiées (cron)** : récap doux, détection des mises en avant et resynchronisation des métriques.
 - Design system répliqué de Tiquiz (shadcn/ui + Tailwind + variables CSS, police Inter, indigo primaire), mobile d'abord, mode sombre supporté.
 
@@ -211,7 +222,7 @@ Accès admin réservé aux comptes admin, vérifié côté serveur (middleware e
 - Ta campagne écrite pour toi (bienvenue, un email par profil, vente) plus kit de lancement plus modèles Systeme.io à importer en 1 clic.
 - Badges sur de vrais jalons, célébration honnête, certificat de fin de formation partageable.
 - Mise en avant automatique des réussites (brouillon d'étude de cas prêt à valider).
-- Espace affiliation avec lien tracké et kit de promo personnalisé.
+- Espace affiliation avec lien tracké prêt à l'ouverture (70 % sur l'Atelier, 40 % récurrent sur Tiquiz) et kit de promo personnalisé.
 - Accès auto à l'achat, emails brandés, récap doux, collecte des blocages et amélioration continue.
 </content>
 </invoke>

@@ -2,7 +2,7 @@
 
 // app/(app)/affiliation/AffiliationClient.tsx
 // Espace Affiliation en onglets (lisibilité) : Mon lien / Mes gains /
-// Promouvoir / Paiement. Construit le lien affilié Systeme.io, affiche les
+// Promouvoir / Paiement. Affiche le lien affilié (code public) et les
 // VRAIS gains (commissions attribuées par les webhooks) + un simulateur, et
 // un kit de promo personnalisé selon le business de l'élève.
 
@@ -39,7 +39,7 @@ import {
   TIQUIZ_RECURRING_PCT,
   ATELIER_SALES_URL,
   SIO_AFFILIATE_DASHBOARD_URL,
-  SIO_AFFILIATE_SETTINGS_URL,
+  ESPACE_AFFILIE_URL,
   buildAffiliateLink,
   normalizeAffiliateId,
   isValidAffiliateId,
@@ -106,16 +106,22 @@ export function AffiliationClient({
   niche,
   activityType,
   initialAffiliateId,
+  refCode,
+  refEtat,
   gains,
 }: {
   firstName: string | null;
   niche: string | null;
   activityType: string | null;
   initialAffiliateId: string;
+  /** Le code public, fabriqué et gardé par le registre central. */
+  refCode: string | null;
+  /** Pourquoi il n'y a pas de code, quand il n'y en a pas. */
+  refEtat: "ok" | "exclu" | "deja-affilie" | "injoignable";
   gains: Gains;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>(initialAffiliateId ? "gains" : "lien");
+  const [tab, setTab] = useState<Tab>("lien");
   const [input, setInput] = useState(initialAffiliateId);
   const [savedId, setSavedId] = useState(initialAffiliateId);
   const [saving, setSaving] = useState(false);
@@ -128,7 +134,11 @@ export function AffiliationClient({
   const inputValid = isValidAffiliateId(normalized);
   const inputTouchedInvalid = normalized.length > 0 && !inputValid;
   const effectiveId = inputValid ? normalized : savedId;
-  const link = effectiveId ? buildAffiliateLink(effectiveId) : "";
+  // LE LIEN NE DÉPEND PLUS DE L'IDENTIFIANT SYSTEME.IO. Il porte le code
+  // public du registre central, seul paramètre que notre bon de commande
+  // sait lire. Le `sa` ne sert plus qu'à rattacher les ventes arrivées
+  // par les anciens tunnels, et il est facultatif.
+  const link = buildAffiliateLink(refCode);
 
   async function save() {
     if (inputTouchedInvalid) {
@@ -215,58 +225,17 @@ export function AffiliationClient({
               Ton lien affilié
             </span>
 
-            <ol className="flex flex-col gap-1.5 text-sm text-muted-foreground">
-              <li>
-                1. Ouvre ton{" "}
-                <a
-                  href={SIO_AFFILIATE_DASHBOARD_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
-                >
-                  tableau de bord affilié Systeme.io
-                  <ExternalLink className="size-3.5" />
-                </a>
-                .
-              </li>
-              <li>
-                2. Repère ton <strong>identifiant affilié</strong> (il commence par{" "}
-                <code className="rounded bg-muted px-1 py-0.5 text-xs">sa</code>).
-              </li>
-              <li>3. Colle-le ci-dessous : on construit ton lien automatiquement.</li>
-            </ol>
-
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="aff-id">Ton identifiant affilié Systeme.io</Label>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Input
-                  id="aff-id"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="sa0007878317200141bbe3de2b6644176621db2c6580"
-                  className="font-mono text-xs sm:text-sm"
-                  spellCheck={false}
-                  autoCapitalize="off"
-                  autoCorrect="off"
-                />
-                <Button onClick={save} disabled={saving} className="shrink-0">
-                  {saving ? "..." : savedId ? "Mettre à jour" : "Valider"}
-                </Button>
-              </div>
-              {inputTouchedInvalid ? (
-                <p className="text-xs text-destructive">
-                  Hmm, ça ne ressemble pas à un ID Systeme.io. Tu peux aussi coller le lien complet.
-                </p>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  Astuce : tu peux coller ton ID seul OU un lien Systeme.io contenant ?sa=...
-                </p>
-              )}
-            </div>
-
+            {/*
+              LE LIEN EST DÉJÀ LÀ, il n'y a plus rien à aller chercher
+              ailleurs. Avant le 26 août, cet écran demandait d'ouvrir
+              Systeme.io, d'y repérer un identifiant et de le recoller
+              ici : trois étapes pour obtenir un lien qui, depuis que
+              l'Atelier se vend chez nous, ne pouvait plus rien
+              commissionner.
+            */}
             {link ? (
               <div className="flex flex-col gap-2">
-                <Label>Ton lien affilié prêt à partager</Label>
+                <Label>Ton lien, prêt à partager</Label>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <code className="flex-1 truncate rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs">
                     {link}
@@ -276,19 +245,104 @@ export function AffiliationClient({
                     {copied ? "Copié" : "Copier"}
                   </Button>
                 </div>
-                <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
-                  <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                  <span>
-                    Partage toujours CE lien (avec <code>?sa=</code>). Un lien nu vers {ATELIER_SALES_URL}{" "}
-                    sans ton identifiant ne te crédite aucune commission.
-                  </span>
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  Partage ce lien tel quel. Le cookie posé chez la personne dure{" "}
+                  <strong>un an</strong>, et quelqu'un qui s'inscrit en gratuit par ce
+                  lien te reste rattaché à vie, même s'il achète des mois plus tard.
+                </p>
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground">
-                Ajoute ton identifiant ci-dessus pour générer ton lien.
-              </p>
+              /*
+                PAS DE LIEN PLUTÔT QU'UN LIEN MUET. Un lien sans code se
+                partage quand même, et chaque partage est une vente
+                perdue que personne ne peut plus retrouver. On dit donc
+                ce qui se passe, au lieu d'afficher une adresse nue.
+              */
+              <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                <span>
+                  {refEtat === "exclu" ? (
+                    <>
+                      Ton compte affilié est suspendu. Écris au support pour en
+                      connaître la raison : tant qu'il l'est, aucun lien n'est
+                      généré.
+                    </>
+                  ) : refEtat === "deja-affilie" ? (
+                    <>
+                      Ton adresse est déjà affiliée sous un autre identifiant.
+                      Tes commissions y sont accrochées, donc on ne fusionne pas
+                      deux comptes tout seuls : écris au support et on s'en
+                      occupe.
+                    </>
+                  ) : (
+                    <>
+                      Ton lien n'a pas pu être récupéré à l'instant. Recharge la
+                      page dans un moment : rien n'est perdu, ton code existe et
+                      ne change pas.
+                    </>
+                  )}
+                </span>
+              </div>
             )}
+
+            {/*
+              L'IDENTIFIANT SYSTEME.IO EST FACULTATIF, et il ne sert plus
+              qu'à UNE chose : rattacher les ventes arrivées par les
+              anciens tunnels. Celui qui n'en a pas n'a rien à faire ici.
+            */}
+            <details className="rounded-lg border border-border bg-muted/20 px-3 py-2">
+              <summary className="cursor-pointer text-sm font-medium">
+                Tu as déjà promu l'Atelier via Systeme.io ?
+              </summary>
+              <div className="mt-3 flex flex-col gap-1.5">
+                <p className="text-xs text-muted-foreground">
+                  Colle ton identifiant affilié Systeme.io (il commence par{" "}
+                  <code className="rounded bg-muted px-1 py-0.5">sa</code>) pour que
+                  tes ventes arrivées par leurs anciens tunnels te soient
+                  rattachées. C'est la seule chose que ce champ fait, et il est
+                  facultatif : ton lien ci-dessus fonctionne sans lui.
+                </p>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Input
+                    id="aff-id"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="sa0007878317200141bbe3de2b6644176621db2c6580"
+                    className="font-mono text-xs sm:text-sm"
+                    spellCheck={false}
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={save}
+                    disabled={saving}
+                    className="shrink-0"
+                  >
+                    {saving ? "..." : savedId ? "Mettre à jour" : "Enregistrer"}
+                  </Button>
+                </div>
+                {inputTouchedInvalid ? (
+                  <p className="text-xs text-destructive">
+                    Hmm, ça ne ressemble pas à un identifiant Systeme.io. Tu peux
+                    aussi coller le lien complet.
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Tu peux coller l'identifiant seul OU un lien contenant ?sa=...
+                  </p>
+                )}
+                <a
+                  href={SIO_AFFILIATE_DASHBOARD_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex w-fit items-center gap-1 text-xs font-medium text-primary hover:underline"
+                >
+                  Où le trouver dans Systeme.io
+                  <ExternalLink className="size-3.5" />
+                </a>
+              </div>
+            </details>
           </CardContent>
         </Card>
       )}
@@ -304,11 +358,16 @@ export function AffiliationClient({
                   Tes gains réels
                 </span>
                 <p className="text-sm text-muted-foreground">
-                  Ajoute ton identifiant affilié pour activer le suivi de tes commissions.
+                  Les ventes passées par ton lien sont suivies dans ton espace
+                  affilié, avec tes clics, tes filleuls et tes versements. Ce
+                  compteur ci ne sert qu&apos;aux ventes arrivées par les anciens
+                  tunnels Systeme.io, et tu n&apos;en as pas.
                 </p>
-                <Button size="sm" onClick={() => setTab("lien")}>
-                  Configurer mon lien
-                  <ArrowRight className="size-4" />
+                <Button size="sm" asChild>
+                  <a href={ESPACE_AFFILIE_URL} target="_blank" rel="noopener noreferrer">
+                    Ouvrir mon espace affilié
+                    <ExternalLink className="size-4" />
+                  </a>
                 </Button>
               </CardContent>
             </Card>
@@ -324,7 +383,7 @@ export function AffiliationClient({
                 </CardContent>
               </Card>
 
-              {/* Commissions par statut (calé sur le cycle Systeme.io) */}
+              {/* Commissions par statut, sur le cycle de versement (J+30). */}
               <Card>
                 <CardContent className="flex flex-col gap-4 py-5">
                   <span className="flex items-center gap-2 text-sm font-semibold">
@@ -374,7 +433,7 @@ export function AffiliationClient({
                 </CardContent>
               </Card>
 
-              {/* Comment tu es payé (transparence, aligné Systeme.io) */}
+              {/* Comment tu es payé, en toutes lettres. */}
               <Card>
                 <CardContent className="flex flex-col gap-2 py-5">
                   <span className="flex items-center gap-2 text-sm font-semibold">
@@ -401,16 +460,18 @@ export function AffiliationClient({
                     <li className="flex items-start gap-2">
                       <ArrowRight className="mt-0.5 size-3.5 shrink-0 text-primary" />
                       <span>
-                        Passé ces 30 jours, la commission est acquise. Systeme.io te la verse
-                        <strong> une fois par mois, autour du 10</strong>, sur le moyen de paiement de
-                        tes réglages affilié.
+                        Passé ces 30 jours, la commission est acquise. Elle part
+                        <strong> entre le 10 et le 13 du mois</strong>, par virement
+                        ou PayPal selon ce que tu as choisi, dès 20 € cumulés.
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <ArrowRight className="mt-0.5 size-3.5 shrink-0 text-primary" />
                       <span>
-                        Les montants ici sont calculés comme ceux de Systeme.io. En cas d'écart,
-                        Systeme.io reste la référence pour le paiement.
+                        Ce compteur suit tes ventes arrivées par les anciens
+                        tunnels Systeme.io. Celles passées par ton lien ci-dessus
+                        sont comptées dans ton espace affilié, qui fait référence
+                        pour le versement.
                       </span>
                     </li>
                   </ul>
@@ -505,8 +566,8 @@ export function AffiliationClient({
                   )}
                   <div>
                     <Button asChild variant="outline" size="sm">
-                      <a href={SIO_AFFILIATE_DASHBOARD_URL} target="_blank" rel="noopener noreferrer">
-                        Voir aussi sur Systeme.io
+                      <a href={ESPACE_AFFILIE_URL} target="_blank" rel="noopener noreferrer">
+                        Voir le détail dans mon espace affilié
                         <ExternalLink className="size-4" />
                       </a>
                     </Button>
@@ -640,22 +701,36 @@ export function AffiliationClient({
               <CheckCircle2 className="size-4 text-primary" />
               Configure ton paiement (une fois)
             </span>
+            {/*
+              LE CYCLE DE VERSEMENT VIT CHEZ NOUS DEPUIS LE 25 AOÛT.
+              Cet écran envoyait encore régler ses coordonnées dans
+              Systeme.io : quelqu'un qui les y remplissait aujourd'hui ne
+              serait payé de rien pour ses ventes passées par notre bon de
+              commande. C'est la faute déjà commise le 8 juin, dans
+              l'autre sens ("arrête d'inventer n'importe quoi").
+            */}
             <p className="text-sm text-muted-foreground">
-              Tu es payé directement par Systeme.io, en automatique,{" "}
-              <strong>entre le 10 et le 13</strong> de chaque mois. Pour ça, complète tes infos de
-              paiement (PayPal ou virement) dans tes réglages affilié.
+              Tu choisis : <strong>virement ou PayPal</strong>. Les versements
+              partent <strong>entre le 10 et le 13</strong> de chaque mois, pour
+              les commissions dont les 30 jours sont passés, dès{" "}
+              <strong>20 € cumulés</strong>. En dessous, l&apos;argent reste acquis
+              et part au versement suivant. La facture est écrite à ta place
+              chaque mois : tu n&apos;as rien à nous envoyer.
             </p>
             <div>
               <Button asChild variant="outline" size="sm">
-                <a href={SIO_AFFILIATE_SETTINGS_URL} target="_blank" rel="noopener noreferrer">
-                  Compléter mes infos de paiement
+                <a href={`${ESPACE_AFFILIE_URL}paiement`} target="_blank" rel="noopener noreferrer">
+                  Renseigner mes coordonnées de versement
                   <ExternalLink className="size-4" />
                 </a>
               </Button>
             </div>
             <p className="flex items-start gap-2 text-xs text-muted-foreground">
               <Info className="mt-0.5 size-3.5 shrink-0" />
-              Sans infos de paiement renseignées, Systeme.io ne peut pas t’envoyer tes commissions.
+              Sans coordonnées renseignées, ta ligne est écartée du versement du
+              mois et son montant t&apos;est conservé. Les commissions de tes
+              ventes arrivées par les anciens tunnels Systeme.io continuent, elles,
+              d&apos;être versées par Systeme.io.
             </p>
           </CardContent>
         </Card>

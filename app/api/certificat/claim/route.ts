@@ -10,11 +10,8 @@ import { randomBytes } from "node:crypto";
 import { getViewer, getDaysWithProgress } from "@/lib/parcours";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { cleanCertName } from "@/lib/certificateRender";
-import {
-  buildAffiliateLink,
-  isValidAffiliateId,
-  ATELIER_SALES_URL,
-} from "@/lib/affiliate";
+import { lienAffilieDeLEleve } from "@/lib/affiliate/lienEleve";
+import { ATELIER_SALES_URL } from "@/lib/affiliate";
 
 function makeToken(): string {
   // 12 caracteres url-safe, suffisant et non devinable.
@@ -71,12 +68,21 @@ export async function POST(req: NextRequest) {
     certNumber = allocated as string;
   }
 
-  // QR : lien affilie tracke de l'eleve s'il a renseigne son ID Systeme.io,
-  // sinon lien de vente simple. Recalcule a chaque generation pour qu'un ID
-  // ajoute apres coup soit pris en compte quand l'eleve regenere.
+  // QR : le lien affilie TRACKE de l'eleve, qui porte son code public
+  // (`?ref=`) depuis le 26 aout. Il portait un `?sa=` vers un tunnel
+  // Systeme.io, qui ne transmet pas la query : ce QR ne pouvait donc
+  // plus rien commissionner chez nous.
+  //
+  // Repli sur l'adresse nue quand aucun code n'est disponible : un
+  // certificat s'imprime, donc son QR doit MENER quelque part. C'est le
+  // seul endroit ou un lien non tracke vaut mieux que rien.
   const sa = viewer.profile?.sio_affiliate_id ?? null;
-  const qrUrl =
-    sa && isValidAffiliateId(sa) ? buildAffiliateLink(sa) : ATELIER_SALES_URL;
+  const { lien } = await lienAffilieDeLEleve({
+    email: viewer.email,
+    displayName: name,
+    sa,
+  });
+  const qrUrl = lien || ATELIER_SALES_URL;
 
   const { error } = await supabaseAdmin.from("certificates").upsert(
     {

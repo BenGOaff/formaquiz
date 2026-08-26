@@ -9,7 +9,8 @@ import { Award, Lock } from "lucide-react";
 import { getViewer, getDaysWithProgress } from "@/lib/parcours";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getAppUrl } from "@/lib/appUrl";
-import { isValidAffiliateId, buildAffiliateLink, ATELIER_SALES_URL } from "@/lib/affiliate";
+import { ATELIER_SALES_URL } from "@/lib/affiliate";
+import { lienAffilieDeLEleve } from "@/lib/affiliate/lienEleve";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -79,7 +80,15 @@ export default async function CertificatPage() {
   // Si l'eleve n'a pas d'ID affilie valide, le QR de son certificat pointe
   // vers la page de vente sans ref (aucune commission). On l'en informe.
   const sa = String(viewer.profile?.sio_affiliate_id ?? "").trim();
-  const hasAffiliate = isValidAffiliateId(sa);
+  // Le QR porte le CODE PUBLIC depuis le 26 aout : un `?sa=` menait a un
+  // tunnel Systeme.io qui ne transmet pas la query, donc a un QR imprime
+  // qui ne commissionnait plus rien.
+  const { lien: lienAffilie } = await lienAffilieDeLEleve({
+    email: viewer.email,
+    displayName: String(viewer.profile?.full_name ?? "") || null,
+    sa: sa || null,
+  });
+  const hasAffiliate = Boolean(lienAffilie);
 
   // AUTO-REPARATION (cas Monique) : le qr_url est un snapshot pose a la
   // generation. Si l'ID affilie a ete ajoute (ou retire) APRES, le snapshot
@@ -87,7 +96,7 @@ export default async function CertificatPage() {
   // ici a CHAQUE visite de la page : plus besoin de regenerer, ni de tomber
   // au bon moment. Service role car RLS n'autorise que le select cote eleve.
   if (existing) {
-    const expectedQr = hasAffiliate ? buildAffiliateLink(sa) : ATELIER_SALES_URL;
+    const expectedQr = lienAffilie || ATELIER_SALES_URL;
     if ((existing.qr_url as string | null) !== expectedQr) {
       const { error: healErr } = await supabaseAdmin
         .from("certificates")

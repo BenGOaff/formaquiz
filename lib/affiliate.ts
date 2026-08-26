@@ -1,11 +1,32 @@
 // lib/affiliate.ts
 // Espace Affiliation de l'Atelier du Quiz. Module data-pure (réutilisable
-// serveur + client). L'affiliation est NATIVE Systeme.io : on stocke l'ID
-// affilié (sa...) et on construit le lien tracké. Le tracking des gains et
-// le paiement sont gérés par Systeme.io (source de vérité).
+// serveur + client).
 //
-// Modèle de commission (configuré côté Systeme.io) :
-//   - 70% de commission sur chaque vente de l'Atelier du Quiz (Quizing)
+// -- LE LIEN EST LE NÔTRE DEPUIS LE 26 AOÛT 2026 -----------------------
+//
+// Béné, capture de cet écran à l'appui : "t'as pas oublié un truc ?"
+// L'onglet demandait encore un identifiant Systeme.io et fabriquait
+// `tipote.fr/atelier-du-quiz?sa=...`, la veille du jour où l'Atelier est
+// passé sur NOTRE bon de commande et NOTRE registre d'affiliés. La
+// plomberie avait bougé, l'écran non : exactement la faute commise
+// deux jours plus tôt sur `affiliate.tipote.com`.
+//
+// Le lien pointe donc sur `atelierduquiz.fr` et porte `?ref=<code>`.
+// Ce n'est pas cosmétique : un tunnel Systeme.io ne nous transmet RIEN
+// de ce qu'on ajoute à l'URL, donc un lien qui passe par eux ne peut
+// atteindre ni notre commissionnement, ni le mois offert.
+//
+// -- LE `sa` RESTE LU, ET IL EST FACULTATIF ----------------------------
+//
+// Il ne sert plus qu'à UNE chose : rattacher les ventes arrivées par les
+// anciens tunnels Systeme.io à la bonne personne. Celui qui en a un le
+// colle, celui qui n'en a pas laisse vide et on lui fabrique une clé
+// interne. Le nom du paramètre dit la génération du lien (`?ref=` vient
+// d'ici, `?sa=` d'un ancien tunnel), et c'est ce qui permet de réserver
+// le mois offert au système courant sans aucun marqueur à maintenir.
+//
+// Modèle de commission :
+//   - 70% sur chaque vente de l'Atelier du Quiz
 //     (100% au lancement, passé à 70% en juillet 2026)
 //   - 40% par mois, en récurrent, sur chaque abonnement Tiquiz parrainé
 
@@ -13,6 +34,7 @@
 // resout pas l'alias @/ (cf. AGENTS, filet de tests logique).
 import { resolvePersona, type Persona } from "./personas.ts";
 import { SA_RE } from "@/lib/affiliate/sa";
+import { REF_PARAM, readRef } from "@/lib/affiliate/refLien";
 import {
   COMMISSION_BASE,
   COMMISSION_RATES,
@@ -31,8 +53,15 @@ function formatEur(value: number): string {
 export const QUIZING_COMMISSION_PCT = 70;
 export const TIQUIZ_RECURRING_PCT = 40;
 
-/** Page de vente de l'Atelier du Quiz (le lien affilié pointe ici). */
-export const ATELIER_SALES_URL = "https://www.tipote.fr/atelier-du-quiz";
+/**
+ * Page de vente de l'Atelier du Quiz : la NÔTRE, jamais le tunnel
+ * Systeme.io. Leur page ne nous transmet pas la query, donc un `?ref=`
+ * posé dessus n'atteindrait jamais notre bon de commande.
+ */
+export const ATELIER_SALES_URL = "https://atelierduquiz.fr/";
+
+/** Où l'affilié suit ses gains, ses liens et ses versements. */
+export const ESPACE_AFFILIE_URL = "https://affiliate.tipote.com/";
 
 /** Où l'affilié trouve son identifiant et règle ses paiements (Systeme.io). */
 export const SIO_AFFILIATE_DASHBOARD_URL = "https://systeme.io/dashboard/affiliate-dashboard";
@@ -63,11 +92,22 @@ export function isValidAffiliateId(value: string | null | undefined): boolean {
   return SA_RE.test(String(value ?? "").trim());
 }
 
-/** Construit le lien affilié tracké vers la page de vente de l'Atelier du Quiz. */
-export function buildAffiliateLink(affiliateId: string): string {
-  const sa = String(affiliateId ?? "").trim();
-  if (!sa) return "";
-  return `${ATELIER_SALES_URL}?sa=${sa}`;
+/**
+ * Construit le lien affilié tracké vers la page de vente de l'Atelier.
+ *
+ * Il prend le CODE PUBLIC (`ref`), jamais l'identifiant Systeme.io. Le
+ * code est fabriqué et gardé par le registre unique, chez Tipote : le
+ * recopier ici donnerait deux registres, donc deux réponses différentes
+ * le jour où l'un prend du retard.
+ *
+ * Pas de code -> chaîne vide, et l'écran n'affiche AUCUN lien. Jamais un
+ * lien muet : un lien sans code se partage quand même, et chaque partage
+ * est une vente perdue que personne ne peut plus retrouver.
+ */
+export function buildAffiliateLink(refCode: string | null | undefined): string {
+  const ref = readRef(refCode);
+  if (!ref) return "";
+  return `${ATELIER_SALES_URL}?${REF_PARAM}=${encodeURIComponent(ref)}`;
 }
 
 // --- Personnalisation : playbook de promo par persona ---------------------
@@ -215,8 +255,8 @@ export const AFFILIATE_ARGUMENTS: { title: string; body: string }[] = [
     body: "L'Atelier du Quiz transforme un quiz en machine à leads. C'est concret, démontrable, et ton audience en a besoin.",
   },
   {
-    title: "Paiement automatique chaque mois",
-    body: "Systeme.io te paie directement entre le 10 et le 13 de chaque mois. Tu n'as rien à gérer une fois ton lien en place.",
+    title: "Payé chaque mois, comme tu veux",
+    body: "Virement ou PayPal, au choix. Les commissions partent entre le 10 et le 13 du mois, dès 20 € cumulés (en dessous, l'argent reste acquis et part au versement suivant). La facture est écrite à ta place : tu n'as rien à nous envoyer.",
   },
 ];
 
