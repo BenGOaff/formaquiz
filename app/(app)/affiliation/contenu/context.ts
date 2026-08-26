@@ -8,14 +8,15 @@
 
 import { redirect } from "next/navigation";
 import { getViewer } from "@/lib/parcours";
-import { buildAffiliateLink } from "@/lib/affiliate";
+import { lienAffilieDeLEleve } from "@/lib/affiliate/lienEleve";
 
 export type EmailOverride = { subject?: string | null; bodyHtml?: string | null };
 
 export type ContentContext = {
-  /** Lien tracké prêt à coller. Chaîne vide si l'affilié n'a pas encore
-   *  renseigné son identifiant Systeme.io : les pages le disent alors
-   *  explicitement plutôt que de laisser copier un lien non tracké. */
+  /** Lien tracké prêt à coller (`atelierduquiz.fr/?ref=...`). Chaîne
+   *  vide si le code public n'a pas pu être obtenu : les pages le disent
+   *  alors explicitement plutôt que de laisser copier un lien non
+   *  tracké, qui se partagerait pareil et ne rapporterait rien. */
   affiliateLink: string;
   hasAffiliateId: boolean;
   /** Nom de signature utilisé dans les contenus ({NAME}). */
@@ -41,9 +42,20 @@ export async function getContentContext(): Promise<ContentContext> {
   const sa = p?.sio_affiliate_id ?? "";
   const fullName = (p?.full_name ?? "").trim();
 
+  // Le lien porte le CODE PUBLIC, pas l'identifiant Systeme.io : c'est
+  // le seul paramètre que notre bon de commande sait lire. `hasAffiliateId`
+  // suit donc le LIEN et non plus le `sa`, sinon un élève sans compte
+  // Systeme.io verrait "renseigne ton identifiant" avec son lien juste
+  // au dessus.
+  const { lien } = await lienAffilieDeLEleve({
+    email: viewer.email,
+    displayName: fullName || null,
+    sa: sa || null,
+  });
+
   return {
-    affiliateLink: sa ? buildAffiliateLink(sa) : "",
-    hasAffiliateId: Boolean(sa),
+    affiliateLink: lien,
+    hasAffiliateId: Boolean(lien),
     // Repli neutre : mieux vaut une signature générique qu'un "{NAME}"
     // brut collé tel quel dans un email envoyé à une liste.
     displayName: fullName || "Moi",
