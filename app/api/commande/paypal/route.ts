@@ -2,7 +2,7 @@
 //
 // DÉMARRE UN PAIEMENT PAYPAL POUR L'ATELIER.
 //
-//   POST { produit, k, ref? }  ->  { ok: true, approveUrl, mode }
+//   POST { produit, k, ref?, code? }  ->  { ok: true, approveUrl, mode }
 //                              ->  { ok: false, reason }
 //
 // Jumelle de `/api/commande/session` (Stripe). Les deux gardes sont les
@@ -33,6 +33,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     produit?: string;
     k?: string;
     ref?: string;
+    /** Le CODE PUBLIC de nos liens (`?ref=`), distinct du `sa`. */
+    code?: string;
     email?: string;
     facturation?: unknown;
   };
@@ -119,6 +121,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // Annuler ramène au bon de commande, pas sur un cul-de-sac.
     cancelUrl: `${base}/commande/${product.id}?k=${cle}`,
     affiliateRef: typeof body.ref === "string" ? body.ref.trim().slice(0, 40) : null,
+    // Le code public de nos liens. Il voyage dans un champ SÉPARÉ du
+    // `sa` : les deux ne se devinent jamais l'un l'autre.
+    affiliateCode: typeof body.code === "string" ? body.code.trim().slice(0, 40) : null,
     // Elle GAGNE sur l'adresse du compte PayPal : voir `buildCustomId`.
     email: email || null,
   });

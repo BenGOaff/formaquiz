@@ -45,7 +45,7 @@ import { findOwnerProduct } from "@/lib/checkout/catalog";
 import { readOwnerStripe, readOwnerStripeWebhookSecret } from "@/lib/checkout/ownerAccount";
 import { retrieveOwnerSession, verifyStripeSignature } from "@/lib/checkout/stripeCheckout";
 import { logWebhookEvent } from "@/lib/webhooks/log";
-import { commissionnerVente } from "@/lib/affiliate/ownerSale";
+import { annulerCommissionChezTipote, commissionnerVente } from "@/lib/affiliate/ownerSale";
 import { refundCommissionByOrder } from "@/lib/affiliateTracking";
 import { completerFacturation } from "@/lib/facture/store";
 
@@ -245,6 +245,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     email: vente.email,
     reference: vente.paymentRef,
     affiliateRef: vente.affiliateRef,
+    affiliateCode: vente.affiliateCode,
     amountTotalCents: vente.amountTotalCents,
     amountTaxCents: vente.amountTaxCents,
     product,
@@ -338,6 +339,10 @@ async function surRemboursement(
   // n'annule rien, en silence.
   if (paymentIntent) {
     const r = await refundCommissionByOrder(`stripe:${paymentIntent}`);
+    // ET dans le registre CENTRAL (Tipote), ou la commission vit depuis
+    // le 26 aout. N'annuler que localement laisserait la ligne centrale
+    // murir puis partir en virement sur une vente remboursee.
+    await annulerCommissionChezTipote(`stripe:${paymentIntent}`);
     if (r.refunded > 0) {
       console.log(`[commande/webhook] ${r.refunded} commission(s) annulee(s) apres remboursement`);
     }

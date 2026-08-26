@@ -57,8 +57,21 @@ export const SA_PARAM = "sa";
  */
 export const SA_COOKIE = "aq_sa";
 
-/** 90 jours, en secondes. Même fenêtre que l'attribution par email. */
-export const SA_MAX_AGE_SECONDS = 90 * 24 * 60 * 60;
+/**
+ * UN AN, COMME CHEZ SYSTEME.IO.
+ *
+ * Béné, 26 août 2026 : "son cookie est posé pour 1 an sur le device de
+ * son prospect."
+ *
+ * C'était 90 jours ICI alors que Tiquiz était déjà passé à un an : deux
+ * durées différentes pour la même promesse selon le produit promu. Un
+ * prospect qui clique en janvier et achète l'Atelier en juin ne payait
+ * plus personne, et l'affilié n'avait aucun moyen de le savoir.
+ *
+ * Le cookie `?ref=` porte la MÊME durée, dans `refLien.ts` : deux
+ * durées donneraient deux réponses selon le lien emprunté.
+ */
+export const SA_MAX_AGE_SECONDS = 365 * 24 * 60 * 60;
 
 /**
  * L'identifiant s'il est valide, `null` sinon.

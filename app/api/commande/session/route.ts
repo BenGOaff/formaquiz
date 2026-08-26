@@ -2,7 +2,7 @@
 //
 // DÉMARRE LE PAIEMENT D'UNE VENTE DE BÉNÉ.
 //
-//   POST { produit, k, ref? }  ->  { ok: true, clientSecret }
+//   POST { produit, k, ref?, code? }  ->  { ok: true, clientSecret }
 //                              ->  { ok: false, reason }
 //
 // Le navigateur envoie l'identifiant du produit, JAMAIS le prix : celui
@@ -36,7 +36,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  let body: { produit?: string; k?: string; ref?: string };
+  let body: { produit?: string; k?: string; ref?: string; code?: string };
   try {
     body = await req.json();
   } catch {
@@ -96,6 +96,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     product,
     returnUrl: retour,
     affiliateRef: typeof body.ref === "string" ? body.ref.trim().slice(0, 40) : null,
+    // Le code public de nos liens. Il voyage dans un champ SÉPARÉ du
+    // `sa` : les deux ne se devinent jamais l'un l'autre.
+    affiliateCode: typeof body.code === "string" ? body.code.trim().slice(0, 40) : null,
   });
 
   if (!result.ok || !result.clientSecret) {

@@ -118,6 +118,15 @@ export async function createOwnerCheckoutSession(args: {
   returnUrl: string;
   /** Le code de l'affiliée, s'il y en a un. Voyage jusqu'à la commission. */
   affiliateRef?: string | null;
+  /**
+   * LE CODE PUBLIC DE NOS LIENS (`?ref=jocelyne`), depuis le 26 août 2026.
+   *
+   * Il voyage dans une metadata SÉPARÉE du `sa`. Les deux ne se
+   * devinent jamais l'un l'autre : deviner à la forme marcherait
+   * aujourd'hui et casserait le jour où un affilié choisit un code qui
+   * ressemble à un identifiant Systeme.io.
+   */
+  affiliateCode?: string | null;
   /** Pré-remplit l'adresse quand on la connaît déjà. */
   email?: string | null;
 }): Promise<CheckoutSessionResult> {
@@ -169,6 +178,7 @@ export async function createOwnerCheckoutSession(args: {
     params["subscription_data[metadata][product]"] = p.id;
     params["subscription_data[metadata][source]"] = p.source;
     if (args.affiliateRef) params["subscription_data[metadata][affiliate_ref]"] = args.affiliateRef;
+    if (args.affiliateCode) params["subscription_data[metadata][affiliate_code]"] = args.affiliateCode;
     // Un abonnement produit ses factures TOUT SEUL, à chaque échéance.
     // `invoice_creation` n'existe QUE pour le paiement unique, et
     // l'envoyer ici ferait refuser la session par Stripe.
@@ -196,6 +206,7 @@ export async function createOwnerCheckoutSession(args: {
   }
 
   if (args.affiliateRef) params["metadata[affiliate_ref]"] = args.affiliateRef;
+  if (args.affiliateCode) params["metadata[affiliate_code]"] = args.affiliateCode;
   if (args.email) params.customer_email = args.email;
 
   try {
@@ -302,6 +313,7 @@ export interface OwnerSessionInfo {
   name?: string | null;
   productId: string | null;
   affiliateRef: string | null;
+  affiliateCode: string | null;
   /** Ce qui a été encaissé, TVA comprise. */
   amountTotalCents: number;
   /** La TVA comprise dans le total. Sert à calculer la base HT. */
@@ -359,6 +371,7 @@ function litSession(s: RawSession): OwnerSessionInfo {
     facturation: acheteurDepuisStripe(s.customer_details),
     productId: meta.product ?? null,
     affiliateRef: meta.affiliate_ref ?? null,
+    affiliateCode: meta.affiliate_code ?? null,
     amountTotalCents: Number(s.amount_total ?? 0) || 0,
     amountTaxCents: Number(s.total_details?.amount_tax ?? 0) || 0,
     paymentRef: (s.payment_intent ?? "").trim() || (s.id ?? "").trim() || null,

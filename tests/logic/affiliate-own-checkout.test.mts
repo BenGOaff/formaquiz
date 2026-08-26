@@ -75,17 +75,29 @@ test("le navigateur retrouve le sa dans l'URL ou dans le cookie", () => {
   assert.equal(readSaFromBrowser("", ""), null);
 });
 
-test("la fenetre du cookie est celle de l'attribution par email", () => {
-  // Deux durees differentes pour la meme promesse donneraient deux
-  // reponses selon le chemin emprunte par l'acheteuse.
-  assert.equal(SA_MAX_AGE_SECONDS, 90 * 24 * 60 * 60);
+test("le cookie dure UN AN, et ce n'est pas la fenetre d'attribution", () => {
+  // Bene, 26 aout 2026 : "son cookie est posé pour 1 an sur le device de
+  // son prospect." C'etait 90 jours ici alors que Tiquiz etait deja a un
+  // an : deux durees pour la meme promesse selon le produit promu.
+  assert.equal(SA_MAX_AGE_SECONDS, 365 * 24 * 60 * 60);
+
+  // CE TEST LIAIT LES DEUX, ET C'ETAIT L'ERREUR. Le COOKIE dit combien
+  // de temps un CLIC compte ; la FENETRE d'attribution par email dit
+  // combien de temps une CONVERSION deja enregistree compte. Ce sont
+  // deux questions differentes, et les avoir mariees a fige le cookie a
+  // 90 jours pendant que la promesse en annoncait 365.
+  //
+  // La fenetre du registre HISTORIQUE de l'Atelier reste a 90 jours,
+  // volontairement : c'est un chemin de repli qu'on ne fait plus
+  // grandir. Le registre central (Tipote) est a VIE, et c'est lui qui
+  // repond en premier depuis le 26 aout.
   const src = fs.readFileSync(
     path.join(process.cwd(), "lib/affiliateTracking.ts"),
     "utf8",
   );
   assert.ok(
     /ATTRIBUTION_WINDOW_DAYS\s*=\s*90/.test(src),
-    "la fenetre d'attribution par email a bouge : le cookie doit suivre",
+    "la fenetre du registre historique a bouge : a verifier volontairement",
   );
 });
 
