@@ -3,12 +3,13 @@
 // les routes membre + admin. Mono-langue, donc pas de logique de locale
 // (contrairement à Tiquiz).
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextFetchEvent, NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { isAdminEmail } from "@/lib/adminEmails";
 import { salesSlugForHost } from "@/lib/sales/salesHosts";
 import { readSa, SA_COOKIE, SA_MAX_AGE_SECONDS, SA_PARAM } from "@/lib/affiliate/sa";
 import { readRef, REF_COOKIE, REF_MAX_AGE_SECONDS, REF_PARAM } from "@/lib/affiliate/refLien";
+import { clicASignaler, signalerClic } from "@/lib/affiliate/signalerClic";
 
 // Routes accessibles sans être connecté.
 const PUBLIC_PREFIXES = [
@@ -51,7 +52,7 @@ function startsWithAny(pathname: string, prefixes: string[]): boolean {
   return prefixes.some((p) => pathname === p || pathname.startsWith(p + "/") || pathname.startsWith(p));
 }
 
-export async function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest, event: NextFetchEvent) {
   const { pathname } = req.nextUrl;
 
   // ── LE `?sa=` D'UNE AFFILIÉE, RANGÉ DÈS LA PREMIÈRE PAGE ──
@@ -74,6 +75,22 @@ export async function middleware(req: NextRequest) {
   // `sa`. Le nom du paramètre dit à lui seul la génération du lien.
   const sa = readSa(req.nextUrl.searchParams.get(SA_PARAM));
   const ref = readRef(req.nextUrl.searchParams.get(REF_PARAM));
+
+  // LE CLIC EST COMPTE ICI (Bene, 27 aout 2026). Le lien affilie reste
+  // `atelierduquiz.fr/?ref=jocelyne` : on ne change pas le lien de tout
+  // le monde pour nourrir un compteur, on branche le compteur sur le
+  // lien. `waitUntil` et pas `await` : la reponse part sans attendre.
+  if (clicASignaler({ ref, pathname, accept: req.headers.get("accept") })) {
+    event.waitUntil(
+      signalerClic({
+        ref: ref as string,
+        pageUrl: req.nextUrl.toString(),
+        referrer: req.headers.get("referer"),
+        userAgent: req.headers.get("user-agent"),
+        ip: req.headers.get("x-forwarded-for"),
+      }),
+    );
+  }
   const poseSa = (res: NextResponse): NextResponse => {
     // Lisibles par le bon de commande : c'est LUI qui doit les
     // transmettre à Stripe et à PayPal. `httpOnly` les rendrait
