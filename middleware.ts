@@ -9,7 +9,7 @@ import { isAdminEmail } from "@/lib/adminEmails";
 import { salesSlugForHost } from "@/lib/sales/salesHosts";
 import { readSa, SA_COOKIE, SA_MAX_AGE_SECONDS, SA_PARAM } from "@/lib/affiliate/sa";
 import { readRef, REF_COOKIE, REF_MAX_AGE_SECONDS, REF_PARAM } from "@/lib/affiliate/refLien";
-import { clicASignaler, signalerClic } from "@/lib/affiliate/signalerClic";
+import { CANAL_PARAM, clicASignaler, lireCanalBrut, signalerClic } from "@/lib/affiliate/signalerClic";
 
 // Routes accessibles sans être connecté.
 const PUBLIC_PREFIXES = [
@@ -84,6 +84,9 @@ export async function middleware(req: NextRequest, event: NextFetchEvent) {
     event.waitUntil(
       signalerClic({
         ref: ref as string,
+        // `?c=youtube` : l'etiquette que l'affilie pose lui meme, pour
+        // ce que le referrer ne peut PAS voir.
+        canal: lireCanalBrut(req.nextUrl.searchParams.get(CANAL_PARAM)),
         pageUrl: req.nextUrl.toString(),
         referrer: req.headers.get("referer"),
         userAgent: req.headers.get("user-agent"),
