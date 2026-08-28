@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { extractEmail, extractSaFromPayload } from "@/lib/affiliateTracking";
+import { resumerPayload } from "@/lib/affiliate/inspecterPayload";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -57,6 +58,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: "no_email" }, { status: 200, headers: CORS });
   }
   if (!sa) {
+
+  // QUAND ON NE TROUVE PAS, ON DIT CE QU'ON A REÇU (27 août 2026).
+  //
+  // Les chemins de `extractSaFromPayload` sont DEVINÉS depuis le premier
+  // jour, ici comme chez Tipote, et personne n'a jamais regardé ce que
+  // Systeme.io envoie vraiment. On journalise la CARTE du payload : les
+  // chemins et leur type, jamais les valeurs (un webhook de vente porte
+  // l'email, le nom, l'adresse et le montant). Seules exceptions : une
+  // valeur qui a la FORME d'un identifiant, et l'hôte d'une URL.
+  //
+  // À retirer une fois le bon chemin ajouté à la liste.
+    console.log(
+      `[affiliate/sio-conversion] SA INTROUVABLE, forme du payload :\n${resumerPayload(body)}`,
+    );
     return NextResponse.json({ ok: false, reason: "no_sa", email }, { status: 200, headers: CORS });
   }
 
