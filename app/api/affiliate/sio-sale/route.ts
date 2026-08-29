@@ -24,6 +24,7 @@ import {
   extractProductName,
   extractSaFromPayload,
 } from "@/lib/affiliateTracking";
+import { resumerPayload } from "@/lib/affiliate/inspecterPayload";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -70,6 +71,17 @@ export async function POST(req: NextRequest) {
   console.log(
     `[affiliate/sio-sale] email=${email ?? "(none)"} order=${orderId ?? "(none)"} ht=${amountCents} ttc=${totalCents} url=${funnelUrl ?? "(none)"} offer=${offerId ?? "(none)"} product=${product?.source_app ?? "(none)"}`,
   );
+
+  // LE WEBHOOK DE VENTE EST LE PLUS PROMETTEUR : c'est l'événement qui
+  // porte la commission chez Systeme.io, donc celui qui a le plus de
+  // raisons de nommer l'affilié. On journalise sa CARTE quand on ne
+  // trouve rien : les chemins et leur type, jamais les valeurs.
+  // À retirer une fois le bon chemin ajouté à la liste.
+  if (!saHint) {
+    console.log(
+      `[affiliate/sio-sale] SA INTROUVABLE, forme du payload :\n${resumerPayload(body)}`,
+    );
+  }
 
   if (!email || !orderId) {
     return NextResponse.json({ ok: false, reason: "missing_fields" }, { status: 200, headers: CORS });
