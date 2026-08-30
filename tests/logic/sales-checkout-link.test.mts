@@ -247,3 +247,70 @@ test("la page capturee : le bouton de Bene est epargne", () => {
     "plus aucun bouton a popup : les blocs perso de Bene ne s'ouvriront plus",
   );
 });
+
+// ---------------------------------------------------------------------
+// L'ICÔNE DE L'ONGLET
+//
+// Béné, 30 août 2026, sur la page de vente de Tiquiz : "tu n'as pas mis
+// le favicon de tiquiz mais celui de tipote c'est dommage."
+//
+// L'Atelier portait EXACTEMENT le même défaut, et pour cause : sa page
+// est une capture du même compte Systeme.io, et son
+// `<link rel="icon">` désigne le même fichier, octet pour octet (le "t"
+// bleu de Tipote). Le dépôt de Tiquiz est jumeau : un garde-fou qui ne
+// protège qu'un des deux jumeaux ne protège personne.
+// ---------------------------------------------------------------------
+
+test("l'icone de la capture est retiree, la notre est posee", async () => {
+  const { buildHeadTags } = await import("../../lib/sales/servePage.ts");
+
+  const html =
+    '<link rel="icon" type="image/png" href="/v/atelier-du-quiz/045f2fea8dfa.webp">' +
+    '<link rel="apple-touch-icon" href="/v/atelier-du-quiz/045f2fea8dfa.webp">' +
+    '<link rel="shortcut icon" href="/v/atelier-du-quiz/045f2fea8dfa.webp">';
+  const nettoye = stripHeadTags(html);
+  assert.ok(!nettoye.includes("045f2fea8dfa"), "l'icone de la capture survit : " + nettoye);
+
+  const tags = buildHeadTags({
+    slug: "atelier-du-quiz",
+    canonical: "https://atelierduquiz.fr/",
+    title: "T",
+    description: "D",
+    locale: "fr_FR",
+    favicon: "/favicon.ico",
+  });
+  assert.ok(tags.includes('<link rel="icon" href="/favicon.ico">'), tags);
+  assert.ok(tags.includes('<link rel="apple-touch-icon" href="/favicon.ico">'), tags);
+});
+
+test("sans icone declaree on n'en invente aucune", async () => {
+  const { buildHeadTags } = await import("../../lib/sales/servePage.ts");
+  const tags = buildHeadTags({
+    slug: "x",
+    canonical: "https://atelierduquiz.fr/",
+    title: "T",
+    description: "D",
+    locale: "fr_FR",
+  });
+  assert.ok(!tags.includes('rel="icon"'), tags);
+});
+
+test("la page capturee ne sert plus l'icone de Tipote", () => {
+  if (!capturee) return;
+  assert.ok(
+    /<link[^>]*rel=["'][^"']*icon/i.test(capturee),
+    "la capture n'a plus d'icone : ce test ne peut plus echouer, il ment",
+  );
+  assert.ok(
+    !/<link[^>]*rel=["'][^"']*icon/i.test(stripHeadTags(capturee)),
+    "l'icone de Tipote survit dans la page servie",
+  );
+});
+
+test("la page de vente de l'Atelier declare une icone a elle", () => {
+  const route = fs.readFileSync(
+    path.join(process.cwd(), "app/apercu/vente/[slug]/route.ts"),
+    "utf8",
+  );
+  assert.ok(/favicon:\s*"\/favicon\.ico"/.test(route), "la page de vente n'a plus d'icone a elle");
+});

@@ -48,6 +48,9 @@ const PAGES: Record<string, Omit<SalesPageMeta, "slug"> & { produit: OwnerProduc
     description:
       "La méthode complète pour créer un quiz qui capture des leads qualifiés et les transforme en clients, en 7 jours, sans compétence technique.",
     locale: "fr_FR",
+    // L'icône de l'Atelier, la nôtre. Sans elle, la page garde celle de
+    // la capture, c'est à dire le "t" de Tipote (retour Béné, 30 août).
+    favicon: "/favicon.ico",
     /** Ce que cette page vend, donc où mènent ses boutons. */
     produit: "atelier",
   },
