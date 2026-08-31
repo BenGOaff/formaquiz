@@ -885,6 +885,39 @@ pour mot.
 
 🚨 Migration à appliquer : `supabase/migrations/20260825_facturation.sql`.
 
+## Les litiges Stripe n'arrivaient jamais (31 août 2026)
+
+Le webhook de ce dépôt écoute `charge.dispute.created` et
+`charge.dispute.funds_withdrawn` depuis l'audit du 26 août. **Stripe ne
+les envoyait pas** : l'endpoint `quizing.tipote.com/api/commande/webhook`
+n'y était pas abonné.
+
+Relevé avec `npm run check:stripe` (dépôt TIQUIZ, il lit tout le compte
+Stripe d'un coup), pas déduit. Un impayé laissait donc l'accès ouvert et
+la commission en route vers le lot du mois, exactement le trou qu'on
+croyait avoir fermé.
+
+**La leçon dépasse Stripe :** on avait écrit le code, écrit le test, mis
+à jour cette page, et personne n'avait vérifié que le fournisseur ÉMET
+l'événement. Un `if` qui attend un événement jamais envoyé est
+indiscernable d'un `if` qui marche. C'est la version « configuration »
+du garde-fou non fusionné du 23 août : **écrire un garde-fou n'est pas
+la dernière étape, vérifier qu'il reçoit quelque chose l'est.**
+
+**Ce dépôt n'a besoin QUE de cinq événements**, et c'est important pour
+ne pas se faire réclamer le reste : il vend un ACHAT UNIQUE
+(`interval: null`), donc `checkout.session.completed`,
+`checkout.session.async_payment_succeeded`, `charge.refunded` et les
+deux `charge.dispute.*`. Aucun `invoice.*`, aucun
+`customer.subscription.*` : ce sont les abonnements de Tiquiz. Le
+contrôle le sait par un tableau d'hôtes, il ne le devine pas.
+
+**Et la version d'API du compte est `2020-08-27`** (mesurée le 31 août).
+Ce dépôt ne lit ni facture d'abonnement ni période d'abonnement, donc
+les champs que Stripe a déplacés dans ses versions récentes ne le
+concernent pas. Le jour où l'Atelier vendra un abonnement, il faudra
+porter `lib/checkout/formeStripe.ts` depuis le dépôt Tiquiz.
+
 ## L'audit du 26 août : la fonction existait, elle n'était pas branchée
 
 Béné : "tu peux auditer tout le parcours de vente tiquiz et l'atelier,
@@ -940,3 +973,49 @@ les trois dépôts.
    débrancher l'une des deux.
 
 Test : `tests/logic/audit-26-aout.test.mts`.
+
+## Le coach envoyait les élèves sur un lien qui ne paie plus (31 août 2026)
+
+Audit demandé par Béné : "audit atelier + coach ia [sur le nouveau
+système d'affiliation]."
+
+`lib/coach/knowledge.ts` portait encore, daté du 26 août :
+
+> "SEULE EXCEPTION : l'inscription gratuite reste chez eux, parce que
+> son formulaire crée le contact et pose le tag qui déclenche les
+> séquences email."
+
+**C'était vrai un jour, et faux depuis le 27 août.** `tiquiz_free` est
+revenu chez nous ce jour là (`lib/affiliate/linkDestinations.ts` chez
+Tipote : `https://tiquiz.fr/signup`), parce que `/signup` fait
+maintenant les trois choses d'un coup, le compte, le rattachement à vie,
+et le contact chez Systeme.io avec son étiquette.
+
+Ce que ça coûtait : un élève qui demandait au coach quel lien utiliser
+pour l'inscription gratuite s'entendait répondre "celui de Systeme.io".
+Or **depuis que nos liens portent `?ref=`, un lien qui atterrit chez eux
+ne paie plus personne** : leur page ignore le paramètre, notre
+middleware ne voit jamais la requête, et leur webhook ne sait lire qu'un
+`sa`. Le coach recommandait donc, en toute confiance, le seul lien qui
+ne rapporte rien.
+
+**Règle : une connaissance de coach est du CODE PÉRIMABLE.** Elle est
+écrite en prose, personne ne la relit quand une destination bouge, et
+rien ne la contredit avant qu'un élève ne se plaigne de ne pas être
+payé. Toute modification de `linkDestinations.ts` chez Tipote se reporte
+dans ce fichier, le même jour.
+
+Corrigé au passage : le coach ne connaissait pas la MONTÉE DU TAUX (45 %
+au premier filleul, jusqu'à 70 % à 51) ni la remise d'abonnement, ni
+qu'elles sont EXCLUSIVES l'une de l'autre. Béné démarche de gros
+affiliés : c'est la première question qu'ils poseront.
+
+**Le barème n'est PAS recopié dans `lib/affiliate.ts`** (les arguments
+de vente de l'onglet Affiliation), et c'est délibéré : il vit déjà en
+double, chez Tipote et sur `tiquiz.fr/affiliation`, figé des deux côtés
+par un test qui nomme l'autre. Une TROISIÈME copie dans une phrase de
+vente que personne ne relira finirait par annoncer un taux qui n'est
+plus versé (drame du 19 août : 32,90 € annoncés, 27,42 € payés). La
+phrase dit que le taux monte, et renvoie à l'espace affilié pour le
+barème. Le fichier du coach, lui, DOIT porter les chiffres pour pouvoir
+répondre : il porte donc aussi le nom du fichier source.
