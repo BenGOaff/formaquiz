@@ -10,17 +10,21 @@ import {
   saveConnection,
   syncMetrics,
 } from "@/lib/integrations/tiquiz";
+import { resolveAppUrl } from "@/lib/appUrl";
 
 export const dynamic = "force-dynamic";
 
-// Base de redirection : on prefere NEXT_PUBLIC_APP_URL (protocole/host
-// fiables par environnement) plutot que req.url, dont le protocole peut
-// basculer en https derriere un proxy / une redirection cross-app et
-// casser le retour en dev (http://localhost:3002).
+// Base de redirection. L'origine de la requete seule ne suffit pas :
+// derriere un proxy le protocole peut basculer. Mais la variable seule
+// ne suffit pas non plus, et c'est ce que cet en-tete disait avant.
 function appUrl(req: NextRequest, path: string): string {
-  const env = (process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "").trim().replace(/\/$/, "");
-  const base = env || new URL(req.url).origin;
-  return `${base}${path}`;
+  // `resolveAppUrl` VALIDE les deux variables puis retombe sur l'origine
+  // de la requete, et enfin sur le domaine canonique. L'ancienne version
+  // faisait `env || origin` : une variable PRESENTE et absurde
+  // (localhost) gagnait donc sur l'origine reelle, ce qui renvoyait
+  // l'eleve sur sa propre machine juste apres avoir autorise la
+  // connexion. C'est le drame Veronique (2 aout), au retour d'un OAuth.
+  return `${resolveAppUrl(new URL(req.url).origin)}${path}`;
 }
 
 export async function GET(req: NextRequest) {

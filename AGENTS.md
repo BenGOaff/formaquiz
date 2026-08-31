@@ -1300,3 +1300,67 @@ Aucun aplat de couleur sous du texte sur ces pages : fond blanc, texte à
 l'encre, un filet HORIZONTAL à la couleur de marque (règle du 31 août).
 
 Test : `tests/logic/pages-legales.test.mts`.
+
+## L'audit du 31 août : deux trous, dont un garde-fou écrit et jamais branché
+
+### 1. LE DRAME VÉRONIQUE ÉTAIT VIVANT ICI
+
+Le 2 août, une cliente de Tiquiz a demandé un nouveau mot de passe et
+est tombée sur "localhost n'autorise pas la connexion". La cause :
+`process.env.X ?? "https://..."`, avec la variable PRÉSENTE et absurde.
+**Un `??` ne protège que du MANQUANT, jamais du FAUX.**
+
+`lib/appUrl.ts` existe dans CE dépôt, il raconte ce drame dans son
+en-tête, et il VALIDE ce qu'il trouve (il refuse localhost, 127.x, ::1,
+.local, et retombe sur l'origine de la requête puis sur le domaine
+canonique).
+
+**Il n'était appelé par aucun des six fichiers qui fabriquent une
+adresse vue par un humain :**
+
+| Fichier | Ce qu'il produit |
+|---|---|
+| `app/api/auth/forgot/route.ts` | **le lien de réinitialisation de mot de passe** |
+| `app/api/auth/magic-link/route.ts` | le lien de connexion sans mot de passe |
+| `lib/access/grantAccess.ts` | les liens d'accès envoyés après un achat |
+| `lib/email/templates.ts` | tous les emails |
+| `app/api/plus-trial/widget/route.ts` | un widget INJECTÉ dans une page de vente |
+| `app/api/integrations/tiquiz/callback/route.ts` | le retour du consentement Tiquiz |
+
+Les six portaient leur propre cascade `APP_URL ?? NEXT_PUBLIC_APP_URL ??
+"https://..."`, recopiée à l'identique. Le premier est mot pour mot le
+cas de Véronique, sur le seul chemin dont dispose quelqu'un qui ne peut
+plus se connecter.
+
+Le retour OAuth était pire : il faisait `env || origine`, donc une
+variable présente et fausse gagnait CONTRE l'origine réelle de la
+requête.
+
+**La leçon est celle du matin même, transposée :** écrire un garde-fou
+n'est pas la dernière étape, vérifier qu'il est APPELÉ l'est. Il vivait
+là, documenté, testé, et six fichiers passaient à côté.
+
+### 2. UNE ADRESSE EMAIL CHERCHÉE AVEC UN JOKER
+
+`maybeGrantPlusTrial` vérifiait l'idempotence du mois offert avec
+`.ilike("sio_email", email)`. **Dans un LIKE Postgres, `_` est un
+JOKER**, et `_` est parfaitement légal dans une adresse :
+`jean_dupont@gmail.com` matchait donc `jeanXdupont@gmail.com`.
+
+Sur un contrôle d'idempotence, un faux positif **REFUSE le cadeau à
+quelqu'un qui ne l'a jamais reçu**, en silence, et personne ne le
+découvre : l'acheteur ne sait pas qu'il devait recevoir deux mois de
+Plus.
+
+`.eq` est sûr ici parce que les trois écritures de `sio_email` passent
+par la même variable, déjà `.trim().toLowerCase()`. **Cette condition
+est ce qui rend la correction valable, donc elle est testée elle
+aussi** : une future écriture non normalisée fait rougir le test.
+
+**Règle générale : une adresse email se compare, elle ne se filtre
+jamais par motif.** `ilike` sur une donnée reçue de l'extérieur mélange
+comparaison et recherche.
+
+Test : `tests/logic/audit-atelier-31-aout.test.mts`. Les deux
+assertions ont été vérifiées en rejouant la version d'avant : elles
+rougissent.

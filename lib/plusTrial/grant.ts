@@ -207,10 +207,20 @@ export async function maybeGrantPlusTrial(args: MaybeGrantArgs): Promise<MaybeGr
     // ── 1a. Idempotence GLOBALE (tous tunnels) : un même acheteur ne peut
     // recevoir qu'UNE seule fois le mois offert, même s'il déclenche les
     // deux tunnels. On regarde tout claim final sur cet email. ──
+    // `.eq` ET PAS `.ilike` (31 août 2026). Dans un LIKE Postgres, `_`
+    // est un JOKER qui remplace n'importe quel caractère, et `_` est
+    // parfaitement légal dans une adresse : `jean_dupont@gmail.com`
+    // matchait donc `jeanXdupont@gmail.com`. Sur CE contrôle
+    // d'idempotence, un faux positif REFUSE le cadeau à quelqu'un qui
+    // ne l'a jamais reçu, en silence.
+    //
+    // La comparaison exacte est sûre ici parce que les trois écritures
+    // de `sio_email` passent par `sioEmail`, déjà `.trim().toLowerCase()`
+    // en tête de fonction : la colonne ne contient que du minuscule.
     const { data: anyFinal } = await supabaseAdmin
       .from("plus_trial_claims")
       .select("status")
-      .ilike("sio_email", sioEmail)
+      .eq("sio_email", sioEmail)
       .in("status", ["granted", "already_premium"])
       .limit(1)
       .maybeSingle();
@@ -224,7 +234,7 @@ export async function maybeGrantPlusTrial(args: MaybeGrantArgs): Promise<MaybeGr
       .from("plus_trial_claims")
       .select("id, status, consumed_place")
       .eq("funnel", funnel)
-      .ilike("sio_email", sioEmail)
+      .eq("sio_email", sioEmail)
       .maybeSingle();
     const claim = existing as ClaimRow | null;
     if (claim && (claim.status === "granted" || claim.status === "already_premium")) {

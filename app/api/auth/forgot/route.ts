@@ -8,14 +8,21 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendEmail } from "@/lib/email/resend";
 import { resetPasswordEmail } from "@/lib/email/templates";
+import { getAppUrl } from "@/lib/appUrl";
 
 // Runtime (APP_URL) plutôt que NEXT_PUBLIC_* (inliné au build) : voir
 // grantAccess.ts (drame localhost:3002 dans les liens, 18 juin 2026).
-const APP_URL = (
-  process.env.APP_URL ??
-  process.env.NEXT_PUBLIC_APP_URL ??
-  "https://quizing.tipote.com"
-).trim().replace(/\/$/, "");
+// LE `??` EST UN FAUX GARDE-FOU, et ce fichier en portait un (31 août
+// 2026). Il ne protège que de la variable ABSENTE ; une variable
+// PRÉSENTE et absurde (`http://localhost:3002` dans un `.env` de prod)
+// le traverse intacte. C'est le drame Véronique du 2 août : "je demande
+// un nouveau mot de passe, je clique, et j'arrive sur localhost
+// n'autorise pas la connexion".
+//
+// `lib/appUrl.ts` existait déjà ici et VALIDE ce qu'il trouve. Il
+// n'était simplement pas branché : un garde-fou écrit et non appelé ne
+// protège personne.
+const APP_URL = getAppUrl();
 const schema = z.object({ email: z.string().email() });
 
 export async function POST(req: NextRequest) {
