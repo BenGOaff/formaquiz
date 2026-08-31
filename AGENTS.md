@@ -1466,3 +1466,58 @@ illisible, donc l'événement ne repasserait plus jamais.
 index : aucune donnée n'est réécrite.
 
 Test : `tests/logic/audit-atelier-bonus-certificat.test.mts`.
+
+
+## L'acheteur de l'Atelier n'entrait dans aucune séquence email (31 août 2026)
+
+Béné : "du coup c'est bon aussi pour les ventes ? Les bons tags seront
+attribués aux bons acheteurs ?"
+
+Pour l'Atelier, la réponse était NON, et pas par accident : **le bon de
+commande n'a jamais posé la moindre étiquette Systeme.io**, ni par
+carte ni par PayPal. L'en-tête du webhook le disait lui même, "le tag
+Systeme.io n'est pas encore branché".
+
+Les emails restant chez Systeme.io, un acheteur non étiqueté sort de
+toutes les séquences : pas de bienvenue, pas de relance, pas de
+segment. Et le symptôme est l'absence de symptôme, puisque son accès et
+sa facture, eux, arrivent normalement. C'est le trou que Tiquiz a
+bouché le 22 août, resté ouvert ici pendant que l'Atelier vendait.
+
+**L'étiquette est `atelier-clients`**, choisie par Béné le 31 août :
+celle que portent déjà ses clients. Les étiquettes qui commencent par
+`ads-` ne nous concernent PAS ("c'est un test en pub qui ne nous
+concerne pas"), et il n'y a pas d'upsell sur l'Atelier.
+
+**On DEMANDE à Tiquiz, on ne recopie pas.** Tout ce qui sait parler à
+Systeme.io vit là-bas : la clé du compte propriétaire, la création du
+contact avec ses champs de facturation, la recherche PAGINÉE
+d'étiquette (sans laquelle une étiquette ancienne est introuvable, cf.
+la panne de la newsletter du 31 août). Le recopier donnerait deux
+implémentations qui divergent, ce que ces dépôts ont déjà payé quatre
+fois, et une deuxième clé à maintenir. La porte est
+`POST /api/partner/tag` chez Tiquiz, `x-partner-secret`.
+
+**Trois choses à ne pas défaire :**
+
+- **l'étiquette vient APRÈS l'accès ET après la commission.** Une
+  étiquette qui échoue ne doit priver personne de ce qu'il a payé
+  (règle du 7 août), ni retarder l'argent d'une affiliée ;
+- **le délai maximum de 8 s.** Sans lui, une panne de Tiquiz garderait
+  le webhook de paiement ouvert jusqu'à ce que la plateforme le tue
+  (leçon de `commissionnerVente`, audit du 24 août) ;
+- **le tag est un PARAMÈTRE de `poserEtiquetteAcheteur`**, pas une
+  constante lue à l'intérieur : le jour où l'Atelier vend autre chose,
+  l'appelant devra dire quoi, au lieu qu'une valeur par défaut
+  étiquette silencieusement de travers.
+
+Côté PayPal, l'identité envoyée est celle de la FACTURE qu'on vient
+d'émettre, jamais un profil relu à côté : c'est la même donnée que
+celle imprimée sur sa pièce comptable.
+
+**`PARTNER_SHARED_SECRET` doit être posée sur CE serveur**, avec la
+même valeur que chez Tiquiz. Elle l'est déjà (le pont métriques et le
+pilotage s'en servent) ; sans elle, l'étiquette n'est pas posée et ça
+crie dans `pm2 logs`.
+
+Test : `tests/logic/etiquette-acheteur-atelier.test.mts`.

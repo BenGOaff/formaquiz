@@ -24,6 +24,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { grantAccessByEmail, revokeAccessByEmail } from "@/lib/access/grantAccess";
 import { annulerCommissionChezTipote, commissionnerVente } from "@/lib/affiliate/ownerSale";
+import { TAG_CLIENT_ATELIER, poserEtiquetteAcheteur } from "@/lib/sio/etiquetteVente";
 import { refundCommissionByOrder } from "@/lib/affiliateTracking";
 import { findOwnerProduct, tierForOwnerProduct } from "@/lib/checkout/catalog";
 import { readOwnerPaypal, readOwnerPaypalWebhookId } from "@/lib/checkout/ownerAccount";
@@ -275,6 +276,19 @@ async function traiterEvenement(
     amountTotalCents: totalCommission,
     amountTaxCents: taxe,
     product,
+  });
+
+  // ── L'ÉTIQUETTE SYSTEME.IO, APRÈS TOUT LE RESTE ──
+  //
+  // Même geste que par carte, et pour la même raison : sans elle,
+  // l'acheteur sort de toutes les séquences email. L'identité vient de
+  // la FACTURE qu'on vient d'émettre, donc de ce qui a été figé, jamais
+  // d'un profil relu à côté : c'est la même donnée que celle imprimée
+  // sur sa pièce comptable.
+  await poserEtiquetteAcheteur({
+    email,
+    tag: TAG_CLIENT_ATELIER,
+    acheteur: facture?.acheteur ?? null,
   });
 
   return NextResponse.json({ ok: true, granted: true });
