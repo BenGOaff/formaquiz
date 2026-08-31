@@ -60,6 +60,7 @@ function factureDe(pays: string | null, numeroTva: string | null, totalCents = 4
       emailCle: "acheteur@exemple.fr",
     },
     { pays, tvaNumero: numeroTva } as Parameters<typeof construireFacture>[2],
+    numeroTva ? "valide" : "non-verifie",
   );
 }
 

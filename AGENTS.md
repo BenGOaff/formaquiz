@@ -1108,3 +1108,114 @@ retirer d'un AUTRE donne une base fausse qui a l'air juste.
 L'encaissement passe maintenant devant.
 
 Test : `tests/logic/commission-ht-paypal.test.mts`, ici et chez Tiquiz.
+
+## L'audit de l'Atelier (31 août 2026)
+
+Béné : "reprends l'Atelier. Tipote pour le moment il passe au second
+plan sauf pour tout ce qui est portage des améliorations Tiquiz."
+
+Trois trous, et les trois avaient la même forme : **une correction faite
+chez Tiquiz et jamais portée ici.** L'Atelier vend le panier le plus gros
+avec la commission la plus forte, donc c'est ici que chacune coûtait le
+plus.
+
+### 1. UN RÉESSAI DE WEBHOOK NE POUVAIT PAS REPASSER
+
+Le bug corrigé chez Tiquiz le 24 août, encore ouvert ici une semaine
+plus tard.
+
+Les deux webhooks de paiement écrivaient une ligne `received` AVANT de
+travailler, et TOUT conflit sur l'index valait "déjà traité". Dès que le
+traitement ÉCHOUAIT (Supabase indisponible une seconde, Stripe
+injoignable, `grantAccessByEmail` qui rate), la route répondait 502 pour
+demander un réessai, et **ce réessai était refusé par notre propre
+journal** : ligne existante -> doublon -> 200 -> le fournisseur arrête.
+
+**Une vente encaissée dont le premier traitement rate n'ouvrait donc
+JAMAIS l'accès.** La page s'affiche, la carte passe, l'argent arrive, et
+l'acheteur n'a rien. Quatre chemins répondaient 502 en comptant sur un
+réessai impossible, dont le plus probable en pratique : `grant_failed`.
+
+Le statut fait maintenant partie du verrou (`prendreLeVerrou` +
+`marquerTraite`, décision pure dans `verrouRegles.ts`) : une ligne
+`error` en SORT, donc le réessai suivant reprend.
+
+**DEUX PIÈGES DANS LE PORTAGE, et les deux auraient cassé quelque
+chose :**
+
+1. **La colonne ne porte pas le même nom.** `created_at` ici,
+   `received_at` chez Tiquiz. Recopié tel quel, le `select` échouait, la
+   relecture du verrou répondait "je ne sais pas", donc 409, donc
+   l'événement ne repassait PLUS JAMAIS. **Un fichier jumeau se relit
+   contre le schéma d'arrivée, il ne se recopie pas.**
+2. **L'index est PARTAGÉ avec le webhook Systeme.io**, qui écrit
+   `received` et ne le change jamais. Lui appliquer le filtre de statut
+   aurait SUPPRIMÉ sa protection anti-doublon : une relance de
+   Systeme.io rouvrirait un accès et REPAIERAIT une commission. Les deux
+   index sont donc séparés, et `logWebhookEvent` reste pour lui seul.
+
+🚨 Migration : `supabase/migrations/20260831_webhook_lock.sql`
+(Supabase de L'ATELIER).
+
+Test : `tests/logic/verrou-webhook.test.mts`, qui vérifie AUSSI qu'il
+attrape les deux régressions.
+
+### 2. LES NUMÉROS DE TVA N'ÉTAIENT PAS VÉRIFIÉS
+
+Corrigé chez Tiquiz le 27 août, jamais porté. `BE0123456789` est
+parfaitement bien formé et n'appartient peut-être à personne : l'Atelier
+lui accordait l'autoliquidation sur sa seule FORME.
+
+**La même erreur passe deux fois à la caisse.** Sur une vente à 47 € :
+7,83 € de TVA à la charge de Béné, découverts au contrôle des années
+plus tard ; et, depuis le 31 août, la commission se calcule sur le HT de
+cette facture, donc une TVA fautivement à zéro commissionne sur le TTC,
+soit 5,48 € de trop à 70 %.
+
+`vies` est un PARAMÈTRE OBLIGATOIRE de `resoudreTva` et de
+`construireFacture` : le compilateur refuse un appelant muet. VIES ne
+lève jamais et rend `injoignable` au bout de six secondes, donc **une
+facture n'attend jamais après la Commission européenne** (règle du
+7 août appliquée à la pièce comptable). Un avoir ne rejuge PAS la TVA de
+la facture qu'il annule : `non-verifie` reproduit le calcul d'origine,
+sinon les deux pièces ne se compenseraient plus.
+
+**VIES N'EST PAS UNE BRIQUE D'AFFILIATION**, et la confusion est facile
+parce que les deux sont arrivées le même jour. C'est la TVA des factures
+que l'Atelier émet pour SES ventes PayPal (PayPal n'en émet aucune). Le
+lien avec l'affiliation est indirect : la commission se calcule sur le HT
+de cette facture.
+
+Test : `tests/logic/vies-atelier.test.mts`.
+
+### 3. L'ATELIER MONTRE, L'ESPACE AFFILIÉ GÈRE
+
+Béné, le même jour : "attention : affiliation sur atelier montre les
+données de affiliate mais les élèves de l'atelier doivent aller sur
+affiliate pour tout gérer. **On gère tout sur affiliate et le reste
+montre seulement.**"
+
+Deux choses ne respectaient pas la règle.
+
+**Un champ pour enregistrer son identifiant Systeme.io.** Il écrivait
+dans le registre HISTORIQUE de l'Atelier (`profiles.sio_affiliate_id`),
+pendant que l'espace affilié écrit dans le registre CENTRAL. Deux
+endroits pour régler la même chose, avec deux effets différents. Le
+champ est parti, et sa route `PATCH /api/me/affiliate` avec lui : une
+porte sans appelant est une porte que le prochain passage rebranche en
+croyant réparer. Ce qui est DÉJÀ enregistré reste lu (c'est le repli des
+ventes des anciens tunnels) et s'affiche en lecture seule.
+
+**Un relevé qui avait l'air complet et ne l'était pas.**
+`getAffiliateGains` lit `affiliate_commissions` D'ICI, alimenté par le
+webhook Systeme.io : il ne voit RIEN de ce qui passe par un lien `?ref=`
+d'aujourd'hui. Or les libellés disaient "Total gagné (net)", "Versé
+(estimé)", "Prochain versement estimé". Un élève qui vend par son lien
+actuel lisait un relevé qui ne compte que ses vieilles ventes.
+
+C'est la même famille que le tableau de bord affilié corrigé chez Tipote
+le 31 août : **un chiffre qui a l'air d'être le total et qui ne l'est pas
+coûte la confiance, et ça se découvre au premier versement.** L'écran le
+dit maintenant en haut, en gras, et chaque libellé nomme Systeme.io.
+
+Test : `tests/logic/atelier-montre-affiliate-gere.test.mts`.
