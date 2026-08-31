@@ -94,15 +94,31 @@ test("les CGV decrivent CE produit, pas l'abonnement de Tiquiz", () => {
   );
 });
 
-test("la garantie des CGV n'est pas plus restrictive que le bon de commande", () => {
-  // Le bon de commande annonce "sans poser de questions". Les CGV ne
-  // doivent donc poser aucune condition de resultat ni de justificatif.
-  assert.match(BON, /Garantie 30 jours, sans poser de questions/);
+test("la garantie des CGV dit la MEME chose que le bon de commande", () => {
+  // Bene, 31 aout : "c'est 30j et si aucun lead capture malgre les
+  // conseils appliques, on rembourse." La condition doit etre ecrite
+  // des DEUX cotes, et le titre ne doit pas promettre plus.
   const article = getLegalPage("terms").sections.find((s) => s.h.includes("Garantie"));
   assert.ok(article, "pas d'article Garantie dans les CGV");
   const texte = JSON.stringify(article);
-  assert.match(texte, /sans avoir à se justifier/i);
-  assert.match(texte, /sans condition de résultat/i);
+
+  // Le titre du bon de commande ne promet pas l'inconditionnel.
+  assert.doesNotMatch(
+    BON,
+    /sans poser de questions/i,
+    "Le bon de commande promettrait une garantie inconditionnelle que les CGV refusent.",
+  );
+  assert.match(BON, /Garantie 30 jours/);
+
+  // La duree et la condition, des deux cotes.
+  assert.match(texte, /trente jours/i);
+  assert.match(texte, /appliqué les conseils/i);
+  assert.match(texte, /aucun contact/i);
+  assert.match(BON, /appliques les conseils|appliques? les conseils/i);
+  assert.match(BON, /aucun contact/i);
+
+  // Et aucun justificatif n'est exige : c'est ce que la page promet.
+  assert.match(texte, /[Aa]ucun justificatif n'est exigé/);
 });
 
 test("le bon de commande recueille VRAIMENT les CGV et la renonciation", () => {

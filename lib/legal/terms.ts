@@ -10,12 +10,16 @@ import { COMPANY as C } from "./company";
  * avec une garantie 30 jours. Recopier les CGV de Tiquiz aurait
  * promis l'inverse de ce que la page de vente annonce.
  *
- * **RÈGLE : les CGV ne sont JAMAIS plus restrictives que la page de
- * vente.** C'est le drame du 22 août côté Tiquiz, où l'article 5
- * annonçait une renonciation que l'écran ne recueillait pas. Ici le
- * bon de commande dit "Garantie 30 jours, sans poser de questions" :
- * l'article 7 dit donc exactement ça, sans condition de résultat, sans
- * justificatif, et sans "à la discrétion du Vendeur".
+ * **RÈGLE : les CGV disent EXACTEMENT ce que la page de vente promet,
+ * ni plus ni moins.**
+ *
+ * Premier jet : le bon de commande titrait "sans poser de questions" et
+ * l'article 7 le recopiait. Béné a tranché le 31 août : "c'est 30j et
+ * si aucun lead capturé malgré les conseils appliqués, on rembourse."
+ * C'était donc le TITRE qui était faux, et mes CGV qui étaient trop
+ * généreuses. Les deux disent maintenant la même chose, et le test les
+ * compare : une garantie annoncée d'un côté et refusée de l'autre se
+ * découvre au premier remboursement demandé.
  */
 const fr: LegalPage = {
   title: "Conditions générales de vente",
@@ -70,7 +74,7 @@ const fr: LegalPage = {
       h: "Article 7 - Garantie 30 jours",
       body: [
         "Le Vendeur accorde une garantie commerciale de trente jours calendaires à compter de la date de paiement.",
-        "Pendant ce délai, le Client peut demander le remboursement intégral de sa commande par simple email à " + C.email + ", sans avoir à se justifier et sans condition de résultat.",
+        "Pendant ce délai, le Client qui a appliqué les conseils de la formation et n'a capté aucun contact avec son quiz peut demander le remboursement intégral de sa commande par simple email à " + C.email + ". Aucun justificatif n'est exigé : la demande du Client suffit.",
         "Le remboursement est effectué dans un délai de sept jours suivant la demande, sur le moyen de paiement utilisé lors de la commande. L'accès à la formation est clôturé au moment du remboursement.",
       ],
     },
