@@ -84,14 +84,23 @@ export interface VenteACommissionner {
    * Stripe la calcule et la renvoie. **PayPal ne la dit pas** : notre
    * commande PayPal envoie un montant unique, sans ventilation.
    *
-   * DÉCISION BÉNÉ, 22 août 2026 : "pour paypal : oui on garde le TTC."
-   * Une vente PayPal paie donc l'affiliée sur le TTC, soit un peu plus
-   * que la même vente par carte. C'est un choix, pas un défaut, et il
-   * vaut mieux que l'alternative : appliquer un taux de TVA inventé
-   * produirait un versement faux qui a l'air juste.
+   * DÉCISION BÉNÉ, 31 août 2026 : "pour l'affiliation on fait
+   * uniquement 40 % etc. sur le HT. Débrouille toi pour que sur PayPal
+   * ça marche aussi, il y a forcément un moyen de calculer chez nous la
+   * TVA si concerné ou pas."
    *
-   * **Ne PAS "corriger" ça en posant 0.2 quelque part.** Le jour où
-   * PayPal ventilera la taxe, c'est cette valeur là qu'on lira.
+   * Ça REMPLACE sa décision du 22 août ("pour paypal : oui on garde le
+   * TTC"), qui datait d'un moment où nous ne savions pas ventiler.
+   * Depuis le 24 août, c'est NOUS qui émettons la facture d'une vente
+   * PayPal, donc nous qui résolvons le régime de TVA de l'acheteur : le
+   * webhook passe la taxe de CETTE facture là
+   * (`lib/facture/taxeVentePaypal.ts`).
+   *
+   * **Ne PAS poser 0.2 ici, ni ailleurs.** Ce champ porte une taxe
+   * CALCULÉE pour cette vente, jamais un taux appliqué de mémoire : un
+   * acheteur belge, un professionnel en autoliquidation et un acheteur
+   * hors UE n'ont pas la même, et un taux de mémoire les paierait tous
+   * les trois faux.
    */
   amountTaxCents: number;
   product: { id: string; label: string; affiliateApp: "quizing" | "tiquiz" };

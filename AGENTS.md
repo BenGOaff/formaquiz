@@ -1019,3 +1019,92 @@ plus versé (drame du 19 août : 32,90 € annoncés, 27,42 € payés). La
 phrase dit que le taux monte, et renvoie à l'espace affilié pour le
 barème. Le fichier du coach, lui, DOIT porter les chiffres pour pouvoir
 répondre : il porte donc aussi le nom du fichier source.
+
+
+## Un backtick dans la connaissance du coach a cassé le build (31 août 2026)
+
+Béné, en collant la sortie de son déploiement :
+
+```
+Build error occurred
+./lib/coach/knowledge.ts:353:54  Expected a semicolon
+```
+
+J'avais écrit un nom de fichier entre backticks DANS une chaîne de
+connaissance du coach. Ces chaînes sont des template literals : le
+backtick l'a refermée, et tout ce qui suivait est devenu du code.
+
+**Deux fautes, et la deuxième est la mienne, pas celle du code.**
+
+1. `lib/coach/knowledge.ts` porte `import "server-only"` : aucun test ne
+   peut le charger, donc `npm run test:logic` est passé au vert sur un
+   fichier qui ne compile pas.
+2. **Je n'ai pas relancé `npx tsc --noEmit` après la DERNIÈRE
+   modification.** Je l'avais lancé avant, sur l'édition précédente, et
+   j'ai poussé sur ce vert là. `tsc` voyait la faute : il l'a dit dès
+   que je l'ai relancé. La consigne dit "avant CHAQUE push", pas "une
+   fois dans la session".
+
+**Garde-fou : `tests/logic/fichiers-server-only.test.mts`.** Il liste
+tous les fichiers du dépôt qui portent `import "server-only"` (ceux
+qu'aucun test ne pourra jamais importer, par construction) et les PARSE
+avec le compilateur TypeScript. Un fichier qui ne se parse plus fait
+rougir le filet logique au lieu de casser le build sur le serveur de
+prod.
+
+Ça ne remplace pas `tsc`, qui voit infiniment plus. Ça le double sur le
+seul point qui a coûté quelque chose : une faute de frappe dans un gros
+bloc de prose, dans un fichier que le filet logique ne touche jamais.
+
+**Et dans ces blocs de prose : PAS DE BACKTICK.** Un nom de fichier s'y
+écrit nu (`lib/affiliate/recompense.ts`, sans rien autour). Le test le
+rattrape, mais autant ne pas l'écrire.
+
+## Une vente PayPal paie sur le HT, comme une vente carte (Béné, 31 août 2026)
+
+"Pour l'affiliation on fait uniquement 40 % etc. sur le HT. Débrouille
+toi pour que sur PayPal ça marche aussi, il y a forcément un moyen de
+calculer chez nous la TVA si concerné ou pas et le montant de la
+commission, de manière fiable et stable."
+
+**Le moyen existait déjà, il n'était pas branché.**
+
+Le webhook PayPal envoyait `amountTaxCents: 0` et, juste à côté,
+`base: "ht"` à Tipote. **Le champ disait "hors taxes", le nombre était
+TTC.** Un paramètre obligatoire ne protège de rien quand on lui ment.
+
+L'Atelier paie 70 %, donc c'est ici que l'écart est le plus gros : sur
+une vente à 47 € TTC, **32,90 € versés au lieu de 27,42 €**. Ce sont
+mot pour mot les deux chiffres du drame du 19 août, où l'app annonçait
+32,90 € et payait 27,42 €. On avait corrigé ce que l'app ANNONCE ; le
+chemin PayPal, lui, versait encore les 32,90 €.
+
+**La TVA vient de la facture qu'on émet déjà.** Depuis le 25 août, c'est
+nous qui facturons une vente PayPal, donc `construireFacture` résout
+déjà le régime de l'acheteur (pays, numéro de TVA) et décompose le TTC.
+`facturerVente` REND maintenant la facture qu'elle vient de construire,
+et la commission lit son `tvaCents` (`lib/facture/taxeVentePaypal.ts`,
+jumeau de celui de Tiquiz). Montant facturé et montant commissionné
+sortent du MÊME calcul, par construction.
+
+**On ne devine JAMAIS un taux.** Un acheteur belge, un professionnel en
+autoliquidation et un acheteur hors UE n'ont pas la même taxe : un
+`0.2` posé quelque part les paierait tous les trois faux. Le test
+l'interdit.
+
+**Sans facture, on retient et on crie.** Zéro voudrait dire "vente sans
+TVA", ce qui serait faux neuf fois sur dix. On retient le taux du pays
+du vendeur, et le journal le dit. Le sens du repli compte : il
+SOUS-paie, ce qui se corrige au lot suivant, au lieu de SUR-payer, ce
+qu'un virement parti ne rattrape jamais. Une taxe légitimement à zéro
+(autoliquidation, hors UE) n'est PAS un repli : les confondre
+sous-paierait de 20 % chaque vente professionnelle.
+
+**Au passage :** la commission utilisait `commande.amountTotalCents`
+(enregistré à la création de la commande) pendant que la facture
+utilisait le montant de la CAPTURE (ce qui a vraiment été payé, une
+remise comprise). Décomposer une TVA calculée sur un total et la
+retirer d'un AUTRE donne une base fausse qui a l'air juste.
+L'encaissement passe maintenant devant.
+
+Test : `tests/logic/commission-ht-paypal.test.mts`, ici et chez Tiquiz.

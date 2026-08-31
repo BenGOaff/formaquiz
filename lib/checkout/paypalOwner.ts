@@ -207,10 +207,13 @@ export interface PaypalCaptureInfo {
   /**
    * Ce qui a été encaissé, en centimes.
    *
-   * Sert à la commission de l'affiliée. **PayPal ne ventile pas la TVA**
-   * ici : notre commande envoie un montant unique. C'est donc un TTC
-   * sans taxe connue, et `lib/affiliate/ownerSale.ts` en tire les
-   * conséquences au lieu d'inventer un taux.
+   * C'est un TTC : notre commande envoie un montant unique, PayPal ne
+   * ventile rien. La TVA est calculée de NOTRE côté, au moment de la
+   * facture (`lib/facture/taxeVentePaypal.ts`), et c'est elle qui donne
+   * la base de commission depuis le 31 août.
+   *
+   * Ce champ reste donc un TTC, et il ne faut pas y retirer la taxe :
+   * `commissionBaseCents` attend le total ET la taxe séparément.
    */
   amountTotalCents: number;
 }
