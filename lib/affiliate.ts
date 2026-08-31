@@ -248,7 +248,16 @@ export const AFFILIATE_ARGUMENTS: { title: string; body: string }[] = [
   },
   {
     title: "40% récurrent sur Tiquiz",
-    body: "Chaque personne qui prend un abonnement Tiquiz te rapporte 40% chaque mois, tant qu'elle reste abonnée. Un revenu qui s'accumule.",
+    // LE BARÈME EXACT N'EST PAS RECOPIÉ ICI, ET C'EST VOULU.
+    // Il vit chez Tipote (`lib/affiliate/recompense.ts`), qui est le
+    // seul dépôt qui PAIE. Il existe déjà en double sur
+    // `tiquiz.fr/affiliation`, figé des deux côtés par un test qui
+    // nomme l'autre. En écrire une TROISIÈME copie ici, dans une
+    // phrase de vente que personne ne relira le jour où le barème
+    // bouge, garantirait qu'elle finisse par annoncer un taux qui
+    // n'est plus versé (drame du 19 août : 32,90 € annoncés,
+    // 27,42 € payés).
+    body: "Chaque personne qui prend un abonnement Tiquiz te rapporte 40% chaque mois, tant qu'elle reste abonnée. Et ce pourcentage MONTE avec le nombre de filleuls que tu amènes : le barème est affiché dans ton espace affilié. Un revenu qui s'accumule.",
   },
   {
     title: "Un produit qui se recommande tout seul",
@@ -272,7 +281,7 @@ export function affiliateIntro(opts: {
   const hello = name ? `${name}, ` : "";
   const niche = (opts.niche ?? "").trim();
   if (niche) {
-    return `${hello}ton audience (${niche}) a tout intérêt à créer des quiz pour capturer des leads. En la recommandant l'Atelier du Quiz, tu l'aides ET tu touches 70% de commission.`;
+    return `${hello}ton audience (${niche}) a tout intérêt à créer des quiz pour capturer des leads. En lui recommandant l'Atelier du Quiz, tu l'aides ET tu touches 70% de commission.`;
   }
   return `${hello}recommande l'Atelier du Quiz à ton audience : tu l'aides à capturer des leads avec des quiz, et tu touches 70% de commission sur chaque vente.`;
 }
