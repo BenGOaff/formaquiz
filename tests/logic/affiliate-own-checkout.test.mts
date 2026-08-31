@@ -218,16 +218,24 @@ test("le taux n'est ecrit qu'a UN endroit", () => {
   }
 });
 
-test("PayPal passe une taxe a zero, et personne n'y met 20%", () => {
-  // Decision Bene du 22 aout : la vente PayPal paie sur le TTC. Le jour
-  // ou quelqu'un voudra "corriger" ca en posant un taux francais en dur,
-  // ce test le dira : un taux inventé produit un versement faux qui a
-  // l'air juste, et il serait faux pour toute acheteuse hors de France.
+test("PayPal passe la taxe CALCULEE, et personne n'y met 20% en dur", () => {
+  // Bene, 31 aout 2026 : "pour l'affiliation on fait uniquement 40 %
+  // etc. sur le HT. Debrouille toi pour que sur PayPal ca marche
+  // aussi." Ca remplace sa decision du 22 aout ("on garde le TTC").
+  //
+  // Ce qui ne change PAS : aucun taux ecrit en dur. La taxe vient de la
+  // facture qu'on emet pour cette vente la, qui connait le pays de
+  // l'acheteur. Un taux invente serait faux pour tout acheteur hors de
+  // France, et pour tout professionnel en autoliquidation.
   const src = fs.readFileSync(
     path.join(process.cwd(), "app/api/commande/paypal/webhook/route.ts"),
     "utf8",
   );
-  assert.ok(/amountTaxCents:\s*0\b/.test(src), "la vente PayPal ne passe plus une taxe a zero");
+  assert.ok(
+    !/amountTaxCents:\s*0\b/.test(src),
+    "une taxe a zero en dur : la commission repart sur le TTC",
+  );
+  assert.ok(src.includes("taxePaypalCents("), "la taxe doit venir de la facture emise");
   const code = src
     .replace(/\/\*[\s\S]*?\*\//g, "")
     .split("\n")

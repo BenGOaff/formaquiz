@@ -35,7 +35,8 @@ import {
 import { sendEmail } from "@/lib/email/resend";
 import { refundGoodbyeEmail } from "@/lib/email/templates";
 import { logWebhookEvent } from "@/lib/webhooks/log";
-import { construireFacture } from "@/lib/facture/construire";
+import { construireFacture, type FactureAEmettre } from "@/lib/facture/construire";
+import { taxeEstUnRepli, taxePaypalCents } from "@/lib/facture/taxeVentePaypal";
 import { lireAcheteur } from "@/lib/facture/identite";
 import {
   encaissementDepuisCapture,
@@ -178,8 +179,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // facture est ce qu'il lui faut ensuite. Aucune des deux ne doit
   // empêcher l'autre.
   const encaissement = encaissementDepuisCapture(event.resource, event.create_time);
+  let facture: FactureAEmettre | null = null;
   if (encaissement) {
-    await facturerVente({
+    facture = await facturerVente({
       email,
       encaissement,
       productId: product.id,
@@ -200,15 +202,38 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   //
   // La référence d'idempotence est la CAPTURE : c'est elle qui identifie
   // l'encaissement, et c'est elle qu'on rembourse.
+  //
+  // ── ET ON PAIE SUR LE HT (Béné, 31 août 2026) ──
+  //
+  // "Pour l'affiliation on fait uniquement 40 % etc. sur le HT.
+  // Débrouille toi pour que sur PayPal ça marche aussi, il y a forcément
+  // un moyen de calculer chez nous la TVA si concerné ou pas."
+  //
+  // Il y en avait un, et il vient de tourner : c'est la facture qu'on
+  // émet juste au dessus qui résout le régime de TVA de l'acheteur. La
+  // taxe passée ici est la SIENNE, jamais un taux redevine à côté :
+  // montant facturé et montant commissionné sortent du MÊME calcul.
+  //
+  // **Le montant ENCAISSÉ passe devant celui de la commande.** La
+  // capture porte ce qui a vraiment été payé (une remise comprise) ;
+  // décomposer une TVA calculée sur un total et la retirer d'un autre
+  // donnerait une base fausse qui a l'air juste.
+  const totalCommission = encaissement?.totalCents ?? commande?.amountTotalCents ?? 0;
+  const taxe = taxePaypalCents(facture, totalCommission);
+  if (taxeEstUnRepli(facture, totalCommission)) {
+    console.error(
+      `[commande/paypal/webhook] TVA de la vente INCONNUE (${email}) : commission calculee ` +
+        `au taux du pays du vendeur. A verifier sur sa fiche client.`,
+    );
+  }
   await commissionnerVente({
     moyen: "paypal",
     email,
     reference: commande?.captureId ?? (String(event.resource?.id ?? "").trim() || null),
     affiliateRef: commande?.affiliateRef ?? depuisCapture.affiliateRef,
     affiliateCode: commande?.affiliateCode ?? depuisCapture.affiliateCode,
-    amountTotalCents: commande?.amountTotalCents ?? 0,
-    // PayPal ne ventile pas la TVA : voir `VenteACommissionner`.
-    amountTaxCents: 0,
+    amountTotalCents: totalCommission,
+    amountTaxCents: taxe,
     product,
   });
 
@@ -243,9 +268,17 @@ async function facturerVente(args: {
   encaissement: EncaissementPaypal;
   productId: string | null;
   libelle: string;
-}): Promise<void> {
+}): Promise<FactureAEmettre | null> {
   try {
-    const acheteur = await lireFacturation({ email: args.email });
+    // Un échec de LECTURE ne prive pas la commission de sa base : sans
+    // fiche de facturation, `resoudreTva` retient le taux du pays du
+    // vendeur et marque "pays" à compléter.
+    const acheteur = await lireFacturation({ email: args.email }).catch((e) => {
+      console.error(
+        `[commande/paypal/webhook] fiche de facturation illisible : ${(e as Error).message}`,
+      );
+      return null;
+    });
     const facture = construireFacture(
       "facture",
       {
@@ -261,13 +294,20 @@ async function facturerVente(args: {
       acheteur,
     );
     const ligne = await emettreFacture(facture);
-    if (!ligne) return;
-    console.log(
-      `[commande/paypal/webhook] facture ${ligne.numero} emise pour ${args.email}` +
-        (facture.aCompleter.length ? ` (a completer : ${facture.aCompleter.join(", ")})` : ""),
-    );
+    if (ligne) {
+      console.log(
+        `[commande/paypal/webhook] facture ${ligne.numero} emise pour ${args.email}` +
+          (facture.aCompleter.length ? ` (a completer : ${facture.aCompleter.join(", ")})` : ""),
+      );
+    }
+    // On rend la facture MÊME si l'émission a échoué : la TVA a été
+    // calculée, et la commission de l'affilié n'a aucune raison
+    // d'attendre une pièce comptable. Une pièce manquante se réémet, un
+    // versement faux ne se reprend pas.
+    return facture;
   } catch (e) {
     console.error(`[commande/paypal/webhook] facture NON emise : ${(e as Error).message}`);
+    return null;
   }
 }
 

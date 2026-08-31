@@ -1059,3 +1059,52 @@ bloc de prose, dans un fichier que le filet logique ne touche jamais.
 **Et dans ces blocs de prose : PAS DE BACKTICK.** Un nom de fichier s'y
 écrit nu (`lib/affiliate/recompense.ts`, sans rien autour). Le test le
 rattrape, mais autant ne pas l'écrire.
+
+## Une vente PayPal paie sur le HT, comme une vente carte (Béné, 31 août 2026)
+
+"Pour l'affiliation on fait uniquement 40 % etc. sur le HT. Débrouille
+toi pour que sur PayPal ça marche aussi, il y a forcément un moyen de
+calculer chez nous la TVA si concerné ou pas et le montant de la
+commission, de manière fiable et stable."
+
+**Le moyen existait déjà, il n'était pas branché.**
+
+Le webhook PayPal envoyait `amountTaxCents: 0` et, juste à côté,
+`base: "ht"` à Tipote. **Le champ disait "hors taxes", le nombre était
+TTC.** Un paramètre obligatoire ne protège de rien quand on lui ment.
+
+L'Atelier paie 70 %, donc c'est ici que l'écart est le plus gros : sur
+une vente à 47 € TTC, **32,90 € versés au lieu de 27,42 €**. Ce sont
+mot pour mot les deux chiffres du drame du 19 août, où l'app annonçait
+32,90 € et payait 27,42 €. On avait corrigé ce que l'app ANNONCE ; le
+chemin PayPal, lui, versait encore les 32,90 €.
+
+**La TVA vient de la facture qu'on émet déjà.** Depuis le 25 août, c'est
+nous qui facturons une vente PayPal, donc `construireFacture` résout
+déjà le régime de l'acheteur (pays, numéro de TVA) et décompose le TTC.
+`facturerVente` REND maintenant la facture qu'elle vient de construire,
+et la commission lit son `tvaCents` (`lib/facture/taxeVentePaypal.ts`,
+jumeau de celui de Tiquiz). Montant facturé et montant commissionné
+sortent du MÊME calcul, par construction.
+
+**On ne devine JAMAIS un taux.** Un acheteur belge, un professionnel en
+autoliquidation et un acheteur hors UE n'ont pas la même taxe : un
+`0.2` posé quelque part les paierait tous les trois faux. Le test
+l'interdit.
+
+**Sans facture, on retient et on crie.** Zéro voudrait dire "vente sans
+TVA", ce qui serait faux neuf fois sur dix. On retient le taux du pays
+du vendeur, et le journal le dit. Le sens du repli compte : il
+SOUS-paie, ce qui se corrige au lot suivant, au lieu de SUR-payer, ce
+qu'un virement parti ne rattrape jamais. Une taxe légitimement à zéro
+(autoliquidation, hors UE) n'est PAS un repli : les confondre
+sous-paierait de 20 % chaque vente professionnelle.
+
+**Au passage :** la commission utilisait `commande.amountTotalCents`
+(enregistré à la création de la commande) pendant que la facture
+utilisait le montant de la CAPTURE (ce qui a vraiment été payé, une
+remise comprise). Décomposer une TVA calculée sur un total et la
+retirer d'un AUTRE donne une base fausse qui a l'air juste.
+L'encaissement passe maintenant devant.
+
+Test : `tests/logic/commission-ht-paypal.test.mts`, ici et chez Tiquiz.
