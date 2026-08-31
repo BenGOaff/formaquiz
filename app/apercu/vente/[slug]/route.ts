@@ -43,7 +43,12 @@ const PAGES: Record<string, Omit<SalesPageMeta, "slug"> & { produit: OwnerProduc
   "atelier-du-quiz": {
     // La canonique d'APERÇU. Sur le domaine public, elle est remplacée
     // par `publicSalesCanonical()` : voir plus bas.
-    canonical: "https://www.tipote.fr/atelier-du-quiz",
+    //
+    // Elle désignait `www.tipote.fr/atelier-du-quiz`, c'est à dire
+    // l'ancien tunnel Systeme.io, comme l'original. L'aperçu est en
+    // `noindex`, donc ça ne coûtait rien à Google, mais plus rien ne
+    // doit nommer l'ancienne page comme la vraie (Béné, 31 août).
+    canonical: "https://atelierduquiz.fr/",
     title: "L'Atelier du Quiz : lance ton quiz marketing en 7 jours",
     description:
       "La méthode complète pour créer un quiz qui capture des leads qualifiés et les transforme en clients, en 7 jours, sans compétence technique.",
