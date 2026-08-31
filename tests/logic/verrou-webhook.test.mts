@@ -101,15 +101,18 @@ describe("La decision du verrou", () => {
     assert.deepEqual(lireVerrou({}, MAINTENANT), { action: "en_cours" });
   });
 
-  test("LA COLONNE EST `created_at`, celle de CETTE table", () => {
+  test("AUCUNE colonne de l'autre depot dans la requete", () => {
     // Recopie de Tiquiz, elle s'appelait `received_at` : le `select`
     // echouait, donc 409, donc l'evenement ne repassait plus jamais.
     const src = lire("lib/webhooks/log.ts");
-    assert.match(src, /select\("id, status, created_at"\)/);
     assert.ok(
       !/\.order\("received_at"|received_at: new Date/.test(src),
       "une colonne de l'autre depot est restee dans la requete",
     );
+    // La relecture ne NOMME plus les colonnes : `locked_at` peut ne pas
+    // encore exister en prod, et une colonne nommee ferait echouer
+    // TOUTE la requete, donc rendrait le verrou illisible.
+    assert.match(src, /\.select\("\*"\)/);
   });
 });
 

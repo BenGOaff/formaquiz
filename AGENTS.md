@@ -1364,3 +1364,105 @@ comparaison et recherche.
 Test : `tests/logic/audit-atelier-31-aout.test.mts`. Les deux
 assertions ont été vérifiées en rejouant la version d'avant : elles
 rougissent.
+
+## Le bonus et le certificat : deux identités qu'on pouvait perdre (31 août 2026)
+
+Béné : "tu as fini tous les audits ? Je peux envoyer des clients et des
+affiliés sans risque sur chaque page ? Tout le monde reçoit ce qu'il
+paye ?"
+
+Deux trous, et les deux ont la forme habituelle : une logique écrite
+pour un cas, appliquée telle quelle à un autre.
+
+### 1. ÊTRE CONNECTÉ N'EST PAS ÊTRE INSCRIT
+
+Quatre points d'entrée regardent `viewer.enrolled` : le parcours, le
+coach, l'audit de quiz, le certificat. **Le générateur de bonus, le
+plus long et le plus cher de tous, ne le regardait pas.**
+
+Ça ne se voyait pas parce que l'Atelier n'a **aucune inscription
+publique** (vérifié : pas de route `signup`, et `generateLink` de type
+`magiclink` ne crée pas de compte). Tout compte a donc payé. Mais un
+REMBOURSEMENT pose `enrollments.status = 'revoked'` et **ne supprime
+pas le compte** (`revokeAccessByEmail`) : la session reste valide.
+Quelqu'un qui s'est fait rembourser gardait donc la génération de
+bonus, sans aucune limite journalière, quand tout le reste s'était
+fermé pour lui.
+
+`/api/me/affiliate-generate` reste ouvert aux connectés, et c'est
+VOULU : on peut être affilié sans être élève, et cette route porte
+déjà une limite de 30 générations par jour et par personne. Un
+remboursement de la formation ne retire pas le statut d'affilié.
+
+### 2. UNE LECTURE QUI ÉCHOUE N'EST PAS UN CERTIFICAT QUI N'EXISTE PAS
+
+`/api/certificat/claim` lisait le certificat existant en ignorant
+l'erreur du `select`. Une panne d'une seconde rendait donc `existing`
+à `null`, donc on fabriquait un NOUVEAU jeton de partage et on allouait
+un DEUXIÈME numéro, puis l'upsert écrasait les anciens.
+
+**Un certificat s'imprime et se partage.** Son lien `/cert/<jeton>`
+répondait alors 404 pour tous ceux qui l'avaient déjà reçu, et son
+numéro changeait sous les yeux de l'élève. C'est la règle du 23 août :
+"je n'ai pas pu regarder" et "il n'y a rien" sont deux réponses
+différentes, et ici la confondre coûte une identité.
+
+Le jeton est passé en `const` : rien ne doit pouvoir le réassigner.
+
+Test : `tests/logic/audit-atelier-bonus-certificat.test.mts`.
+
+### Ce que l'audit a vérifié sans rien trouver
+
+À écrire, parce qu'une zone auditée et muette ressemble à une zone
+oubliée :
+
+- **le QR du certificat** porte bien `?ref=` vers `atelierduquiz.fr`
+  (`lienAffilieDeLEleve`), plus aucun `?sa=` ni tunnel Systeme.io ;
+- **la page publique `/cert/<jeton>`** ne lit que `full_name` et
+  `cert_number` : elle tourne en service_role, un `select("*")` y
+  sortirait le `user_id` et le lien affilié à n'importe quel visiteur ;
+- **la connexion Tiquiz** (`/api/integrations/tiquiz/*`) : `state`
+  anti-CSRF en cookie `httpOnly`, échangé auprès du MÊME domaine que
+  celui qui l'a émis, retour construit par `resolveAppUrl`, et le
+  garde-fou du drame Jocelyne (un compte SANS le moindre quiz n'est
+  jamais relié en silence) toujours en place ;
+- **les 4 portes partenaires** de ce dépôt comparent leur secret avec
+  `safeEqual`, jamais avec `!==` ;
+- **plus aucun `.ilike`** dans le code de ce dépôt.
+
+
+## La date d'une vente ne bouge pas parce qu'un webhook a été réessayé (31 août 2026)
+
+Trouvé en relisant le verrou de webhook posé le matin même, dans le
+même audit.
+
+Quand un traitement mourait en route, la reprise repoussait
+`webhook_logs.created_at` pour que la reprise suivante ne passe pas par
+dessus la nôtre. C'était le bon geste sur la MAUVAISE COLONNE :
+
+> `created_at` EST LA DATE DE LA VENTE partout ailleurs.
+> `buildSales` (`lib/checkout/sales.ts`) en fait le `paidAt`, et l'écran
+> de pilotage de Béné trie dessus.
+
+Un réessai déplaçait donc une vente d'août au jour de la reprise, en
+silence, et la faisait remonter en tête de sa liste. Le chiffre du mois
+devenait faux sans qu'aucune ligne ne le dise.
+
+**Règle : le battement de coeur du verrou a sa propre colonne**
+(`webhook_logs.locked_at`). `lireVerrou` la préfère et retombe sur
+`created_at` pour les lignes écrites avant elle, donc rien de ce qui
+existe ne bouge.
+
+**Les deux écritures se replient sur l'ancienne forme** quand la colonne
+n'est pas encore en prod (`colonneInconnue`, `PGRST204`) : PostgREST
+rejette l'écriture ENTIÈRE sur une colonne inconnue, donc sans repli un
+déploiement en avance sur la migration ferait échouer la PRISE DU VERROU
+de tous les paiements. Et la relecture fait `select("*")` : nommer
+`locked_at` ferait échouer toute la requête, donc rendrait le verrou
+illisible, donc l'événement ne repasserait plus jamais.
+
+🚨 Migration : `supabase/migrations/20260831_webhook_lock_locked_at.sql`
+(Supabase de l'ATELIER). Elle ajoute une colonne nullable et refait un
+index : aucune donnée n'est réécrite.
+
+Test : `tests/logic/audit-atelier-bonus-certificat.test.mts`.

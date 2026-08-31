@@ -115,6 +115,21 @@ export async function POST(req: NextRequest) {
   if (!viewer) {
     return NextResponse.json({ ok: false, reason: "unauth" }, { status: 401 });
   }
+  // ÊTRE CONNECTÉ N'EST PAS ÊTRE INSCRIT (audit du 31 août 2026).
+  //
+  // C'était le SEUL point d'entrée coûteux de l'Atelier ouvert à un
+  // compte dont l'accès a été RÉVOQUÉ (`enrollments.status`), c'est à
+  // dire à quelqu'un qui a été remboursé. Un remboursement ferme le
+  // parcours, le coach et l'audit de quiz ; il laissait ouvert le
+  // générateur de bonus, le plus long et le plus cher de tous, sans
+  // aucune limite journalière.
+  //
+  // Le compte n'est pas supprimé par un remboursement
+  // (`revokeAccessByEmail` pose `revoked`), donc la session reste
+  // valide : sans ce contrôle là, il n'y en a aucun.
+  if (!viewer.enrolled) {
+    return NextResponse.json({ ok: false, reason: "no_access" }, { status: 403 });
+  }
   const apiKey = getApiKey();
   if (!apiKey) {
     return NextResponse.json({ ok: false, reason: "no_api_key" }, { status: 500 });
