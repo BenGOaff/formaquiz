@@ -22,6 +22,11 @@ export const dynamic = "force-dynamic";
 export default async function LaboBonusPage() {
   const viewer = await getViewer();
   if (!viewer) redirect("/login");
+  // "OUVERT À TOUS LES ÉLÈVES" disait le commentaire, et le code
+  // ouvrait à tous les CONNECTÉS : un accès révoqué (remboursement)
+  // gardait la page ET sa génération. La route refuse maintenant
+  // (`no_access`) ; l'écran n'a aucune raison de s'ouvrir quand même.
+  if (!viewer.enrolled) redirect("/");
 
   // TOUT CE QUE LE QUIZ SAIT DEJA, on ne le redemande pas (retour Bene,
   // 5 aout 2026). Echec silencieux : la page marche sans, la route

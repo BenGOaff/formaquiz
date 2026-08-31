@@ -49,13 +49,29 @@ export async function POST(req: NextRequest) {
   // Certificat deja delivre ? On garde le token ET le numero, on met juste
   // a jour le nom affiche. Si un ancien certificat (ere examen) n'a pas de
   // numero, on lui en attribue un maintenant.
-  const { data: existing } = await supabaseAdmin
+  //
+  // UNE LECTURE QUI ÉCHOUE N'EST PAS UN CERTIFICAT QUI N'EXISTE PAS
+  // (audit du 31 août 2026). L'erreur de ce `select` était ignorée :
+  // une panne d'une seconde rendait `existing` à `null`, donc on
+  // fabriquait un NOUVEAU jeton et on allouait un DEUXIÈME numéro,
+  // puis l'upsert écrasait les anciens. Un certificat s'imprime et se
+  // partage : son lien `/cert/<jeton>` répondait alors 404, et son
+  // numéro changeait sous les yeux de l'élève.
+  //
+  // "Je n'ai pas pu regarder" et "il n'y a rien" sont deux réponses
+  // différentes (règle du 23 août). On s'arrête.
+  const { data: existing, error: lectureErr } = await supabaseAdmin
     .from("certificates")
     .select("share_token, cert_number")
     .eq("user_id", viewer.userId)
     .maybeSingle();
 
-  let shareToken = (existing?.share_token as string) ?? makeToken();
+  if (lectureErr) {
+    console.error(`[certificat] lecture impossible : ${lectureErr.message}`);
+    return NextResponse.json({ ok: false, reason: "db" }, { status: 500 });
+  }
+
+  const shareToken = (existing?.share_token as string) ?? makeToken();
   let certNumber = (existing?.cert_number as string) ?? null;
 
   if (!certNumber) {
