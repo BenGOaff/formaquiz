@@ -7,6 +7,59 @@ sur le VPS de Béné. On ne modifie JAMAIS le code de Tiquiz ni Tipote.
 > vérité des intentions Béné (étoile polaire, 5 chantiers A à E, ordre,
 > statut). À relire au début de toute session qui touche au produit.
 
+## ÉTAT DU SYSTÈME au 30 août 2026 (à lire en premier)
+
+### Les trois applications, et les six domaines
+
+| Domaine | Sert | Dépôt | Port |
+|---|---|---|---|
+| `atelierduquiz.fr` | **la page de vente et le bon de commande** | formaquiz | 3002 |
+| `quizing.tipote.com` | **l'application** : la formation, le coach | formaquiz | 3002 |
+| `tiquiz.fr` | vente Tiquiz, bon de commande, blog | tiquiz | 3001 |
+| `quiz.tipote.com` | l'app Tiquiz | tiquiz | 3001 |
+| `app.tipote.com`, `affiliate.tipote.com` | Tipote et l'espace affilié | tipote-app | 3000 |
+
+**Les deux noms de ce dépôt ne font PAS le même métier**, et Caddy les
+sert par deux blocs distincts. `quizing.tipote.com` est tombé le
+30 août parce que son bloc n'avait jamais été rapatrié dans
+`infra/caddy/Caddyfile` (dépôt tiquiz) : sans bloc nommé, Caddy n'a
+aucun certificat pour ce nom et coupe la poignée de main. PM2 reste
+vert, l'app tourne, aucun journal ne dit rien.
+
+### L'affiliation : ce dépôt ne paie PAS, il remonte
+
+- **Le registre est celui de Tipote depuis le 26 août.**
+  `commissionnerVente` (`lib/affiliate/ownerSale.ts`) appelle
+  `POST /api/affiliate/attribute-sale` chez Tipote avec
+  `source_app: "atelier"` : c'est CE champ qui fixe les **70 %**.
+- **Le registre local (`profiles.sio_affiliate_id`) n'est plus qu'un
+  REPLI**, et il ne s'exécute que sur un refus franc, jamais sur une
+  erreur réseau : les deux bases ne partagent aucune contrainte
+  d'unicité, donc appeler les deux paierait deux fois.
+- **Le lien porte `?ref=`**, lu par le middleware d'ici. L'ancien `?sa=`
+  reste accepté.
+
+### Avant CHAQUE push, sans qu'on le demande
+
+```bash
+npm run test:logic
+npx tsc --noEmit       # exit 0 obligatoire
+```
+
+### Où chercher le reste
+
+| Question | Fichier |
+|---|---|
+| ce que la formation promet | `PRODUCT_BRIEF.md` |
+| ce qui est prévu | `VISION_ET_ROADMAP.md` |
+| poser l'environnement | `SETUP.md` |
+| ce qui reste à reprendre à Systeme.io | `ROADMAP_SORTIE_SIO.md` (dépôt tiquiz) |
+| le programme d'affiliation en détail | `PLAN_AFFILIATION.md` (dépôt tipote-app) |
+
+**Béné ne lit pas les dossiers.** Tout ce qu'elle doit faire ou copier
+se met dans le message final, jamais dans un fichier qu'on lui demande
+d'ouvrir. Une commande à la fois, aucun paramètre à remplacer.
+
 ## Règles non négociables
 
 - **Tutoiement** partout dans l'interface et le contenu.
@@ -866,13 +919,17 @@ les trois dépôts.
 
 ### Deux choses que l'audit laisse ouvertes
 
-1. **Les commissions de ce dépôt ne sont dans AUCUN lot de versement.**
-   Le registre est `profiles.sio_affiliate_id`, pas la table `affiliates`
-   de Tipote, et `preparerLot` (chez Tipote) ne lit que la sienne. Une
-   vente prise sur NOTRE bon de commande crée donc une commission que
-   Systeme.io ne connaît pas et que notre cycle ne paie pas. L'admin de
-   Tiquiz les AFFICHE (il interroge les deux bases), ce qui rend la dette
-   visible sans la solder.
+1. **Les commissions du REGISTRE LOCAL ne sont dans aucun lot de
+   versement.** À nuancer depuis le 26 août au soir, sinon la phrase
+   fait peur pour rien : `commissionnerVente` interroge maintenant le
+   registre CENTRAL de Tipote EN PREMIER (`source_app: "atelier"`), donc
+   **la vente d'un affilié inscrit chez Tipote entre normalement dans
+   les lots de versement**. Ce qui reste dehors, c'est le seul cas du
+   REPLI : un élève affilié ici (`profiles.sio_affiliate_id`) et pas
+   chez Tipote. Sa commission est écrite dans NOTRE base, que
+   `preparerLot` ne lit pas. L'admin de Tiquiz les AFFICHE (il interroge
+   les deux bases), ce qui rend la dette visible sans la solder. Elle
+   disparaîtra le jour où les deux registres seront fusionnés.
 2. **`/api/affiliate/sio-sale` accepte les produits TIQUIZ** et les écrit
    dans la base de l'Atelier, pendant que le webhook Systeme.io de Tiquiz
    remonte les mêmes ventes chez Tipote. Deux tables, deux contraintes
