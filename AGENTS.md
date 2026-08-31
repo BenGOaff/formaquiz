@@ -1219,3 +1219,84 @@ coûte la confiance, et ça se découvre au premier versement.** L'écran le
 dit maintenant en haut, en gras, et chaque libellé nomme Systeme.io.
 
 Test : `tests/logic/atelier-montre-affiliate-gere.test.mts`.
+
+## Les pages légales vivent sur NOTRE domaine (Béné, 31 août 2026)
+
+"Il faut ajouter les pages légales de l'atelier sur le domaine de
+l'atelier et renvoyer vers elles. On ne veut plus rien qui soit lié à
+Systemeio tant qu'on peut l'éviter."
+
+Les six liens du pied de page du bon de commande menaient à
+`www.tipote.fr`, c'est à dire chez Systeme.io. Trois problèmes dans un :
+un texte qu'on ne maîtrise pas, un domaine appelé à disparaître, et des
+conditions qui parlaient de **Tipote** alors que l'acheteur commande
+**l'Atelier**.
+
+### Ce ne sont PAS les CGV de Tiquiz, et c'est le coeur du fichier
+
+Recopier celles de Tiquiz aurait promis l'inverse de ce que la page de
+vente annonce :
+
+| | Tiquiz | l'Atelier |
+|---|---|---|
+| ce qui est vendu | un ABONNEMENT | un ACHAT UNIQUE, 47 € TTC, à vie |
+| remboursement | "aucun remboursement" | **garantie 30 jours** |
+| reconduction | automatique | aucune |
+
+**RÈGLE : les CGV ne sont JAMAIS plus restrictives que la page de
+vente.** Le bon de commande dit "Garantie 30 jours, sans poser de
+questions" : l'article 7 dit donc exactement ça, sans condition de
+résultat et sans justificatif. Le test compare les deux.
+
+### LE TROU QUI EST FERMÉ AU PASSAGE
+
+Nos CGV disent à l'article 6 "cette renonciation est recueillie sur le
+bon de commande, avant le paiement". **Le bon de commande ne recueillait
+rien du tout** : ni CGV, ni renonciation. C'est mot pour mot le drame du
+22 août côté Tiquiz, un texte qui promet ce que l'écran ne fait pas.
+
+La mention est rendue dans les **TROIS branches** du composant, pas
+seulement la principale : la branche d'erreur carte et la branche sans
+clé Stripe laissent toutes les deux payer par PayPal. Une règle recopiée
+dans une seule branche finit toujours par en oublier une (leçon des 3
+branches de `ConsentText`, 24 août). Le test compte les trois rendus, et
+il a été vérifié qu'il rougit quand on en retire un.
+
+Les liens sont des `<a target="_blank">`, jamais `<Link>` : un paiement
+est en cours, et faire quitter la page fait tout reprendre.
+
+### Ce qui n'est PAS recopié ici
+
+**Les conditions du programme d'affiliation.** Elles sont maintenues à
+UN seul endroit, l'espace affilié : "on gère tout sur affiliate et le
+reste montre seulement". Une copie ici divergerait en une semaine, et
+c'est celle qu'on ne maintient pas que l'affilié lirait. Le test exige
+que la RAISON de cette exception reste écrite à côté.
+
+### Monolingue, et c'est assumé
+
+`getLegalPage(slug)` ne prend PAS de locale, contrairement à Tiquiz.
+L'Atelier n'a ni `messages/` ni `next-intl` : une signature avec locale
+laisserait croire à des traductions qui n'existent pas.
+
+### Les sous-traitants ont été RELEVÉS DANS LE CODE
+
+Supabase, Hostinger (Paris), Stripe, PayPal, Resend, Systeme.io,
+Anthropic pour l'assistant, Google Analytics sur les pages de vente
+(derrière le consentement, mode Consentement réglé sur refus par
+défaut). Une politique qui nomme un sous-traitant qu'on n'utilise pas,
+ou qui en oublie un qu'on utilise, est pire qu'une politique absente :
+elle affirme.
+
+### Et une faute trouvée sur la page où l'on sort sa carte
+
+"Un email suffit : tu es **remboursée** dans la semaine." Un accord au
+féminin sur le bon de commande, c'est un message qui dit "ce produit
+n'est pas pour toi" trente secondes avant le paiement. La phrase est
+TOURNÉE ("le remboursement part dans la semaine"), sa promesse est
+inchangée, et le test la surveille sur les deux écrans d'achat.
+
+Aucun aplat de couleur sous du texte sur ces pages : fond blanc, texte à
+l'encre, un filet HORIZONTAL à la couleur de marque (règle du 31 août).
+
+Test : `tests/logic/pages-legales.test.mts`.

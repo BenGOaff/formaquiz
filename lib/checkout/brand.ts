@@ -26,6 +26,8 @@
 // Les valeurs sont RELEVÉES dans la page de vente en ligne
 // (`content/sales/atelier-du-quiz.html`), pas inventées.
 
+import { LEGAL_PATHS } from "@/lib/legal";
+
 /** Le bleu nuit du texte et des titres. */
 export const NUIT = "#16182e";
 /** L'indigo des boutons et des liens. La couleur d'action. */
@@ -71,14 +73,24 @@ export const BORDURE = "#e1e6f7";
  * point ouvert, pas un oubli.
  */
 export const LIENS_LEGAUX: readonly { texte: string; href: string }[] = [
-  { texte: "Politique de confidentialité", href: "https://www.tipote.fr/politique-de-confidentialite" },
-  { texte: "Mentions légales", href: "https://www.tipote.fr/mentions-legales" },
-  { texte: "Conditions générales de vente", href: "https://www.tipote.fr/cgv" },
-  { texte: "Conditions générales d'utilisation", href: "https://www.tipote.fr/cgu" },
-  { texte: "Politique de cookies", href: "https://www.tipote.fr/politique-de-cookies" },
-  // Les conditions du programme, celles qui sont maintenues. L'ancienne
-  // adresse `tipote.fr/affiliation` répond 404.
-  { texte: "Affiliation", href: "https://quiz.tipote.com/affiliate?lang=fr" },
+  // NOS PAGES, SUR NOTRE DOMAINE (31 août 2026). Elles pointaient vers
+  // `www.tipote.fr`, c'est à dire chez Systeme.io : un texte qu'on ne
+  // maîtrise pas, sur un domaine qui doit disparaître, et qui parlait
+  // de Tipote alors que l'acheteur commande l'Atelier.
+  //
+  // Béné : "on ne veut plus rien qui soit lié à Systemeio tant qu'on
+  // peut l'éviter".
+  { texte: "Conditions générales de vente", href: LEGAL_PATHS.terms },
+  { texte: "Conditions générales d'utilisation", href: LEGAL_PATHS["terms-of-use"] },
+  { texte: "Politique de confidentialité", href: LEGAL_PATHS.privacy },
+  { texte: "Politique de cookies", href: LEGAL_PATHS.cookies },
+  { texte: "Mentions légales", href: LEGAL_PATHS.legal },
+  // LA SEULE QUI RESTE EXTERNE, ET C'EST VOULU. Les conditions du
+  // programme d'affiliation sont maintenues à UN endroit, l'espace
+  // affilié : "on gère tout sur affiliate et le reste montre
+  // seulement". Une copie ici divergerait, et c'est celle qu'on ne
+  // maintient pas que l'affilié lirait.
+  { texte: "Affiliation", href: "https://affiliate.tipote.com/" },
 ];
 
 /**

@@ -23,6 +23,8 @@ import ChampsFacturation, {
 } from "@/components/facturation/ChampsFacturation";
 import { manques } from "@/lib/facture/identite";
 import { loadStripe } from "@stripe/stripe-js";
+
+import { LEGAL_PATHS } from "@/lib/legal";
 import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js";
 
 import { readSaFromBrowser } from "@/lib/affiliate/sa";
@@ -274,6 +276,51 @@ export default function CommandeClient({
     </div>
   ) : null;
 
+  // ── LES CGV ET LA RENONCIATION, RECUEILLIES AVANT LE PAIEMENT ──
+  //
+  // Elles manquaient, et c'est exactement le drame du 22 août côté
+  // Tiquiz : les CGV annonçaient une renonciation que l'écran ne
+  // recueillait pas. L'article 6 de NOS CGV dit "cette renonciation
+  // est recueillie sur le bon de commande, avant le paiement" : il
+  // faut donc qu'elle y soit, sinon le texte promet ce que l'écran ne
+  // fait pas.
+  //
+  // RENDU DANS LES TROIS BRANCHES du composant, pas seulement la
+  // principale : la branche d'erreur carte et la branche sans clé
+  // Stripe laissent toutes les deux payer par PayPal. Une règle
+  // recopiée dans une seule branche finit toujours par en oublier une
+  // (leçon des 3 branches de `ConsentText`, 24 août).
+  //
+  // `<a target="_blank">` et JAMAIS `<Link>` : un paiement est en
+  // cours, et faire quitter la page à quelqu'un qui va lire les CGV
+  // lui fait tout reprendre.
+  const mentionsLegales = (
+    <p className="mt-4 text-[12px] leading-relaxed text-[#6a6f8c]">
+      En payant, tu acceptes les{" "}
+      <a
+        href={LEGAL_PATHS.terms}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="font-semibold text-[#5a6ef6] underline underline-offset-2"
+      >
+        Conditions générales de vente
+      </a>{" "}
+      et la{" "}
+      <a
+        href={LEGAL_PATHS.privacy}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="font-semibold text-[#5a6ef6] underline underline-offset-2"
+      >
+        Politique de confidentialité
+      </a>
+      . Ton accès étant ouvert immédiatement, tu demandes l&apos;exécution du service
+      avant la fin du délai de rétractation de 14 jours et tu renonces expressément à
+      ce droit (articles L221-25 et L221-28 3° du Code de la consommation). La garantie
+      30 jours reste acquise et va plus loin que ce délai.
+    </p>
+  );
+
   if (erreur) {
     return (
       <div>
@@ -282,11 +329,19 @@ export default function CommandeClient({
           <p className="mt-1">{erreur}</p>
         </div>
         {blocPaypal}
+        {mentionsLegales}
       </div>
     );
   }
 
-  if (!clePublique) return <div>{blocPaypal}</div>;
+  if (!clePublique) {
+    return (
+      <div>
+        {blocPaypal}
+        {mentionsLegales}
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -303,6 +358,7 @@ export default function CommandeClient({
       </EmbeddedCheckoutProvider>
 
       {blocPaypal}
+      {mentionsLegales}
     </div>
   );
 }
