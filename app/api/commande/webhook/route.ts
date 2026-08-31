@@ -44,7 +44,7 @@ import { grantAccessByEmail, revokeAccessByEmail } from "@/lib/access/grantAcces
 import { findOwnerProduct } from "@/lib/checkout/catalog";
 import { readOwnerStripe, readOwnerStripeWebhookSecret } from "@/lib/checkout/ownerAccount";
 import { retrieveOwnerSession, verifyStripeSignature } from "@/lib/checkout/stripeCheckout";
-import { logWebhookEvent } from "@/lib/webhooks/log";
+import { marquerTraite, prendreLeVerrou } from "@/lib/webhooks/log";
 import { annulerCommissionChezTipote, commissionnerVente } from "@/lib/affiliate/ownerSale";
 import { refundCommissionByOrder } from "@/lib/affiliateTracking";
 import { completerFacturation } from "@/lib/facture/store";
@@ -91,19 +91,60 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const eventId = String(event.id ?? "").trim() || null;
   const eventType = String(event.type ?? "").trim() || null;
 
-  // Idempotence AVANT toute écriture : un réessai ne doit pas rejouer une
-  // vente. L'insertion et le contrôle sont la même opération, donc pas de
-  // fenêtre entre les deux.
-  const { duplicate } = await logWebhookEvent({
+  // ── LE VERROU, ET IL DOIT LAISSER PASSER UN RÉESSAI ──
+  //
+  // Avant le 31 août, on écrivait une ligne `received` ici et TOUT
+  // conflit valait "déjà traité". Un traitement qui échouait répondait
+  // 502 pour demander un réessai, et ce réessai était refusé par notre
+  // propre journal : la vente était encaissée et l'accès ne s'ouvrait
+  // jamais.
+  //
+  // Le statut fait maintenant partie du verrou (migration
+  // `20260831_webhook_lock.sql`) : une ligne `error` en SORT, donc le
+  // réessai suivant peut reprendre. Détail dans `lib/webhooks/log.ts`.
+  const verrou = await prendreLeVerrou({
     source: SOURCE,
     event_id: eventId,
     event_type: eventType,
     payload: event,
-    status: "received",
+    status: "processing",
   });
-  if (duplicate) {
+  if (verrou.action === "doublon") {
     return NextResponse.json({ ok: true, duplicate: true });
   }
+  if (verrou.action === "en_cours") {
+    // 409 et pas 200 : quelqu'un travaille dessus À L'INSTANT. Si son
+    // traitement échoue, il faut que le fournisseur repasse.
+    return NextResponse.json({ ok: false, reason: "en_cours" }, { status: 409 });
+  }
+
+  // LE TRAITEMENT EST SÉPARÉ POUR UNE SEULE RAISON : toutes ses sorties
+  // doivent passer par le marquage. Un `return` oublié au milieu de
+  // deux cents lignes laisserait l'événement bloqué en `processing`.
+  let reponse: NextResponse;
+  try {
+    reponse = await traiterEvenement(event, eventType);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`[commande/webhook] traitement interrompu : ${message}`);
+    await marquerTraite(SOURCE, eventId, "error", message.slice(0, 500));
+    return NextResponse.json({ ok: false, reason: "exception" }, { status: 500 });
+  }
+  const reussi = reponse.status >= 200 && reponse.status < 300;
+  await marquerTraite(SOURCE, eventId, reussi ? "processed" : "error", reussi ? null : `HTTP ${reponse.status}`);
+  return reponse;
+}
+
+/**
+ * Le traitement proprement dit, une fois le verrou pris.
+ *
+ * Séparé de `POST` pour que TOUTES ses sorties passent par le marquage :
+ * voir ci-dessus.
+ */
+async function traiterEvenement(
+  event: RawEvent,
+  eventType: string | null,
+): Promise<NextResponse> {
 
   // ── L'ARGENT REPART : ON FERME, ET ON LE DIT BIEN ──
   //

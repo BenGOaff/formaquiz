@@ -8,7 +8,6 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Share2,
@@ -41,8 +40,6 @@ import {
   SIO_AFFILIATE_DASHBOARD_URL,
   ESPACE_AFFILIE_URL,
   buildAffiliateLink,
-  normalizeAffiliateId,
-  isValidAffiliateId,
   getAffiliatePlaybook,
   AFFILIATE_ARGUMENTS,
   affiliateIntro,
@@ -120,53 +117,20 @@ export function AffiliationClient({
   refEtat: "ok" | "exclu" | "deja-affilie" | "injoignable";
   gains: Gains;
 }) {
-  const router = useRouter();
   const [tab, setTab] = useState<Tab>("lien");
-  const [input, setInput] = useState(initialAffiliateId);
-  const [savedId, setSavedId] = useState(initialAffiliateId);
-  const [saving, setSaving] = useState(false);
+  // `savedId` est LU, jamais écrit ici : plus rien ne se règle sur cet
+  // écran (voir l'onglet Mon lien).
+  const [savedId] = useState(initialAffiliateId);
   const [copied, setCopied] = useState(false);
 
   const playbook = useMemo(() => getAffiliatePlaybook(activityType), [activityType]);
   const intro = useMemo(() => affiliateIntro({ firstName, niche }), [firstName, niche]);
 
-  const normalized = normalizeAffiliateId(input);
-  const inputValid = isValidAffiliateId(normalized);
-  const inputTouchedInvalid = normalized.length > 0 && !inputValid;
-  const effectiveId = inputValid ? normalized : savedId;
   // LE LIEN NE DÉPEND PLUS DE L'IDENTIFIANT SYSTEME.IO. Il porte le code
   // public du registre central, seul paramètre que notre bon de commande
   // sait lire. Le `sa` ne sert plus qu'à rattacher les ventes arrivées
   // par les anciens tunnels, et il est facultatif.
   const link = buildAffiliateLink(refCode);
-
-  async function save() {
-    if (inputTouchedInvalid) {
-      toast.error("Cet identifiant ne ressemble pas à un ID affilié Systeme.io (sa...).");
-      return;
-    }
-    setSaving(true);
-    try {
-      const res = await fetch("/api/me/affiliate", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ affiliateId: input }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data?.ok) {
-        toast.error(data?.reason === "bad_format" ? "Format d'identifiant invalide." : "Échec de l'enregistrement.");
-        return;
-      }
-      setSavedId(data.affiliateId ?? "");
-      setInput(data.affiliateId ?? "");
-      toast.success(data.affiliateId ? "Lien affilié enregistré !" : "Identifiant retiré.");
-      router.refresh();
-    } catch {
-      toast.error("Erreur réseau.");
-    } finally {
-      setSaving(false);
-    }
-  }
 
   async function copyLink() {
     if (!link) return;
@@ -286,63 +250,35 @@ export function AffiliationClient({
             )}
 
             {/*
-              L'IDENTIFIANT SYSTEME.IO EST FACULTATIF, et il ne sert plus
-              qu'à UNE chose : rattacher les ventes arrivées par les
-              anciens tunnels. Celui qui n'en a pas n'a rien à faire ici.
+              ON NE GÈRE RIEN ICI (Béné, 31 août 2026) : "les élèves de
+              l'Atelier doivent aller sur affiliate pour tout gérer. On
+              gère tout sur affiliate et le reste montre seulement."
+
+              Cet écran portait un champ pour enregistrer son identifiant
+              Systeme.io. Il écrivait dans le registre HISTORIQUE de
+              l'Atelier, pendant que l'espace affilié écrit dans le
+              registre CENTRAL : deux endroits pour régler la même chose,
+              avec deux effets différents. C'est la mécanique qui produit
+              les contradictions les plus chères de ces dépôts.
+
+              Le champ est donc parti. Ce qui est DÉJÀ enregistré reste
+              lu (il sert de repli pour les ventes des anciens tunnels),
+              et on le montre en lecture seule pour que personne ne le
+              croie perdu.
             */}
-            <details className="rounded-lg border border-border bg-muted/20 px-3 py-2">
-              <summary className="cursor-pointer text-sm font-medium">
-                Tu as déjà promu l'Atelier via Systeme.io ?
-              </summary>
-              <div className="mt-3 flex flex-col gap-1.5">
+            {savedId ? (
+              <div className="rounded-lg border border-border bg-muted/20 px-3 py-2">
                 <p className="text-xs text-muted-foreground">
-                  Colle ton identifiant affilié Systeme.io (il commence par{" "}
-                  <code className="rounded bg-muted px-1 py-0.5">sa</code>) pour que
-                  tes ventes arrivées par leurs anciens tunnels te soient
-                  rattachées. C'est la seule chose que ce champ fait, et il est
-                  facultatif : ton lien ci-dessus fonctionne sans lui.
+                  Identifiant Systeme.io rattaché à ce compte :{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 font-mono">{savedId}</code>
                 </p>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Input
-                    id="aff-id"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder="sa0007878317200141bbe3de2b6644176621db2c6580"
-                    className="font-mono text-xs sm:text-sm"
-                    spellCheck={false}
-                    autoCapitalize="off"
-                    autoCorrect="off"
-                  />
-                  <Button
-                    variant="outline"
-                    onClick={save}
-                    disabled={saving}
-                    className="shrink-0"
-                  >
-                    {saving ? "..." : savedId ? "Mettre à jour" : "Enregistrer"}
-                  </Button>
-                </div>
-                {inputTouchedInvalid ? (
-                  <p className="text-xs text-destructive">
-                    Hmm, ça ne ressemble pas à un identifiant Systeme.io. Tu peux
-                    aussi coller le lien complet.
-                  </p>
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    Tu peux coller l'identifiant seul OU un lien contenant ?sa=...
-                  </p>
-                )}
-                <a
-                  href={SIO_AFFILIATE_DASHBOARD_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex w-fit items-center gap-1 text-xs font-medium text-primary hover:underline"
-                >
-                  Où le trouver dans Systeme.io
-                  <ExternalLink className="size-3.5" />
-                </a>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Il ne sert qu&apos;à retrouver tes ventes arrivées par les anciens
+                  tunnels. Pour le changer, passe par ton espace affilié : c&apos;est
+                  lui qui fait référence.
+                </p>
               </div>
-            </details>
+            ) : null}
           </CardContent>
         </Card>
       )}
@@ -373,6 +309,42 @@ export function AffiliationClient({
             </Card>
           ) : (
             <>
+              {/*
+                CE QUE CES CHIFFRES SONT, ET CE QU'ILS NE SONT PAS.
+
+                Béné, 31 août 2026 : "on gère tout sur affiliate et le
+                reste montre seulement."
+
+                `getAffiliateGains` lit le registre HISTORIQUE de
+                l'Atelier (`affiliate_commissions` d'ICI), alimenté par
+                le webhook Systeme.io. Il ne voit RIEN de ce qui passe
+                par un lien `?ref=` d'aujourd'hui, qui remonte au
+                registre central.
+
+                Or les libellés disaient "Total gagné (net)", "Prêt à
+                verser", "Versé (estimé)" : un élève qui vend par son
+                lien actuel lisait un relevé qui a l'air complet et qui
+                ne compte que ses vieilles ventes. Le dire une fois en
+                haut, en gras, coûte moins cher qu'une réclamation.
+              */}
+              <Card className="border-primary/30 bg-primary/5">
+                <CardContent className="flex flex-col items-start gap-2 py-4">
+                  <p className="text-sm">
+                    <strong>Ces chiffres ne comptent que tes ventes arrivées par les
+                    anciens tunnels Systeme.io.</strong>{" "}
+                    Tes clics, tes filleuls, tes commissions d&apos;aujourd&apos;hui et
+                    tes versements vivent dans ton espace affilié, et c&apos;est lui
+                    qui fait référence.
+                  </p>
+                  <Button size="sm" asChild>
+                    <a href={ESPACE_AFFILIE_URL} target="_blank" rel="noopener noreferrer">
+                      Ouvrir mon espace affilié
+                      <ExternalLink className="size-4" />
+                    </a>
+                  </Button>
+                </CardContent>
+              </Card>
+
               {/* Entonnoir : visites -> leads -> ventes -> remboursements */}
               <Card>
                 <CardContent className="grid gap-3 py-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -391,10 +363,10 @@ export function AffiliationClient({
                     Tes commissions
                   </span>
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <GainStat label="Total gagné (net)" cents={gains?.totalCents ?? 0} highlight />
+                    <GainStat label="Gagné via Systeme.io (net)" cents={gains?.totalCents ?? 0} highlight />
                     <GainStat label="Garantie 30j en cours" cents={gains?.guaranteeCents ?? 0} />
                     <GainStat label="Prêt à verser" cents={gains?.payableCents ?? 0} />
-                    <GainStat label="Versé (estimé)" cents={gains?.paidCents ?? 0} />
+                    <GainStat label="Versé par Systeme.io (estimé)" cents={gains?.paidCents ?? 0} />
                   </div>
                   {(gains?.refundsCount ?? 0) > 0 && (
                     <p className="text-xs text-muted-foreground">
@@ -425,8 +397,13 @@ export function AffiliationClient({
                     <div className="flex items-start gap-2 rounded-lg bg-primary/5 p-3 text-sm">
                       <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
                       <span>
-                        <strong>Prochain versement estimé : {eurCents(gains.nextPayout.amountCents)}</strong>,{" "}
-                        {gains.nextPayout.label}. Ce sont tes commissions dont la garantie 30 jours est passée.
+                        <strong>
+                          Prochain versement Systeme.io estimé :{" "}
+                          {eurCents(gains.nextPayout.amountCents)}
+                        </strong>
+                        , {gains.nextPayout.label}. Ce sont tes commissions des anciens
+                        tunnels dont la garantie 30 jours est passée. Les versements de
+                        tes ventes actuelles sont annoncés dans ton espace affilié.
                       </span>
                     </div>
                   )}

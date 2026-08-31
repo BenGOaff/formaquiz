@@ -34,10 +34,11 @@ import {
 } from "@/lib/checkout/paypalOwner";
 import { sendEmail } from "@/lib/email/resend";
 import { refundGoodbyeEmail } from "@/lib/email/templates";
-import { logWebhookEvent } from "@/lib/webhooks/log";
+import { marquerTraite, prendreLeVerrou } from "@/lib/webhooks/log";
 import { construireFacture, type FactureAEmettre } from "@/lib/facture/construire";
 import { taxeEstUnRepli, taxePaypalCents } from "@/lib/facture/taxeVentePaypal";
 import { lireAcheteur } from "@/lib/facture/identite";
+import { verifierVies } from "@/lib/facture/vies";
 import {
   encaissementDepuisCapture,
   remboursementDepuisRefund,
@@ -110,14 +111,53 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const eventType = String(event.event_type ?? "").trim() || null;
-  const { duplicate } = await logWebhookEvent({
+  const eventId = String(event.id ?? "").trim() || null;
+
+  // ── LE VERROU, ET IL DOIT LAISSER PASSER UN RÉESSAI ──
+  //
+  // Voir `lib/webhooks/log.ts` : une ligne `received` écrite avant le
+  // travail faisait refuser le réessai d'un traitement qui avait échoué,
+  // donc une vente encaissée n'ouvrait jamais l'accès.
+  const verrou = await prendreLeVerrou({
     source: SOURCE,
-    event_id: String(event.id ?? "").trim() || null,
+    event_id: eventId,
     event_type: eventType,
     payload: event,
-    status: "received",
+    status: "processing",
   });
-  if (duplicate) return NextResponse.json({ ok: true, duplicate: true });
+  if (verrou.action === "doublon") return NextResponse.json({ ok: true, duplicate: true });
+  if (verrou.action === "en_cours") {
+    // 409 et pas 200 : quelqu'un travaille dessus À L'INSTANT, et si son
+    // traitement échoue il faut que PayPal repasse.
+    return NextResponse.json({ ok: false, reason: "en_cours" }, { status: 409 });
+  }
+
+  // TOUTES les sorties du traitement doivent passer par le marquage :
+  // un `return` oublié laisserait l'événement bloqué en `processing`.
+  let reponse: NextResponse;
+  try {
+    reponse = await traiterEvenement(compte, event, eventType);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`[commande/paypal/webhook] traitement interrompu : ${message}`);
+    await marquerTraite(SOURCE, eventId, "error", message.slice(0, 500));
+    return NextResponse.json({ ok: false, reason: "exception" }, { status: 500 });
+  }
+  const reussi = reponse.status >= 200 && reponse.status < 300;
+  await marquerTraite(SOURCE, eventId, reussi ? "processed" : "error", reussi ? null : `HTTP ${reponse.status}`);
+  return reponse;
+}
+
+/**
+ * Le traitement, une fois le verrou pris.
+ *
+ * Séparé de `POST` pour que toutes ses sorties passent par le marquage.
+ */
+async function traiterEvenement(
+  compte: NonNullable<ReturnType<typeof readOwnerPaypal>>,
+  event: PaypalEvent,
+  eventType: string | null,
+): Promise<NextResponse> {
 
   // L'argent repart : on ferme, et on envoie l'email d'au revoir.
   if (eventType === "PAYMENT.CAPTURE.REFUNDED") {
@@ -279,6 +319,19 @@ async function facturerVente(args: {
       );
       return null;
     });
+    // ON DEMANDE À VIES, ET ON N'ATTEND JAMAIS APRÈS LUI.
+    //
+    // Béné, 27 août 2026 : "un numéro bien formé mais inexistant produit
+    // une autoliquidation injustifiée, donc de la TVA à ta charge."
+    //
+    // `verifierVies` ne lève pas et rend `injoignable` au bout de six
+    // secondes : la facture sort alors marquée, comme avant. Une pièce
+    // comptable qui attendrait la Commission européenne serait pire, et
+    // c'est la règle du 7 août ("il a payé, il reçoit ses accès")
+    // appliquée à la facture.
+    const vies = acheteur?.tvaNumero
+      ? await verifierVies(acheteur.tvaNumero)
+      : ("non-verifie" as const);
     const facture = construireFacture(
       "facture",
       {
@@ -292,6 +345,7 @@ async function facturerVente(args: {
         emailCle: args.email,
       },
       acheteur,
+      vies,
     );
     const ligne = await emettreFacture(facture);
     if (ligne) {
@@ -331,6 +385,13 @@ async function avoirDuRemboursement(args: {
     const acheteur = origine
       ? lireAcheteur(origine.acheteur)
       : await lireFacturation({ email: args.email });
+    // UN AVOIR NE REJUGE PAS LA TVA DE LA FACTURE QU'IL ANNULE.
+    //
+    // Il porte la même identité (voir juste au dessus) et il doit porter
+    // le même régime : un numéro devenu invalide entre temps, ou un VIES
+    // injoignable ce jour là, produirait un avoir à 21 % pour annuler
+    // une facture à 0 %, et les deux pièces ne se compenseraient plus.
+    // `non-verifie` reproduit EXACTEMENT le calcul d'origine.
     const avoir = construireFacture(
       "avoir",
       {
@@ -344,6 +405,7 @@ async function avoirDuRemboursement(args: {
         emailCle: args.email,
       },
       acheteur,
+      "non-verifie",
     );
     const ligne = await emettreFacture(avoir, origine?.id ?? null);
     if (ligne) {

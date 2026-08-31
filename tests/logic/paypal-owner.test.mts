@@ -126,7 +126,7 @@ test("un appel de webhook non authentifie n'ouvre RIEN", () => {
   assert.ok(verif > 0 && octroi > 0, "verification ou octroi absent");
   assert.ok(verif < octroi, "l'acces s'ouvre AVANT que l'appel soit authentifie");
   assert.ok(
-    src.includes("logWebhookEvent("),
+    src.includes("prendreLeVerrou("),
     "l'idempotence a disparu : un reessai de PayPal rejouerait la vente",
   );
 });

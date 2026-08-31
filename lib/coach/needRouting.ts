@@ -102,7 +102,19 @@ export type CoachUpsell = {
  *  L'Atelier vient de lib/affiliate.ts : une seule definition, sinon on
  *  se retrouve un jour avec deux pages de vente differentes selon
  *  l'ecran, et une qui n'existe plus. */
-export const TIQUIZ_PLANS_URL = "https://www.tipote.fr/tiquiz";
+/**
+ * LA PAGE DE VENTE DE TIQUIZ, LA NÔTRE.
+ *
+ * C'était `www.tipote.fr/tiquiz`, le tunnel Systeme.io. Béné,
+ * 31 août 2026 : "tout bascule sur le nouveau système et les nouvelles
+ * pages, nouveau blog, nouveaux domaines, il faut bien que ce soit ça
+ * qui s'affiche pour les nouveaux partout."
+ *
+ * Le coach est justement ce qui parle aux NOUVEAUX : c'est lui qui
+ * répond aux non-élèves, et son lien d'orientation était le seul écran
+ * qui les renvoyait encore sur l'ancienne page.
+ */
+export const TIQUIZ_PLANS_URL = "https://tiquiz.fr/";
 export { ATELIER_SALES_URL as ATELIER_URL } from "../affiliate.ts";
 
 /**

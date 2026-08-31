@@ -51,12 +51,24 @@ export const BORDURE = "#e1e6f7";
  * un écart entre les deux est une cause classique de contestation.
  */
 /**
- * Le pied de page légal, celui de ses pages Systeme.io.
+ * Le pied de page légal du bon de commande et de la page de merci.
  *
- * Relevé sur `tipote.fr/atelier-du-quiz-merci`. Il vit ici parce que le
- * bon de commande et la page de remerciement en ont besoin tous les
- * deux, et qu'une liste de liens recopiée à deux endroits finit avec un
- * lien mort d'un côté et pas de l'autre.
+ * Il vit ici parce que les deux écrans en ont besoin, et qu'une liste de
+ * liens recopiée à deux endroits finit avec un lien mort d'un côté et
+ * pas de l'autre. C'est arrivé quand même, autrement : voir
+ * `LIEN_SUPPORT`.
+ *
+ * -- DEUX LIENS ÉTAIENT MORTS (mesuré le 31 août 2026) ----------------
+ *
+ * `www.tipote.fr/affiliation` répond **404**, et il était affiché sous
+ * le formulaire de paiement. Le programme d'affiliation a ses conditions
+ * maintenues, servies par Tiquiz : c'est là qu'on envoie.
+ *
+ * Les quatre autres pages répondent 200 et restent chez Systeme.io.
+ * **Elles y resteront tant que Béné n'aura pas écrit les siennes** :
+ * recopier les conditions générales d'un autre produit, ou les
+ * réinventer, serait pire qu'un lien vers une page qui marche. C'est un
+ * point ouvert, pas un oubli.
  */
 export const LIENS_LEGAUX: readonly { texte: string; href: string }[] = [
   { texte: "Politique de confidentialité", href: "https://www.tipote.fr/politique-de-confidentialite" },
@@ -64,11 +76,29 @@ export const LIENS_LEGAUX: readonly { texte: string; href: string }[] = [
   { texte: "Conditions générales de vente", href: "https://www.tipote.fr/cgv" },
   { texte: "Conditions générales d'utilisation", href: "https://www.tipote.fr/cgu" },
   { texte: "Politique de cookies", href: "https://www.tipote.fr/politique-de-cookies" },
-  { texte: "Affiliation", href: "https://www.tipote.fr/affiliation" },
+  // Les conditions du programme, celles qui sont maintenues. L'ancienne
+  // adresse `tipote.fr/affiliation` répond 404.
+  { texte: "Affiliation", href: "https://quiz.tipote.com/affiliate?lang=fr" },
 ];
 
-/** Là où on répond quand quelque chose cloche. */
-export const LIEN_SUPPORT = "https://www.tipote.com/contact";
+/**
+ * LÀ OÙ ON RÉPOND QUAND QUELQUE CHOSE CLOCHE.
+ *
+ * C'était `www.tipote.com/contact`, qui répond **404** (mesuré le
+ * 31 août 2026, pas déduit). Ce lien est affiché DEUX FOIS sur la page
+ * qui suit le paiement : quelqu'un dont l'accès n'est pas arrivé
+ * cliquait dessus et tombait sur une page d'erreur, au pire moment
+ * possible.
+ *
+ * Le centre d'aide porte le formulaire depuis le 23 août, et le ticket
+ * atterrit dans la file unique, rattaché à son adresse. `produit=atelier`
+ * lui évite d'avoir à le préciser.
+ *
+ * L'en-tête de l'app importe cette constante au lieu de réécrire
+ * l'adresse : c'est exactement la faute que ce fichier dit éviter, et
+ * elle avait quand même été commise.
+ */
+export const LIEN_SUPPORT = "https://app.tipote.com/support?lang=fr&produit=atelier";
 
 export const STRIPE_BRANDING: Readonly<Record<string, string>> = {
   "branding_settings[background_color]": "#ffffff",

@@ -43,10 +43,14 @@ test("la signature est verifiee AVANT tout le reste", () => {
 test("un evenement deja traite n'ouvre pas l'acces une deuxieme fois", () => {
   // Stripe réessaie tant qu'il n'a pas un 2xx. Sans idempotence, un
   // réessai rejouerait la vente.
-  assert.ok(src.includes("logWebhookEvent"), "plus de journal, donc plus d'idempotence");
+  //
+  // Depuis le 31 août c'est un VERROU et plus un simple journal : une
+  // ligne `error` en sort, donc un traitement qui a échoué peut
+  // repasser. Le détail vit dans `verrou-webhook.test.mts`.
+  assert.ok(src.includes("prendreLeVerrou"), "plus de verrou, donc plus d'idempotence");
   assert.ok(src.includes("duplicate"), "le doublon n'est plus detecte");
 
-  const posLog = src.indexOf("await logWebhookEvent(");
+  const posLog = src.indexOf("await prendreLeVerrou(");
   const posGrant = src.indexOf("await grantAccessByEmail(");
   assert.ok(posLog > 0 && posGrant > 0, "appels introuvables : le test ne mesure plus rien");
   assert.ok(

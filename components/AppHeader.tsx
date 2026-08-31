@@ -26,6 +26,7 @@ import { Logo } from "@/components/Logo";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { LIEN_SUPPORT } from "@/lib/checkout/brand";
 
 const NAV = [
   { href: "/dashboard", label: "Formation", icon: GraduationCap },
@@ -225,7 +226,7 @@ export function AppHeader({
                       dans la file unique, rattache a son adresse.
                       `produit=atelier` evite qu'il ait a le preciser. */}
                   <a
-                    href="https://app.tipote.com/support?lang=fr&produit=atelier"
+                    href={LIEN_SUPPORT}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-muted"
