@@ -46,4 +46,20 @@ export async function register() {
 
   const message = formaterDiagnostic(diagnostic, "ATELIER");
   if (message) console.error(message);
+
+  // L'EXPÉDITEUR DES EMAILS, POUR LA MÊME RAISON.
+  //
+  // Depuis le 30 août, l'Atelier écrit depuis `atelierduquiz.fr`. Une
+  // adresse posée sur un domaine pas encore vérifié chez Resend part en
+  // spam sans le moindre symptôme : le contrôle vit donc au démarrage,
+  // là où l'on voit la variable telle que le PROCESSUS l'a reçue.
+  const { verifierExpediteur, formaterExpediteur } = await import("@/lib/env/expediteur");
+  const expediteur = formaterExpediteur(
+    verifierExpediteur({
+      brut: process.env.FORMAQUIZ_EMAIL_FROM ?? process.env.QUIZING_EMAIL_FROM,
+      domainesAttendus: ["atelierduquiz.fr", "tiquiz.fr"],
+    }),
+    "ATELIER",
+  );
+  if (expediteur) console.error(expediteur);
 }
