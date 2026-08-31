@@ -29,9 +29,10 @@
 //
 // -- CE QUI RESTE À FAIRE ICI ------------------------------------------
 //
-// La facture et le tag Systeme.io ne sont pas encore branchés. Ils
-// arrivent au chantier suivant, et leur absence ne prive personne de son
-// accès : c'est le point important.
+// La facture d'une vente CARTE reste celle de Stripe (il l'émet lui
+// même) : on n'en émet pas une deuxième, ce serait deux pièces pour un
+// seul encaissement. Le tag Systeme.io, lui, est branché depuis le
+// 31 août : voir le bloc en fin de `traiterVente`.
 
 import { NextRequest, NextResponse } from "next/server";
 
@@ -46,6 +47,7 @@ import { readOwnerStripe, readOwnerStripeWebhookSecret } from "@/lib/checkout/ow
 import { retrieveOwnerSession, verifyStripeSignature } from "@/lib/checkout/stripeCheckout";
 import { marquerTraite, prendreLeVerrou } from "@/lib/webhooks/log";
 import { annulerCommissionChezTipote, commissionnerVente } from "@/lib/affiliate/ownerSale";
+import { TAG_CLIENT_ATELIER, poserEtiquetteAcheteur } from "@/lib/sio/etiquetteVente";
 import { refundCommissionByOrder } from "@/lib/affiliateTracking";
 import { completerFacturation } from "@/lib/facture/store";
 
@@ -290,6 +292,19 @@ async function traiterEvenement(
     amountTotalCents: vente.amountTotalCents,
     amountTaxCents: vente.amountTaxCents,
     product,
+  });
+
+  // ── L'ÉTIQUETTE SYSTEME.IO, APRÈS TOUT LE RESTE ──
+  //
+  // Elle n'a JAMAIS été posée sur ce chemin, et l'en-tête de ce fichier
+  // le disait ("pas encore branché"). Les emails restent chez
+  // Systeme.io : un acheteur non étiqueté sort de toutes les séquences,
+  // sans que rien ne le signale, puisque son accès et sa facture, eux,
+  // arrivent. Trou trouvé le 31 août, en auditant l'Atelier.
+  await poserEtiquetteAcheteur({
+    email: vente.email,
+    tag: TAG_CLIENT_ATELIER,
+    acheteur: vente.facturation ?? null,
   });
 
   return NextResponse.json({ ok: true, granted: true });
