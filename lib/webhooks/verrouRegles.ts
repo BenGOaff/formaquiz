@@ -53,6 +53,22 @@ export interface LigneDeVerrou {
    * en confiance.
    */
   created_at?: string | null;
+  /**
+   * QUAND LE VERROU A ÉTÉ PRIS, et c'est une AUTRE date que `created_at`
+   * (audit du 31 août 2026).
+   *
+   * La reprise d'un traitement mort repoussait `created_at` pour que le
+   * suivant ne reprenne pas par dessus. Or `created_at` est la DATE DE
+   * LA VENTE partout ailleurs : `buildSales` en fait le `paidAt`, et
+   * l'écran de pilotage de Béné trie dessus. Un réessai déplaçait donc
+   * une vente d'août au jour de la reprise, en silence, et la faisait
+   * remonter en tête de liste.
+   *
+   * Le battement de coeur du verrou vit dans sa propre colonne. Elle
+   * est OPTIONNELLE : tant que la migration n'est pas passée, on
+   * retombe sur `created_at`, c'est à dire sur l'ancien comportement.
+   */
+  locked_at?: string | null;
 }
 
 /**
@@ -79,7 +95,10 @@ export function lireVerrou(
   // ne peut pas nous avoir bloqués, donc on ne sait pas ce qu'on lit.
   if (statut !== "processing") return { action: "en_cours" };
 
-  const depuis = ligne.created_at ? Date.parse(ligne.created_at) : Number.NaN;
+  // `locked_at` d'abord : c'est l'heure de la PRISE du verrou. On
+  // retombe sur `created_at` pour les lignes écrites avant la colonne.
+  const brut = ligne.locked_at ?? ligne.created_at ?? null;
+  const depuis = brut ? Date.parse(brut) : Number.NaN;
   // Un horodatage illisible se traite comme un traitement mort : mieux
   // vaut reprendre une vente que la laisser bloquée pour toujours.
   const mort = !Number.isFinite(depuis) || maintenant - depuis > REPRISE_APRES_MS;

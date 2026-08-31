@@ -1429,3 +1429,40 @@ oubliée :
 - **les 4 portes partenaires** de ce dépôt comparent leur secret avec
   `safeEqual`, jamais avec `!==` ;
 - **plus aucun `.ilike`** dans le code de ce dépôt.
+
+
+## La date d'une vente ne bouge pas parce qu'un webhook a été réessayé (31 août 2026)
+
+Trouvé en relisant le verrou de webhook posé le matin même, dans le
+même audit.
+
+Quand un traitement mourait en route, la reprise repoussait
+`webhook_logs.created_at` pour que la reprise suivante ne passe pas par
+dessus la nôtre. C'était le bon geste sur la MAUVAISE COLONNE :
+
+> `created_at` EST LA DATE DE LA VENTE partout ailleurs.
+> `buildSales` (`lib/checkout/sales.ts`) en fait le `paidAt`, et l'écran
+> de pilotage de Béné trie dessus.
+
+Un réessai déplaçait donc une vente d'août au jour de la reprise, en
+silence, et la faisait remonter en tête de sa liste. Le chiffre du mois
+devenait faux sans qu'aucune ligne ne le dise.
+
+**Règle : le battement de coeur du verrou a sa propre colonne**
+(`webhook_logs.locked_at`). `lireVerrou` la préfère et retombe sur
+`created_at` pour les lignes écrites avant elle, donc rien de ce qui
+existe ne bouge.
+
+**Les deux écritures se replient sur l'ancienne forme** quand la colonne
+n'est pas encore en prod (`colonneInconnue`, `PGRST204`) : PostgREST
+rejette l'écriture ENTIÈRE sur une colonne inconnue, donc sans repli un
+déploiement en avance sur la migration ferait échouer la PRISE DU VERROU
+de tous les paiements. Et la relecture fait `select("*")` : nommer
+`locked_at` ferait échouer toute la requête, donc rendrait le verrou
+illisible, donc l'événement ne repasserait plus jamais.
+
+🚨 Migration : `supabase/migrations/20260831_webhook_lock_locked_at.sql`
+(Supabase de l'ATELIER). Elle ajoute une colonne nullable et refait un
+index : aucune donnée n'est réécrite.
+
+Test : `tests/logic/audit-atelier-bonus-certificat.test.mts`.

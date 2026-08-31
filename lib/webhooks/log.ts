@@ -64,8 +64,17 @@ export interface WebhookLogRow {
 // `processing` sans le marquer ensuite le sortirait de l'index et
 // rejouerait ses ventes.
 
+/**
+ * PostgREST refuse-t-il cette écriture parce qu'il ne connaît pas la
+ * colonne ? (`PGRST204`, ou son message.) C'est le seul cas où on
+ * réécrit sans elle : toute autre erreur doit remonter telle quelle.
+ */
+function colonneInconnue(error: { code?: string; message?: string }): boolean {
+  return error.code === "PGRST204" || /column .* does not exist|find the '.*' column/i.test(error.message ?? "");
+}
+
 export async function prendreLeVerrou(row: WebhookLogRow): Promise<VerdictVerrou> {
-  const { error } = await supabaseAdmin.from("webhook_logs").insert({
+  const base = {
     source: row.source,
     event_id: row.event_id,
     event_type: row.event_type,
@@ -74,7 +83,22 @@ export async function prendreLeVerrou(row: WebhookLogRow): Promise<VerdictVerrou
     // l'index, donc c'est lui qui tient le verrou.
     status: "processing",
     error: row.error ?? null,
-  });
+  };
+
+  // `locked_at` PORTE LE BATTEMENT DE COEUR DU VERROU, et pas
+  // `created_at`, qui est la DATE DE LA VENTE (`buildSales` en fait le
+  // `paidAt`, l'écran de pilotage trie dessus).
+  //
+  // REPLI SI LA COLONNE N'EST PAS ENCORE EN PROD : PostgREST rejette
+  // l'écriture ENTIÈRE sur une colonne inconnue. Sans ce repli, un
+  // déploiement en avance sur la migration ferait échouer la prise du
+  // verrou de TOUS les paiements (drame `quiz_events.meta`).
+  let { error } = await supabaseAdmin
+    .from("webhook_logs")
+    .insert({ ...base, locked_at: new Date().toISOString() });
+  if (error && colonneInconnue(error)) {
+    ({ error } = await supabaseAdmin.from("webhook_logs").insert(base));
+  }
 
   if (!error) return { action: "traiter" };
 
@@ -95,9 +119,13 @@ export async function prendreLeVerrou(row: WebhookLogRow): Promise<VerdictVerrou
 
 /** Que dit la ligne qui nous a bloqués ? */
 async function relireLeVerrou(row: WebhookLogRow): Promise<VerdictVerrou> {
+  // `select("*")` et pas une liste de colonnes : nommer `locked_at`
+  // avant que la migration ne soit passée ferait échouer TOUTE la
+  // requête, donc le verrou deviendrait illisible, donc l'événement ne
+  // repasserait plus jamais. Même précaution que `getViewer`.
   const { data, error } = await supabaseAdmin
     .from("webhook_logs")
-    .select("id, status, created_at")
+    .select("*")
     .eq("source", row.source)
     .eq("event_id", row.event_id)
     .in("status", ["processing", "processed"])
@@ -116,19 +144,37 @@ async function relireLeVerrou(row: WebhookLogRow): Promise<VerdictVerrou> {
     return { action: "en_cours" };
   }
 
-  const ligne = data as { id: string; status: string; created_at: string };
+  const ligne = data as {
+    id: string;
+    status: string;
+    created_at: string;
+    locked_at?: string | null;
+  };
   // LA DÉCISION est pure et testée (`verrouRegles.ts`). Ici on ne fait
   // que lui donner la ligne et l'heure.
   const verdict = lireVerrou(ligne, Date.now());
   if (verdict.action !== "traiter") return verdict;
 
   // Le traitement précédent est mort en route. On REPREND, et on
-  // repousse l'horodatage pour que le suivant ne reprenne pas par
-  // dessus nous.
-  await supabaseAdmin
+  // repousse le battement de coeur pour que le suivant ne reprenne pas
+  // par dessus nous.
+  //
+  // **JAMAIS `created_at`.** C'est la date de la vente : la repousser
+  // déplaçait la vente au jour de la reprise dans l'écran de pilotage,
+  // et la faisait remonter en tête de liste. Repli sur l'ancien
+  // comportement tant que `locked_at` n'existe pas : sans horodatage
+  // repoussé, deux reprises simultanées valent mieux qu'un verrou
+  // jamais relâché.
+  const { error: repriseErr } = await supabaseAdmin
     .from("webhook_logs")
-    .update({ created_at: new Date().toISOString(), status: "processing" })
+    .update({ locked_at: new Date().toISOString(), status: "processing" })
     .eq("id", ligne.id);
+  if (repriseErr && colonneInconnue(repriseErr)) {
+    await supabaseAdmin
+      .from("webhook_logs")
+      .update({ created_at: new Date().toISOString(), status: "processing" })
+      .eq("id", ligne.id);
+  }
   console.warn(
     `[webhook] traitement precedent abandonne sur ${row.source}/${row.event_id ?? "?"} : on reprend.`,
   );
