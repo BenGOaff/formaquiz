@@ -147,11 +147,11 @@ export default async function Page({
             </ul>
 
             <div className="mt-6 rounded-xl border border-[#e1e6f7] bg-[#eef2fe] px-4 py-3">
-              <p className="text-sm font-bold">Garantie 30 jours, sans poser de questions</p>
+              <p className="text-sm font-bold">Garantie 30 jours</p>
               <p className="mt-1 text-[13px] leading-snug text-[#3a3e5c]">
-                Tu appliques, et si tu n&apos;attires pas de clients avec ton quiz, un email
-                suffit : tu es remboursée dans la semaine, sur le moyen de paiement qui a
-                servi à la commande.
+                Tu appliques les conseils, et si tu ne captes aucun contact avec ton quiz,
+                un email suffit : le remboursement part dans la semaine, sur le moyen de
+                paiement qui a servi à la commande.
               </p>
             </div>
           </section>

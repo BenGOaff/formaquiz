@@ -1219,3 +1219,148 @@ coûte la confiance, et ça se découvre au premier versement.** L'écran le
 dit maintenant en haut, en gras, et chaque libellé nomme Systeme.io.
 
 Test : `tests/logic/atelier-montre-affiliate-gere.test.mts`.
+
+## Les pages légales vivent sur NOTRE domaine (Béné, 31 août 2026)
+
+"Il faut ajouter les pages légales de l'atelier sur le domaine de
+l'atelier et renvoyer vers elles. On ne veut plus rien qui soit lié à
+Systemeio tant qu'on peut l'éviter."
+
+Les six liens du pied de page du bon de commande menaient à
+`www.tipote.fr`, c'est à dire chez Systeme.io. Trois problèmes dans un :
+un texte qu'on ne maîtrise pas, un domaine appelé à disparaître, et des
+conditions qui parlaient de **Tipote** alors que l'acheteur commande
+**l'Atelier**.
+
+### Ce ne sont PAS les CGV de Tiquiz, et c'est le coeur du fichier
+
+Recopier celles de Tiquiz aurait promis l'inverse de ce que la page de
+vente annonce :
+
+| | Tiquiz | l'Atelier |
+|---|---|---|
+| ce qui est vendu | un ABONNEMENT | un ACHAT UNIQUE, 47 € TTC, à vie |
+| remboursement | "aucun remboursement" | **garantie 30 jours** |
+| reconduction | automatique | aucune |
+
+**RÈGLE : les CGV ne sont JAMAIS plus restrictives que la page de
+vente.** Le bon de commande dit "Garantie 30 jours, sans poser de
+questions" : l'article 7 dit donc exactement ça, sans condition de
+résultat et sans justificatif. Le test compare les deux.
+
+### LE TROU QUI EST FERMÉ AU PASSAGE
+
+Nos CGV disent à l'article 6 "cette renonciation est recueillie sur le
+bon de commande, avant le paiement". **Le bon de commande ne recueillait
+rien du tout** : ni CGV, ni renonciation. C'est mot pour mot le drame du
+22 août côté Tiquiz, un texte qui promet ce que l'écran ne fait pas.
+
+La mention est rendue dans les **TROIS branches** du composant, pas
+seulement la principale : la branche d'erreur carte et la branche sans
+clé Stripe laissent toutes les deux payer par PayPal. Une règle recopiée
+dans une seule branche finit toujours par en oublier une (leçon des 3
+branches de `ConsentText`, 24 août). Le test compte les trois rendus, et
+il a été vérifié qu'il rougit quand on en retire un.
+
+Les liens sont des `<a target="_blank">`, jamais `<Link>` : un paiement
+est en cours, et faire quitter la page fait tout reprendre.
+
+### Ce qui n'est PAS recopié ici
+
+**Les conditions du programme d'affiliation.** Elles sont maintenues à
+UN seul endroit, l'espace affilié : "on gère tout sur affiliate et le
+reste montre seulement". Une copie ici divergerait en une semaine, et
+c'est celle qu'on ne maintient pas que l'affilié lirait. Le test exige
+que la RAISON de cette exception reste écrite à côté.
+
+### Monolingue, et c'est assumé
+
+`getLegalPage(slug)` ne prend PAS de locale, contrairement à Tiquiz.
+L'Atelier n'a ni `messages/` ni `next-intl` : une signature avec locale
+laisserait croire à des traductions qui n'existent pas.
+
+### Les sous-traitants ont été RELEVÉS DANS LE CODE
+
+Supabase, Hostinger (Paris), Stripe, PayPal, Resend, Systeme.io,
+Anthropic pour l'assistant, Google Analytics sur les pages de vente
+(derrière le consentement, mode Consentement réglé sur refus par
+défaut). Une politique qui nomme un sous-traitant qu'on n'utilise pas,
+ou qui en oublie un qu'on utilise, est pire qu'une politique absente :
+elle affirme.
+
+### Et une faute trouvée sur la page où l'on sort sa carte
+
+"Un email suffit : tu es **remboursée** dans la semaine." Un accord au
+féminin sur le bon de commande, c'est un message qui dit "ce produit
+n'est pas pour toi" trente secondes avant le paiement. La phrase est
+TOURNÉE ("le remboursement part dans la semaine"), sa promesse est
+inchangée, et le test la surveille sur les deux écrans d'achat.
+
+Aucun aplat de couleur sous du texte sur ces pages : fond blanc, texte à
+l'encre, un filet HORIZONTAL à la couleur de marque (règle du 31 août).
+
+Test : `tests/logic/pages-legales.test.mts`.
+
+## L'audit du 31 août : deux trous, dont un garde-fou écrit et jamais branché
+
+### 1. LE DRAME VÉRONIQUE ÉTAIT VIVANT ICI
+
+Le 2 août, une cliente de Tiquiz a demandé un nouveau mot de passe et
+est tombée sur "localhost n'autorise pas la connexion". La cause :
+`process.env.X ?? "https://..."`, avec la variable PRÉSENTE et absurde.
+**Un `??` ne protège que du MANQUANT, jamais du FAUX.**
+
+`lib/appUrl.ts` existe dans CE dépôt, il raconte ce drame dans son
+en-tête, et il VALIDE ce qu'il trouve (il refuse localhost, 127.x, ::1,
+.local, et retombe sur l'origine de la requête puis sur le domaine
+canonique).
+
+**Il n'était appelé par aucun des six fichiers qui fabriquent une
+adresse vue par un humain :**
+
+| Fichier | Ce qu'il produit |
+|---|---|
+| `app/api/auth/forgot/route.ts` | **le lien de réinitialisation de mot de passe** |
+| `app/api/auth/magic-link/route.ts` | le lien de connexion sans mot de passe |
+| `lib/access/grantAccess.ts` | les liens d'accès envoyés après un achat |
+| `lib/email/templates.ts` | tous les emails |
+| `app/api/plus-trial/widget/route.ts` | un widget INJECTÉ dans une page de vente |
+| `app/api/integrations/tiquiz/callback/route.ts` | le retour du consentement Tiquiz |
+
+Les six portaient leur propre cascade `APP_URL ?? NEXT_PUBLIC_APP_URL ??
+"https://..."`, recopiée à l'identique. Le premier est mot pour mot le
+cas de Véronique, sur le seul chemin dont dispose quelqu'un qui ne peut
+plus se connecter.
+
+Le retour OAuth était pire : il faisait `env || origine`, donc une
+variable présente et fausse gagnait CONTRE l'origine réelle de la
+requête.
+
+**La leçon est celle du matin même, transposée :** écrire un garde-fou
+n'est pas la dernière étape, vérifier qu'il est APPELÉ l'est. Il vivait
+là, documenté, testé, et six fichiers passaient à côté.
+
+### 2. UNE ADRESSE EMAIL CHERCHÉE AVEC UN JOKER
+
+`maybeGrantPlusTrial` vérifiait l'idempotence du mois offert avec
+`.ilike("sio_email", email)`. **Dans un LIKE Postgres, `_` est un
+JOKER**, et `_` est parfaitement légal dans une adresse :
+`jean_dupont@gmail.com` matchait donc `jeanXdupont@gmail.com`.
+
+Sur un contrôle d'idempotence, un faux positif **REFUSE le cadeau à
+quelqu'un qui ne l'a jamais reçu**, en silence, et personne ne le
+découvre : l'acheteur ne sait pas qu'il devait recevoir deux mois de
+Plus.
+
+`.eq` est sûr ici parce que les trois écritures de `sio_email` passent
+par la même variable, déjà `.trim().toLowerCase()`. **Cette condition
+est ce qui rend la correction valable, donc elle est testée elle
+aussi** : une future écriture non normalisée fait rougir le test.
+
+**Règle générale : une adresse email se compare, elle ne se filtre
+jamais par motif.** `ilike` sur une donnée reçue de l'extérieur mélange
+comparaison et recherche.
+
+Test : `tests/logic/audit-atelier-31-aout.test.mts`. Les deux
+assertions ont été vérifiées en rejouant la version d'avant : elles
+rougissent.

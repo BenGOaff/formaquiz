@@ -18,6 +18,7 @@
 // feuille de style scopée (classes tqpt-*) une seule fois. Se rafraîchit
 // toutes les 30s.
 import { NextRequest, NextResponse } from "next/server";
+import { getAppUrl } from "@/lib/appUrl";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,11 +26,11 @@ export const dynamic = "force-dynamic";
 // Base publique de l'app. On NE se sert PAS de req.nextUrl.origin : derrière
 // le proxy Systeme.io il resout en localhost:3002 (drame connu). On prend
 // APP_URL au runtime, fallback sur l'URL canonique prod.
-const PUBLIC_BASE = (
-  process.env.APP_URL ??
-  process.env.NEXT_PUBLIC_APP_URL ??
-  "https://quizing.tipote.com"
-).trim().replace(/\/$/, "");
+// Le `??` ne protegeait que de la variable ABSENTE : une valeur
+// `localhost` posee en prod le traversait, et ce widget est INJECTE
+// dans une page de vente, donc l'adresse fausse partait chez tous les
+// visiteurs. `getAppUrl` valide (lib/appUrl.ts).
+const PUBLIC_BASE = getAppUrl();
 
 // Feuille de style du widget (style popups Béné). Classes scopées tqpt-*
 // pour ne jamais entrer en collision avec les classes aq-* des popups.
