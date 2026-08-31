@@ -1019,3 +1019,43 @@ plus versé (drame du 19 août : 32,90 € annoncés, 27,42 € payés). La
 phrase dit que le taux monte, et renvoie à l'espace affilié pour le
 barème. Le fichier du coach, lui, DOIT porter les chiffres pour pouvoir
 répondre : il porte donc aussi le nom du fichier source.
+
+
+## Un backtick dans la connaissance du coach a cassé le build (31 août 2026)
+
+Béné, en collant la sortie de son déploiement :
+
+```
+Build error occurred
+./lib/coach/knowledge.ts:353:54  Expected a semicolon
+```
+
+J'avais écrit un nom de fichier entre backticks DANS une chaîne de
+connaissance du coach. Ces chaînes sont des template literals : le
+backtick l'a refermée, et tout ce qui suivait est devenu du code.
+
+**Deux fautes, et la deuxième est la mienne, pas celle du code.**
+
+1. `lib/coach/knowledge.ts` porte `import "server-only"` : aucun test ne
+   peut le charger, donc `npm run test:logic` est passé au vert sur un
+   fichier qui ne compile pas.
+2. **Je n'ai pas relancé `npx tsc --noEmit` après la DERNIÈRE
+   modification.** Je l'avais lancé avant, sur l'édition précédente, et
+   j'ai poussé sur ce vert là. `tsc` voyait la faute : il l'a dit dès
+   que je l'ai relancé. La consigne dit "avant CHAQUE push", pas "une
+   fois dans la session".
+
+**Garde-fou : `tests/logic/fichiers-server-only.test.mts`.** Il liste
+tous les fichiers du dépôt qui portent `import "server-only"` (ceux
+qu'aucun test ne pourra jamais importer, par construction) et les PARSE
+avec le compilateur TypeScript. Un fichier qui ne se parse plus fait
+rougir le filet logique au lieu de casser le build sur le serveur de
+prod.
+
+Ça ne remplace pas `tsc`, qui voit infiniment plus. Ça le double sur le
+seul point qui a coûté quelque chose : une faute de frappe dans un gros
+bloc de prose, dans un fichier que le filet logique ne touche jamais.
+
+**Et dans ces blocs de prose : PAS DE BACKTICK.** Un nom de fichier s'y
+écrit nu (`lib/affiliate/recompense.ts`, sans rien autour). Le test le
+rattrape, mais autant ne pas l'écrire.
