@@ -885,6 +885,39 @@ pour mot.
 
 🚨 Migration à appliquer : `supabase/migrations/20260825_facturation.sql`.
 
+## Les litiges Stripe n'arrivaient jamais (31 août 2026)
+
+Le webhook de ce dépôt écoute `charge.dispute.created` et
+`charge.dispute.funds_withdrawn` depuis l'audit du 26 août. **Stripe ne
+les envoyait pas** : l'endpoint `quizing.tipote.com/api/commande/webhook`
+n'y était pas abonné.
+
+Relevé avec `npm run check:stripe` (dépôt TIQUIZ, il lit tout le compte
+Stripe d'un coup), pas déduit. Un impayé laissait donc l'accès ouvert et
+la commission en route vers le lot du mois, exactement le trou qu'on
+croyait avoir fermé.
+
+**La leçon dépasse Stripe :** on avait écrit le code, écrit le test, mis
+à jour cette page, et personne n'avait vérifié que le fournisseur ÉMET
+l'événement. Un `if` qui attend un événement jamais envoyé est
+indiscernable d'un `if` qui marche. C'est la version « configuration »
+du garde-fou non fusionné du 23 août : **écrire un garde-fou n'est pas
+la dernière étape, vérifier qu'il reçoit quelque chose l'est.**
+
+**Ce dépôt n'a besoin QUE de cinq événements**, et c'est important pour
+ne pas se faire réclamer le reste : il vend un ACHAT UNIQUE
+(`interval: null`), donc `checkout.session.completed`,
+`checkout.session.async_payment_succeeded`, `charge.refunded` et les
+deux `charge.dispute.*`. Aucun `invoice.*`, aucun
+`customer.subscription.*` : ce sont les abonnements de Tiquiz. Le
+contrôle le sait par un tableau d'hôtes, il ne le devine pas.
+
+**Et la version d'API du compte est `2020-08-27`** (mesurée le 31 août).
+Ce dépôt ne lit ni facture d'abonnement ni période d'abonnement, donc
+les champs que Stripe a déplacés dans ses versions récentes ne le
+concernent pas. Le jour où l'Atelier vendra un abonnement, il faudra
+porter `lib/checkout/formeStripe.ts` depuis le dépôt Tiquiz.
+
 ## L'audit du 26 août : la fonction existait, elle n'était pas branchée
 
 Béné : "tu peux auditer tout le parcours de vente tiquiz et l'atelier,
