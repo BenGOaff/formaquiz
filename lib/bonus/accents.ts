@@ -41,7 +41,7 @@ export type SectionAccent = {
   title: string;
   /** Le filet d'un sous-titre, et les puces. */
   rule: string;
-  /** Le tag d'une étape. */
+  /** Le libellé d'une étape. */
   step: string;
 };
 

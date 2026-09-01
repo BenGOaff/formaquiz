@@ -1492,7 +1492,7 @@ concerne pas"), et il n'y a pas d'upsell sur l'Atelier.
 **On DEMANDE à Tiquiz, on ne recopie pas.** Tout ce qui sait parler à
 Systeme.io vit là-bas : la clé du compte propriétaire, la création du
 contact avec ses champs de facturation, la recherche PAGINÉE
-de tag (sans laquelle un tag ancienne est introuvable, cf.
+des tags (sans laquelle un tag ancien est introuvable, cf.
 la panne de la newsletter du 31 août). Le recopier donnerait deux
 implémentations qui divergent, ce que ces dépôts ont déjà payé quatre
 fois, et une deuxième clé à maintenir. La porte est
@@ -1554,3 +1554,23 @@ faux dans l'autre sens.
 Ça couvre aussi le CODE : un fichier `etiquetteVente.ts` et une fonction
 `poserEtiquetteAcheteur` disaient le mot interdit. Renommés en
 `tagVente.ts` et `poserTagAcheteur`.
+
+**ET LA FAUTE QUE J'AI FAITE EN L'APPLIQUANT, qui vaut plus que la
+règle :** j'ai remplacé le mot partout d'un coup, sans relire les
+phrases. "Étiquette" est féminin, "tag" est masculin : le dépôt s'est
+retrouvé avec "un tag posée", "le tag exacte", "de le tag", "aucune tag
+manquante". Et là où le mot voulait dire LIBELLÉ, le texte est devenu
+faux : la largeur d'un axe de graphique "réserve la largeur des tags",
+l'orientation EXIF d'une photo devenait "un tag tourne-moi de 90
+degrés". Réparé le jour même, mais le geste était mauvais.
+
+**Un remplacement de mot n'est pas une opération mécanique.** Un mot
+porte un GENRE (donc des accords à refaire) et un SENS (donc des
+endroits où il ne s'applique pas). Le contrôle à faire après, et pas
+avant :
+
+```bash
+grep -rnE "(une|nouvelle|cette|aucune|toute) tags?|tags? (créée|posée|manquante|exacte|courte|ancienne|inconnue)|de le tag" . --exclude-dir=node_modules
+```
+
+Zéro ligne, sinon on a laissé une phrase cassée derrière soi.
