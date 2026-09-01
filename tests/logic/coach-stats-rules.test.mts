@@ -84,7 +84,7 @@ test("le coach demande d'où vient le trafic avant d'accuser la page", () => {
 
 test("il n'interprète jamais le direct comme une adresse tapée", () => {
   assert.ok(hasRule('"DIRECT" NE VEUT PAS DIRE "ILS ONT TAPÉ TON ADRESSE"'));
-  assert.ok(hasRule("utm_source"), "il sait dire comment étiqueter un lien");
+  assert.ok(hasRule("utm_source"), "il sait dire comment tagger un lien");
 });
 
 // ── Le coach a enfin des chiffres, et il ne les invente plus ─────────

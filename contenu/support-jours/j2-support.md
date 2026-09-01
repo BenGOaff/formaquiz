@@ -9,7 +9,7 @@ Quelqu'un fait ton quiz et te laisse son email. Et après ? Souvent rien : sans 
 ## 3 mots tout simples
 
 - Autorépondeur : l'outil qui garde tes contacts et leur envoie des emails tout seul. Le tien, c'est Systeme.io.
-- Tag : une étiquette qu'on colle sur un contact pour le ranger (ex : "profil Bâtisseur").
+- Tag : un tag qu'on colle sur un contact pour le ranger (ex : "profil Bâtisseur").
 - Automatisation : une règle "si... alors...". Si le contact reçoit le tag X, alors il reçoit l'email Y, tout seul.
 
 ## La clé API : le pont entre Tiquiz et Systeme.io

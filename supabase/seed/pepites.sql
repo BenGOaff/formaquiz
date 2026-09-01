@@ -11,7 +11,7 @@ $$<p>Tes résultats ne décrivent pas, ils retournent gentiment le couteau. La t
 where day_number = 1;
 
 update days set pepite_html =
-$$<p>Un tag n'est pas une étiquette morte, c'est un déclencheur. Poser le tag, c'est démarrer LA bonne séquence. Au lieu d'un email pour tout le monde, tu parles à des seaux : chaque segment reçoit le message qu'il attendait. Tu écris une fois, ça sonne juste pour chacun.</p>$$
+$$<p>Un tag n'est pas un tag morte, c'est un déclencheur. Poser le tag, c'est démarrer LA bonne séquence. Au lieu d'un email pour tout le monde, tu parles à des seaux : chaque segment reçoit le message qu'il attendait. Tu écris une fois, ça sonne juste pour chacun.</p>$$
 where day_number = 2;
 
 update days set pepite_html =

@@ -95,7 +95,7 @@ function Block({ block, accent }: { block: DocBlock; accent: SectionAccent }) {
     );
   }
 
-  // Les étapes portent leur numéro dans une étiquette au lieu de le
+  // Les étapes portent leur numéro dans un libellé au lieu de le
   // laisser dans le texte : c'est ce qui rend un plan en 7 jours
   // parcourable d'un coup d'oeil au lieu de se lire comme un paragraphe.
   if (block.kind === "steps") {

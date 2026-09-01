@@ -100,7 +100,7 @@ values
 <h2>3 mots tout simples</h2>
 <ul>
 <li>Autorépondeur : l'outil qui garde tes contacts et leur envoie des emails tout seul. Le tien, c'est Systeme.io.</li>
-<li>Tag : une étiquette qu'on colle sur un contact pour le ranger (ex : "profil Bâtisseur").</li>
+<li>Tag : un tag qu'on colle sur un contact pour le ranger (ex : "profil Bâtisseur").</li>
 <li>Automatisation : une règle "si... alors...". Si le contact reçoit le tag X, alors il reçoit l'email Y, tout seul.</li>
 </ul>
 <h2>La clé API : le pont entre Tiquiz et Systeme.io</h2>

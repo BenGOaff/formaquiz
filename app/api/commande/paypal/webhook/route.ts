@@ -24,7 +24,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { grantAccessByEmail, revokeAccessByEmail } from "@/lib/access/grantAccess";
 import { annulerCommissionChezTipote, commissionnerVente } from "@/lib/affiliate/ownerSale";
-import { TAG_CLIENT_ATELIER, poserEtiquetteAcheteur } from "@/lib/sio/etiquetteVente";
+import { TAG_CLIENT_ATELIER, poserTagAcheteur } from "@/lib/sio/tagVente";
 import { refundCommissionByOrder } from "@/lib/affiliateTracking";
 import { findOwnerProduct, tierForOwnerProduct } from "@/lib/checkout/catalog";
 import { readOwnerPaypal, readOwnerPaypalWebhookId } from "@/lib/checkout/ownerAccount";
@@ -285,7 +285,7 @@ async function traiterEvenement(
   // la FACTURE qu'on vient d'émettre, donc de ce qui a été figé, jamais
   // d'un profil relu à côté : c'est la même donnée que celle imprimée
   // sur sa pièce comptable.
-  await poserEtiquetteAcheteur({
+  await poserTagAcheteur({
     email,
     tag: TAG_CLIENT_ATELIER,
     acheteur: facture?.acheteur ?? null,

@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "test:logic": "node --test --experimental-strip-types --import ./tests/logic/register-alias.mjs \"tests/logic/*.test.mts\"",
     "check:migrations-pending": "node scripts/check-pending-migrations.mjs",
-    "rag:ingest": "node scripts/ingest-coach-rag.mjs"
+    "rag:ingest": "node scripts/ingest-coach-rag.mjs",
+    "check:resend": "node scripts/check-resend.mjs"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^6.8.1",
