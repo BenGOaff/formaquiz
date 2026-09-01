@@ -255,3 +255,126 @@ export function rewriteOrderButtons(html: string, href: string): OrderButtonRewr
 
   return { html: repli.html, rewritten, missing, fallbackSet: repli.count };
 }
+
+
+/**
+ * LES LIENS DE SITE QUI POINTAIENT ENCORE VERS L'ANCIEN DOMAINE.
+ *
+ * En relisant la capture le 1er septembre 2026, la liste complète des
+ * liens sortants de la page tenait en une poignée d'adresses, et
+ * QUATRE partaient chez `www.tipote.fr` : sa propre copie, les
+ * mentions légales, la politique de confidentialité et les CGV.
+ *
+ * Le BOUTON D'ACHAT, lui, était déjà réglé (`rewriteOrderButtons`,
+ * 21 août) : c'est la NAVIGATION que personne n'avait relue. Depuis la
+ * page qui doit remplacer l'ancienne, un lien vers l'ancienne la
+ * désigne comme celle qui fait autorité.
+ *
+ * LES DESTINATIONS SONT NOS VRAIES ROUTES, vérifiées dans `app/` : les
+ * chemins de Systeme.io (`/mentions-legales`,
+ * `/politique-de-confidentialite`, `/atelier-du-quiz-cgv`) n'existent
+ * pas chez nous, et les recopier aurait posé des 404 dans le pied de
+ * page de la page qui vend.
+ */
+export const SALES_SITE_LINKS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  "atelier-du-quiz": {
+    // SA PROPRE COPIE -> L'ACCUEIL DE CE DOMAINE.
+    "https://www.tipote.fr/atelier-du-quiz": "/",
+    "https://www.tipote.fr/mentions-legales": "/legal",
+    "https://www.tipote.fr/politique-de-confidentialite": "/privacy",
+    "https://www.tipote.fr/atelier-du-quiz-cgv": "/terms",
+  },
+};
+
+/**
+ * Deux adresses désignent-elles la même page ?
+ *
+ * On compare l'hôte et le chemin, sans le protocole, sans la barre
+ * finale, sans ce qui suit le `?`. Jumelle de celle du dépôt Tiquiz.
+ */
+export function samePage(a: string, b: string): boolean {
+  const cle = (u: string): string | null => {
+    try {
+      const url = new URL(String(u ?? "").trim());
+      return `${url.host.toLowerCase()}${url.pathname.replace(/\/+$/, "").toLowerCase()}`;
+    } catch {
+      return null;
+    }
+  };
+  const x = cle(a);
+  const y = cle(b);
+  return x !== null && x === y;
+}
+
+/** Ce que la réécriture des liens de site a fait. */
+export interface SiteLinkRewrite {
+  html: string;
+  rewritten: { from: string; to: string; count: number }[];
+}
+
+/**
+ * Ramène sur ce domaine les liens de site capturés avec la page.
+ *
+ * Séparé de la réécriture du bouton d'achat : celle là décide où va
+ * l'ARGENT, celle ci où va la NAVIGATION, et elle ne s'applique que sur
+ * le domaine public. Derrière la clé d'aperçu, la page n'est pas le
+ * site.
+ */
+export function rewriteSiteLinks(
+  html: string,
+  cibles: Readonly<Record<string, string>>,
+): SiteLinkRewrite {
+  const entrees = Object.entries(cibles);
+  const compte = new Map<string, { to: string; count: number }>();
+
+  const remplace = (url: string): string | null => {
+    const paire = entrees.find(([source]) => samePage(source, url));
+    if (!paire) return null;
+    const [source, destination] = paire;
+    let query = "";
+    try {
+      query = new URL(url).search;
+    } catch {
+      query = "";
+    }
+    const vu = compte.get(source) ?? { to: destination, count: 0 };
+    vu.count += 1;
+    compte.set(source, vu);
+    return `${destination}${query}`;
+  };
+
+  let sortie = String(html ?? "").replace(
+    /href="(https?:\/\/[^"]+)"/gi,
+    (entier, url: string) => {
+      const cible = remplace(url);
+      return cible ? `href="${attr(cible)}"` : entier;
+    },
+  );
+
+  // LES LIENS ÉCRITS DANS UN BLOC DE TEXTE, DONC ÉCHAPPÉS. Ne traiter
+  // que les `href="..."` nus en laisse derrière ceux que l'éditeur
+  // Systeme.io relit pour reconstruire le bloc.
+  sortie = sortie.replace(
+    /href=(\\+)"(https?:\/\/[^"\\]+)\1"/gi,
+    (entier, echappement: string, url: string) => {
+      const cible = remplace(url);
+      return cible ? `href=${echappement}"${cible}${echappement}"` : entier;
+    },
+  );
+
+  // Les deux noms de la même clé chez Systeme.io : la page de l'Atelier
+  // écrit `"link"`, celle de Tiquiz `"linkUrl"`. On traite les deux,
+  // sinon la configuration que l'éditeur relit contredit le HTML.
+  sortie = sortie.replace(
+    /"(link|linkUrl)"\s*:\s*"(https?:\\?\/\\?\/[^"]+)"/gi,
+    (entier, cle: string, brut: string) => {
+      const cible = remplace(brut.replace(/\\\//g, "/"));
+      return cible ? `"${cle}":"${cible}"` : entier;
+    },
+  );
+
+  return {
+    html: sortie,
+    rewritten: [...compte.entries()].map(([from, v]) => ({ from, to: v.to, count: v.count })),
+  };
+}

@@ -19,7 +19,11 @@
 // maintenant un paramètre OBLIGATOIRE de `renderSalesPage`, donc on ne
 // peut plus servir une page de vente sans avoir dit où elle vend.
 
-import { rewriteOrderButtons, type OrderButtonRewrite } from "@/lib/sales/salesPageLinks";
+import {
+  rewriteOrderButtons,
+  rewriteSiteLinks,
+  type OrderButtonRewrite,
+} from "@/lib/sales/salesPageLinks";
 import {
   baliseVerificationGoogle,
   scriptAnalyticsGoogle,
@@ -31,6 +35,27 @@ export type SalesPageMeta = {
   slug: string;
   /** L'adresse canonique une fois en ligne. */
   canonical: string;
+  /**
+   * La marque décrite en données structurées, quand la page en est la
+   * page officielle.
+   *
+   * Absente sur un aperçu : une page fermée n'a pas à se déclarer comme
+   * le site de référence de quoi que ce soit, et deux pages qui le
+   * prétendent se font concurrence sur la même requête.
+   */
+  marque?: {
+    nom: string;
+    logo?: string;
+    sameAs?: string[];
+    /** Le produit vendu ici, décrit comme une FORMATION. */
+    formation?: {
+      nom: string;
+      /** Le prix TTC en euros, sous la forme "47.00". */
+      prix: string;
+      url: string;
+      description: string;
+    };
+  };
   title: string;
   description: string;
   /** L'image de partage, chemin absolu sur notre domaine. */
@@ -59,7 +84,18 @@ export type SalesPageMeta = {
  */
 export function stripHeadTags(html: string): string {
   return html
-    .replace(/<title>[\s\S]*?<\/title>/gi, "")
+    // LE TITRE DE LA CAPTURE, ATTRIBUTS COMPRIS.
+    //
+    // 1er septembre 2026 : cette ligne visait `<title>` NU, alors que
+    // Systeme.io publie `<title data-react-helmet="true">`. Le retrait
+    // ne mordait donc pas, et atelierduquiz.fr comme tiquiz.fr
+    // portaient DEUX titres : le nôtre en haut du head, celui de la
+    // capture plus bas, et Google choisissait lui même.
+    //
+    // `<title\b` exige une frontière de mot : on retire `<title>` et
+    // `<title lang="fr">`, jamais un hypothétique `<titlebar>`.
+    // Le fichier jumeau de Tiquiz porte la même correction.
+    .replace(/<title\b[^>]*>[\s\S]*?<\/title>/gi, "")
     .replace(/<meta[^>]*name=["']?description["']?[^>]*>/gi, "")
     .replace(/<meta[^>]*property=["']og:[^"']*["'][^>]*>/gi, "")
     .replace(/<meta[^>]*name=["']twitter:[^"']*["'][^>]*>/gi, "")
@@ -138,8 +174,88 @@ export function buildHeadTags(meta: SalesPageMeta): string {
     balises.push(`<meta property="og:image" content="${attr(meta.ogImage)}">`);
     balises.push(`<meta name="twitter:image" content="${attr(meta.ogImage)}">`);
   }
+  // QUI EST DERRIÈRE CETTE PAGE, EN DONNÉES STRUCTURÉES.
+  //
+  // Sur une requête de MARQUE (« atelier du quiz »), un moteur cherche
+  // à relier un NOM à un SITE : sans ces blocs, la page n'est qu'un
+  // document parmi d'autres qui contient les mots.
+  if (meta.marque) balises.push(baliseMarque(meta));
+
   return balises.join("\n");
 }
+
+/**
+ * Le JSON-LD de la marque.
+ *
+ * LE TYPE COMPTE. Le produit est décrit comme un `Course`, pas comme un
+ * `SoftwareApplication` (ce qu'est Tiquiz) : l'Atelier est une
+ * formation de sept jours. Annoncer le mauvais type est pire que ne
+ * rien annoncer, parce qu'un moteur qui lit une contradiction cesse de
+ * faire confiance au reste du bloc.
+ *
+ * `sameAs` compte autant que le reste : ce sont les autres endroits où
+ * la marque existe, et c'est ce qui permet à un moteur de recouper.
+ */
+function baliseMarque(meta: SalesPageMeta): string {
+  const marque = meta.marque;
+  if (!marque) return "";
+  const organisation: Record<string, unknown> = {
+    "@type": "Organization",
+    name: marque.nom,
+    url: meta.canonical,
+    description: meta.description,
+  };
+  if (marque.logo) organisation.logo = marque.logo;
+  if (marque.sameAs?.length) organisation.sameAs = marque.sameAs;
+
+  const donnees = {
+    "@context": "https://schema.org",
+    "@graph": [
+      organisation,
+      {
+        "@type": "WebSite",
+        name: marque.nom,
+        url: meta.canonical,
+        inLanguage: meta.locale.replace("_", "-"),
+        publisher: { "@type": "Organization", name: marque.nom },
+      },
+      ...(marque.formation
+        ? [
+            {
+              "@type": "Course",
+              name: marque.formation.nom,
+              description: marque.formation.description,
+              url: meta.canonical,
+              inLanguage: meta.locale.replace("_", "-"),
+              provider: { "@type": "Organization", name: marque.nom, url: meta.canonical },
+              // `hasCourseInstance` est EXIGÉ par Google pour qu'un
+              // `Course` soit valide. Un cours en ligne qu'on suit
+              // quand on veut se décrit "online" et sans date :
+              // inventer un calendrier serait faux.
+              hasCourseInstance: {
+                "@type": "CourseInstance",
+                courseMode: "online",
+                courseWorkload: "P7D",
+              },
+              offers: {
+                "@type": "Offer",
+                price: marque.formation.prix,
+                priceCurrency: "EUR",
+                category: "Paid",
+                url: marque.formation.url,
+                availability: "https://schema.org/InStock",
+              },
+            },
+          ]
+        : []),
+    ],
+  };
+  // Le JSON est inséré dans un `<script>` : une balise fermante à
+  // l'intérieur d'une chaîne fermerait le script et casserait la page.
+  const json = JSON.stringify(donnees).replace(/</g, "\\u003c");
+  return `<script type="application/ld+json">${json}</script>`;
+}
+
 
 /**
  * Le HTML prêt à servir.
@@ -182,6 +298,17 @@ export function renderSalesPage(
      * brancher de commande". On ne peut plus l'oublier par distraction.
      */
     checkoutHref: string | null;
+    /**
+     * Les liens de SITE capturés avec la page, et où ils doivent mener
+     * sur ce domaine : le pied de page légal et la page elle même.
+     *
+     * `null` sur un aperçu : derrière la clé, la page n'est pas le site,
+     * et son pied de page doit continuer de désigner ce qui est en
+     * ligne. Séparé de `checkoutHref` parce que les deux ne répondent
+     * pas à la même question, l'un dit où va l'argent et l'autre où va
+     * le visiteur.
+     */
+    siteLinks?: Readonly<Record<string, string>> | null;
     /** Appelé avec le résultat de la réécriture, pour journaliser. */
     onRewrite?: (info: OrderButtonRewrite) => void;
   },
@@ -192,6 +319,13 @@ export function renderSalesPage(
     const info = rewriteOrderButtons(sortie, opts.checkoutHref);
     sortie = info.html;
     opts.onRewrite?.(info);
+  }
+
+  // LA NAVIGATION APRÈS L'ARGENT : le bouton d'achat est déjà devenu un
+  // chemin relatif quand on arrive ici, donc les deux réécritures ne
+  // peuvent pas se marcher dessus.
+  if (opts.siteLinks) {
+    sortie = rewriteSiteLinks(sortie, opts.siteLinks).html;
   }
 
   const tetes = [

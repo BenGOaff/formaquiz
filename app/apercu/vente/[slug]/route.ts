@@ -28,7 +28,8 @@ import path from "node:path";
 import { renderSalesPage, type SalesPageMeta } from "@/lib/sales/servePage";
 import { isSalesOpen } from "@/lib/sales/previewGate";
 import { isPublicSalesHost, publicSalesCanonical } from "@/lib/sales/salesHosts";
-import type { OwnerProductId } from "@/lib/checkout/catalog";
+import { OWNER_CATALOG, type OwnerProductId } from "@/lib/checkout/catalog";
+import { SALES_SITE_LINKS } from "@/lib/sales/salesPageLinks";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -65,6 +66,38 @@ const PAGES: Record<string, Omit<SalesPageMeta, "slug"> & { produit: OwnerProduc
  * La porte vit dans `lib/sales/previewGate.ts` et pas ici : le bon de
  * commande en a besoin aussi, et deux copies d'une décision divergent.
  */
+/**
+ * QUI EST DERRIÈRE CETTE PAGE, pour les moteurs et pour les modèles.
+ *
+ * 1er septembre 2026 : `atelierduquiz.fr` ne portait qu'un bloc
+ * `FAQPage`. Aucun `Organization`, aucun `WebSite`, rien qui dise à un
+ * moteur que ce domaine EST le site de « l'Atelier du Quiz ». Sur une
+ * requête de marque, la page n'était donc qu'un document parmi d'autres
+ * qui contient ces mots. Le jumeau Tiquiz porte ce bloc depuis le
+ * 29 août ; celui ci ne l'a jamais eu.
+ *
+ * LE PRIX VIENT DU CATALOGUE, jamais recopié : un tarif écrit ici et un
+ * tarif au bon de commande finiraient par diverger, et c'est Google qui
+ * afficherait l'ancien, longtemps après la correction.
+ */
+const MARQUES: Record<string, SalesPageMeta["marque"]> = {
+  "atelier-du-quiz": {
+    nom: "L'Atelier du Quiz",
+    logo: "https://atelierduquiz.fr/quizing.png",
+    // Le logiciel que l'Atelier apprend à utiliser, et le site de sa
+    // fondatrice : c'est ce qui permet à un moteur de recouper les
+    // trois et de comprendre qu'il s'agit d'une seule maison.
+    sameAs: ["https://tiquiz.fr/", "https://www.blagardette.com/"],
+    formation: {
+      nom: OWNER_CATALOG.atelier.label,
+      prix: (OWNER_CATALOG.atelier.amountCents / 100).toFixed(2),
+      url: "https://atelierduquiz.fr/commande/atelier",
+      description:
+        "Sept jours, une action par jour, pour lancer un quiz qui capture des leads qualifiés et les trie par profil.",
+    },
+  },
+};
+
 function porteOuverte(req: NextRequest): boolean {
   // La cle OU le domaine public : sur atelierduquiz.fr la page de vente
   // est ouverte, c'est tout l'interet d'avoir un domaine.
@@ -125,9 +158,16 @@ export async function GET(
   const publique = isPublicSalesHost(req.headers.get("host"));
   const canonique = (publique && publicSalesCanonical(slug)) || meta.canonical;
 
+  // LA MARQUE NE SE DÉCLARE QUE SUR SA PAGE OFFICIELLE.
+  //
+  // Sur un aperçu derrière clé, annoncer « ce site est LE site de
+  // l'Atelier » ferait concurrence à la vraie page sur exactement la
+  // même requête.
+  const marque = publique ? MARQUES[slug] : undefined;
+
   const html = renderSalesPage(
     fs.readFileSync(fichier, "utf8"),
-    { slug, ...meta, canonical: canonique },
+    { slug, ...meta, canonical: canonique, marque },
     {
       indexable: publique,
       // La mesure d'audience ne tourne que sur le domaine PUBLIC :
@@ -139,6 +179,11 @@ export async function GET(
       // paiement n'est jamais atteint (trouvé le 21 août, dix minutes
       // après la mise en ligne du domaine).
       checkoutHref: `/commande/${meta.produit}`,
+      // LES LIENS DE SITE, SUR LE DOMAINE PUBLIC SEULEMENT.
+      //
+      // Derrière la clé d'aperçu, la page est un chantier : son pied de
+      // page doit continuer de désigner le site en ligne.
+      siteLinks: publique ? (SALES_SITE_LINKS[slug] ?? null) : null,
       onRewrite: (info) => {
         if (info.rewritten.length === 0) {
           console.error(
