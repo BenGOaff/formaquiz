@@ -80,18 +80,18 @@ Un seul type de quiz : celui qui attire les bonnes personnes et les transforme e
 > Tes contacts arrivent rangés et accueillis, sans toi.  |  Objectif : Brancher Systeme.io et préparer un premier email qui part tout seul.
 
 ## Le contenu du jour
-- Tiquiz colle une étiquette sur chaque personne, selon son résultat.
-- Le chemin : résultat, puis étiquette, puis le bon email.
+- Tiquiz colle un tag sur chaque personne, selon son résultat.
+- Le chemin : résultat, puis tag, puis le bon email.
 - Tu règles une fois, et l'email part tout seul.
 - Comme tu connais le résultat, tu parles à chacun comme à un ami.
 
-**Schéma.** Le chemin : résultat, étiquette, bon message : Résultat du quiz -> Étiquette (tag) -> Groupe de gens -> Bonne offre. Tu règles ça une seule fois. Ensuite, chacun reçoit le bon message tout seul.
+**Schéma.** Le chemin : résultat, tag, bon message : Résultat du quiz -> Tag (tag) -> Groupe de gens -> Bonne offre. Tu règles ça une seule fois. Ensuite, chacun reçoit le bon message tout seul.
 
-## Banger : Une étiquette sur une réponse
-- **Comment ça marche** : Tu colles une étiquette quand quelqu'un répond un truc précis (ex : « j'ai pas de liste »).
+## Banger : Un tag sur une réponse
+- **Comment ça marche** : Tu colles un tag quand quelqu'un répond un truc précis (ex : « j'ai pas de liste »).
 - **Pourquoi ça marche** : Tu sais ce qu'il a dit. Du coup tu lui envoies le message fait pour lui, et il croit que tu lis dans ses pensées.
 - **Comment ont fait les autres** : BuzzFeed garde chaque réponse pour mieux parler à chaque personne ensuite.
-- **Comment faire chez toi** : Dans Tiquiz (onglet Partage), relie une réponse à une étiquette Systeme.io.
+- **Comment faire chez toi** : Dans Tiquiz (onglet Partage), relie une réponse à un tag Systeme.io.
 
 ## Banger : L'email qui dit ton résultat
 - **Comment ça marche** : Ton premier email dit le résultat exact de la personne.

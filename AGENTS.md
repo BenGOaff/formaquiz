@@ -989,7 +989,7 @@ système d'affiliation]."
 revenu chez nous ce jour là (`lib/affiliate/linkDestinations.ts` chez
 Tipote : `https://tiquiz.fr/signup`), parce que `/signup` fait
 maintenant les trois choses d'un coup, le compte, le rattachement à vie,
-et le contact chez Systeme.io avec son étiquette.
+et le contact chez Systeme.io avec son tag.
 
 Ce que ça coûtait : un élève qui demandait au coach quel lien utiliser
 pour l'inscription gratuite s'entendait répondre "celui de Systeme.io".
@@ -1474,25 +1474,25 @@ Béné : "du coup c'est bon aussi pour les ventes ? Les bons tags seront
 attribués aux bons acheteurs ?"
 
 Pour l'Atelier, la réponse était NON, et pas par accident : **le bon de
-commande n'a jamais posé la moindre étiquette Systeme.io**, ni par
+commande n'a jamais posé la moindre tag Systeme.io**, ni par
 carte ni par PayPal. L'en-tête du webhook le disait lui même, "le tag
 Systeme.io n'est pas encore branché".
 
-Les emails restant chez Systeme.io, un acheteur non étiqueté sort de
+Les emails restant chez Systeme.io, un acheteur non taggé sort de
 toutes les séquences : pas de bienvenue, pas de relance, pas de
 segment. Et le symptôme est l'absence de symptôme, puisque son accès et
 sa facture, eux, arrivent normalement. C'est le trou que Tiquiz a
 bouché le 22 août, resté ouvert ici pendant que l'Atelier vendait.
 
-**L'étiquette est `atelier-clients`**, choisie par Béné le 31 août :
-celle que portent déjà ses clients. Les étiquettes qui commencent par
+**Le tag est `atelier-clients`**, choisie par Béné le 31 août :
+celle que portent déjà ses clients. Les tags qui commencent par
 `ads-` ne nous concernent PAS ("c'est un test en pub qui ne nous
 concerne pas"), et il n'y a pas d'upsell sur l'Atelier.
 
 **On DEMANDE à Tiquiz, on ne recopie pas.** Tout ce qui sait parler à
 Systeme.io vit là-bas : la clé du compte propriétaire, la création du
 contact avec ses champs de facturation, la recherche PAGINÉE
-d'étiquette (sans laquelle une étiquette ancienne est introuvable, cf.
+de tag (sans laquelle un tag ancienne est introuvable, cf.
 la panne de la newsletter du 31 août). Le recopier donnerait deux
 implémentations qui divergent, ce que ces dépôts ont déjà payé quatre
 fois, et une deuxième clé à maintenir. La porte est
@@ -1500,16 +1500,16 @@ fois, et une deuxième clé à maintenir. La porte est
 
 **Trois choses à ne pas défaire :**
 
-- **l'étiquette vient APRÈS l'accès ET après la commission.** Une
-  étiquette qui échoue ne doit priver personne de ce qu'il a payé
+- **le tag vient APRÈS l'accès ET après la commission.** Une
+  tag qui échoue ne doit priver personne de ce qu'il a payé
   (règle du 7 août), ni retarder l'argent d'une affiliée ;
 - **le délai maximum de 8 s.** Sans lui, une panne de Tiquiz garderait
   le webhook de paiement ouvert jusqu'à ce que la plateforme le tue
   (leçon de `commissionnerVente`, audit du 24 août) ;
-- **le tag est un PARAMÈTRE de `poserEtiquetteAcheteur`**, pas une
+- **le tag est un PARAMÈTRE de `poserTagAcheteur`**, pas une
   constante lue à l'intérieur : le jour où l'Atelier vend autre chose,
   l'appelant devra dire quoi, au lieu qu'une valeur par défaut
-  étiquette silencieusement de travers.
+  tag silencieusement de travers.
 
 Côté PayPal, l'identité envoyée est celle de la FACTURE qu'on vient
 d'émettre, jamais un profil relu à côté : c'est la même donnée que
@@ -1517,7 +1517,40 @@ celle imprimée sur sa pièce comptable.
 
 **`PARTNER_SHARED_SECRET` doit être posée sur CE serveur**, avec la
 même valeur que chez Tiquiz. Elle l'est déjà (le pont métriques et le
-pilotage s'en servent) ; sans elle, l'étiquette n'est pas posée et ça
+pilotage s'en servent) ; sans elle, le tag n'est pas posée et ça
 crie dans `pm2 logs`.
 
-Test : `tests/logic/etiquette-acheteur-atelier.test.mts`.
+Test : `tests/logic/tag-acheteur-atelier.test.mts`.
+
+## ON DIT TAG, JAMAIS ÉTIQUETTE (Béné, 1er septembre 2026)
+
+"Ne dis jamais étiquette, nulle part, on parle bien de tag en français
+aussi. Supprime tout ce que tu appelles étiquette partout pour dire tag,
+et mets tags bordel !"
+
+**La raison est produit, pas stylistique : c'est le mot que Systeme.io
+affiche.** Son menu CRM en français dit "Tag". Une consigne qui dit
+"étiquette" envoie la créatrice chercher un mot qui n'existe pas sur son
+écran, au moment précis où elle suit une marche à suivre clic par clic.
+
+**Et ça vaut par LANGUE, pas dans l'absolu.** Vérifié sur ses captures du
+tableau de bord Systeme.io :
+
+| Langue | Ce que Systeme.io affiche | Ce qu'on écrit |
+|---|---|---|
+| français, italien, portugais, anglais | Tag | **tag** |
+| **espagnol** | Etiquetas | **etiqueta** |
+
+L'espagnol est la seule exception, et elle est OBLIGATOIRE : y écrire
+"tag" rendrait la consigne fausse, puisque le bouton qu'elle doit
+cliquer s'appelle "Etiqueta añadida". L'arabe n'a pas été vérifié.
+
+**La nuance à ne pas rater : "étiquette" au sens LIBELLÉ n'est pas un
+tag.** Le libellé min/max d'une échelle, le "conversion label" de Google
+Ads, le mot affiché à la place d'un score : ce ne sont pas des tags
+Systeme.io. On y écrit **libellé**, pas "tag", sinon on rend le texte
+faux dans l'autre sens.
+
+Ça couvre aussi le CODE : un fichier `etiquetteVente.ts` et une fonction
+`poserEtiquetteAcheteur` disaient le mot interdit. Renommés en
+`tagVente.ts` et `poserTagAcheteur`.

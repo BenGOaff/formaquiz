@@ -1,4 +1,4 @@
-// tests/logic/etiquette-acheteur-atelier.test.mts
+// tests/logic/tag-acheteur-atelier.test.mts
 //
 // UN ACHETEUR DE L'ATELIER ENTRE DANS LES SÉQUENCES EMAIL.
 //
@@ -9,10 +9,10 @@
 // Systeme.io n'avait JAMAIS été branché sur son bon de commande, ni par
 // carte ni par PayPal. L'en-tête du webhook le disait lui même ("pas
 // encore branché"). Les emails restant chez Systeme.io, un acheteur non
-// étiqueté sortait de toutes les séquences, et le symptôme était
+// taggé sortait de toutes les séquences, et le symptôme était
 // l'absence de symptôme : son accès et sa facture arrivaient.
 //
-// L'étiquette a été choisie par Béné : `atelier-clients`, celle que
+// Le tag a été choisie par Béné : `atelier-clients`, celle que
 // portent déjà ses clients. Les `ads-*` ne nous concernent pas ("c'est
 // un test en pub"), et il n'y a pas d'upsell sur l'Atelier.
 
@@ -20,7 +20,7 @@ import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import test from "node:test";
 
-const MODULE = readFileSync("lib/sio/etiquetteVente.ts", "utf8");
+const MODULE = readFileSync("lib/sio/tagVente.ts", "utf8");
 const STRIPE = readFileSync("app/api/commande/webhook/route.ts", "utf8");
 const PAYPAL = readFileSync("app/api/commande/paypal/webhook/route.ts", "utf8");
 
@@ -46,7 +46,7 @@ test("les DEUX moyens de paiement etiquettent", () => {
   // Un seul des deux branche, c'est la moitie des acheteurs hors des
   // sequences, et personne pour le remarquer.
   for (const src of [STRIPE, PAYPAL]) {
-    assert.match(src, /await poserEtiquetteAcheteur\(\{/);
+    assert.match(src, /await poserTagAcheteur\(\{/);
   }
 });
 
@@ -57,7 +57,7 @@ test("l'etiquette vient APRES l'acces et APRES la commission", () => {
   for (const src of [STRIPE, PAYPAL]) {
     const acces = src.indexOf("grantAccessByEmail");
     const commission = src.indexOf("await commissionnerVente(");
-    const etiquette = src.indexOf("await poserEtiquetteAcheteur(");
+    const etiquette = src.indexOf("await poserTagAcheteur(");
     assert.ok(acces > -1 && commission > -1 && etiquette > -1);
     assert.ok(acces < etiquette, "l'acces d'abord");
     assert.ok(commission < etiquette, "l'argent de l'affiliee avant l'email");
@@ -89,6 +89,6 @@ test("l'adresse de Tiquiz ne peut pas etre locale", () => {
 test("le tag est un PARAMETRE, pas une valeur devinee dans la fonction", () => {
   // Le jour ou l'Atelier vend autre chose, l'appelant devra dire quoi.
   assert.match(MODULE, /tag: string;/);
-  const corps = MODULE.slice(MODULE.indexOf("export async function poserEtiquetteAcheteur"));
+  const corps = MODULE.slice(MODULE.indexOf("export async function poserTagAcheteur"));
   assert.doesNotMatch(corps, /TAG_CLIENT_ATELIER/, "une valeur par defaut etiquetterait de travers en silence");
 });

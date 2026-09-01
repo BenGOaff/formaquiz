@@ -1,15 +1,15 @@
-// lib/sio/etiquetteVente.ts
+// lib/sio/tagVente.ts
 //
 // L'ÉTIQUETTE SYSTEME.IO D'UN ACHETEUR DE L'ATELIER.
 //
 // -- LE TROU QUE CE FICHIER BOUCHE (audit du 31 août 2026) -------------
 //
-// Le bon de commande de l'Atelier n'a JAMAIS posé la moindre étiquette,
+// Le bon de commande de l'Atelier n'a JAMAIS posé la moindre tag,
 // ni par carte ni par PayPal. Ce n'était pas une panne : c'était du
 // code jamais branché, et l'en-tête du webhook le disait en toutes
 // lettres ("le tag Systeme.io n'est pas encore branché").
 //
-// Or les emails restent chez Systeme.io. Un acheteur non étiqueté sort
+// Or les emails restent chez Systeme.io. Un acheteur non taggé sort
 // donc de toutes les séquences : pas de bienvenue, pas de relance, pas
 // de segment. Et le symptôme est l'absence de symptôme, puisque son
 // accès et sa facture, eux, arrivent normalement.
@@ -21,14 +21,14 @@
 //
 // Tout ce qui sait parler à Systeme.io vit là-bas : la clé du compte
 // propriétaire, la création du contact avec ses champs de facturation,
-// la recherche PAGINÉE d'étiquette (sans laquelle une étiquette
+// la recherche PAGINÉE de tag (sans laquelle un tag
 // ancienne est introuvable, cf. la panne de la newsletter du 31 août).
 // Le recopier donnerait deux implémentations qui divergent et une
 // deuxième clé à maintenir.
 //
 // -- APRÈS L'ACCÈS, ET JAMAIS BLOQUANT ---------------------------------
 //
-// Cette fonction ne jette jamais. Une étiquette qui échoue ne doit PAS
+// Cette fonction ne jette jamais. Un tag qui échoue ne doit PAS
 // priver quelqu'un de ce qu'il vient de payer : c'est la règle du
 // 7 août. Elle CRIE dans le journal, parce qu'un acheteur hors des
 // séquences est un client qu'on perd sans le voir.
@@ -42,15 +42,15 @@ import "server-only";
 import type { Acheteur } from "@/lib/facture/identite";
 
 /**
- * L'étiquette d'un acheteur de l'Atelier.
+ * Le tag d'un acheteur de l'Atelier.
  *
  * Béné, 31 août 2026, en la choisissant elle même : `atelier-clients`,
  * celle que portent déjà ses clients (créée le 25 juin 2026). Les
- * étiquettes qui commencent par `ads-` ne nous concernent PAS : "c'est
+ * tags qui commencent par `ads-` ne nous concernent PAS : "c'est
  * un test en pub qui ne nous concerne pas". Et il n'y a pas d'upsell
  * sur l'Atelier.
  *
- * Ce nom a été RELEVÉ dans son compte, jamais inventé : une étiquette
+ * Ce nom a été RELEVÉ dans son compte, jamais inventé : un tag
  * inconnue n'est pas créée (la porte de Tiquiz refuse), donc une faute
  * de frappe ne polluerait pas sa liste, mais elle ne poserait rien non
  * plus.
@@ -70,13 +70,13 @@ function tiquizBaseUrl(): string {
 }
 
 /**
- * Pose l'étiquette d'un acheteur. Ne jette jamais, ne bloque rien.
+ * Pose le tag d'un acheteur. Ne jette jamais, ne bloque rien.
  *
  * `tag` est un PARAMÈTRE et pas une constante lue à l'intérieur : le
  * jour où l'Atelier vend autre chose, l'appelant devra dire quoi, au
- * lieu qu'une valeur par défaut étiquette silencieusement de travers.
+ * lieu qu'une valeur par défaut tag silencieusement de travers.
  */
-export async function poserEtiquetteAcheteur(args: {
+export async function poserTagAcheteur(args: {
   email: string;
   tag: string;
   acheteur?: Acheteur | null;

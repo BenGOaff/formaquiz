@@ -47,7 +47,7 @@ import { readOwnerStripe, readOwnerStripeWebhookSecret } from "@/lib/checkout/ow
 import { retrieveOwnerSession, verifyStripeSignature } from "@/lib/checkout/stripeCheckout";
 import { marquerTraite, prendreLeVerrou } from "@/lib/webhooks/log";
 import { annulerCommissionChezTipote, commissionnerVente } from "@/lib/affiliate/ownerSale";
-import { TAG_CLIENT_ATELIER, poserEtiquetteAcheteur } from "@/lib/sio/etiquetteVente";
+import { TAG_CLIENT_ATELIER, poserTagAcheteur } from "@/lib/sio/tagVente";
 import { refundCommissionByOrder } from "@/lib/affiliateTracking";
 import { completerFacturation } from "@/lib/facture/store";
 
@@ -298,10 +298,10 @@ async function traiterEvenement(
   //
   // Elle n'a JAMAIS été posée sur ce chemin, et l'en-tête de ce fichier
   // le disait ("pas encore branché"). Les emails restent chez
-  // Systeme.io : un acheteur non étiqueté sort de toutes les séquences,
+  // Systeme.io : un acheteur non taggé sort de toutes les séquences,
   // sans que rien ne le signale, puisque son accès et sa facture, eux,
   // arrivent. Trou trouvé le 31 août, en auditant l'Atelier.
-  await poserEtiquetteAcheteur({
+  await poserTagAcheteur({
     email: vente.email,
     tag: TAG_CLIENT_ATELIER,
     acheteur: vente.facturation ?? null,

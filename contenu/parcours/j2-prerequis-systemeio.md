@@ -19,7 +19,7 @@
 - À L'ÉCRAN : où récupérer sa clé API Systeme.io (on la branchera dans Tiquiz au Jour 4).
 
 **2. Comprendre les tags (le coeur du système).**
-- Un tag = une étiquette posée sur un contact. Tiquiz peut en poser plusieurs automatiquement : tag de capture (tous ceux qui laissent leur email), tag par résultat (un par profil), tag de partage, et le tag par réponse.
+- Un tag = un tag posée sur un contact. Tiquiz peut en poser plusieurs automatiquement : tag de capture (tous ceux qui laissent leur email), tag par résultat (un par profil), tag de partage, et le tag par réponse.
 - La chaîne à retenir : résultat = tag = segment = offre.
 - Le tag par réponse (avancé) : taguer une réponse précise ("a répondu qu'il n'a pas de liste") pour des relances ultra ciblées. Presque personne ne le fait.
 - À L'ÉCRAN : créer quelques tags dans Systeme.io (capture, un par profil de résultat).
