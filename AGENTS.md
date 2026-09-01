@@ -1574,3 +1574,70 @@ grep -rnE "(une|nouvelle|cette|aucune|toute) tags?|tags? (créée|posée|manquan
 ```
 
 Zéro ligne, sinon on a laissé une phrase cassée derrière soi.
+
+## Le SEO d'atelierduquiz.fr : quatre défauts, constatés en ligne (1er septembre 2026)
+
+**1. La page servait DEUX balises `<title>`.** `stripHeadTags` visait
+`<title>` NU, alors que Systeme.io publie
+`<title data-react-helmet="true">` : le retrait ne mordait pas, et
+Google choisissait lui même lequel afficher. **Le dépôt Tiquiz portait
+la même regex fautive** : les deux `lib/sales/servePage.ts` sont
+jumeaux, toute correction de l'un se porte sur l'autre.
+
+**2. Quatre liens partaient chez `www.tipote.fr`** : sa propre copie,
+les mentions légales, la confidentialité et les CGV. Le BOUTON D'ACHAT
+était déjà réglé le 21 août (`rewriteOrderButtons`) ; c'est la
+NAVIGATION que personne n'avait relue. Depuis la page qui doit
+remplacer l'ancienne, un lien vers l'ancienne la désigne comme celle
+qui fait autorité. 17 liens réécrits sur la capture.
+
+**LES DESTINATIONS SONT NOS VRAIES ROUTES.** Les chemins de Systeme.io
+(`/mentions-legales`, `/politique-de-confidentialite`,
+`/atelier-du-quiz-cgv`) n'existent PAS chez nous : les recopier aurait
+posé des 404 dans le pied de page de la page qui vend. Nos pages sont
+`/legal`, `/privacy` et `/terms`.
+
+`rewriteSiteLinks` traite aussi les `href` ÉCHAPPÉS et les clés
+`"link"` / `"linkUrl"` du modèle JSON : ce sont celles que l'éditeur
+Systeme.io relit pour reconstruire ses blocs.
+
+**Rien de tout ça ne s'applique derrière la clé d'aperçu** : la page est
+alors un chantier, et son pied de page doit continuer de désigner ce qui
+est en ligne.
+
+**3. Ni `robots.txt` ni `sitemap.xml`.** `atelierduquiz.fr/sitemap.xml`
+répondait 404. Rien n'interdisait l'exploration, mais rien ne l'aidait :
+le seul chemin de Google jusqu'aux pages légales était un lien de pied
+de page, et ce sont précisément les pages qu'un acheteur méfiant va
+vérifier.
+
+**LE SITEMAP NE LISTE AUCUN CERTIFICAT**, et c'est le point à ne pas
+défaire : chaque `/cert/<jeton>` porte le jeton d'une personne réelle,
+et une liste de jetons est une liste de clients. Ils restent indexables
+un par un, c'est leur page qui le décide ; on ne publie pas l'annuaire.
+
+**4. Aucune donnée structurée hors `FAQPage`.** Rien ne disait à un
+moteur que ce domaine EST le site de "l'Atelier du Quiz" : sur une
+requête de marque, la page n'était qu'un document parmi d'autres qui
+contient ces mots. Elle déclare maintenant `Organization`, `WebSite` et
+`Course`.
+
+**LE TYPE COMPTE.** L'Atelier est une FORMATION de sept jours, pas un
+logiciel : annoncer `SoftwareApplication` (ce qu'est Tiquiz) serait pire
+que ne rien annoncer, parce qu'un moteur qui lit une contradiction cesse
+de faire confiance au reste du bloc. `hasCourseInstance` est EXIGÉ par
+Google pour qu'un `Course` soit valide, et on n'y invente aucun
+calendrier : un cours qu'on suit quand on veut se décrit "online" et
+sans date.
+
+**LE PRIX VIENT DU CATALOGUE**, jamais recopié : un tarif écrit dans le
+JSON-LD et un tarif au bon de commande finiraient par diverger, et c'est
+Google qui afficherait l'ancien, longtemps après la correction.
+
+**La marque ne se déclare QUE sur sa page officielle** : deux pages qui
+prétendent être le site de référence se font concurrence sur exactement
+la même requête.
+
+Test : `tests/logic/seo-page-vente.test.mts`, qui porte sur la VRAIE
+capture. Un test qui n'exercerait qu'une chaîne écrite à la main aurait
+été vert le jour du bug.
