@@ -1684,3 +1684,53 @@ Cloudflare, qu'aucun runner ne peut interroger. Il fige que l'enveloppe
 est posée, que la raison reste écrite à côté, et **que les écrans
 surveillés portent encore une adresse** : un test qui ne peut plus
 échouer ment.
+
+## La mise en forme en ligne vivait en DEUX copies (3 septembre 2026)
+
+Béné, en portant le labo bonus vers Tiquiz : "je veux exactement la même
+chose sur l'atelier et sur tiquiz. Pareil. Ni plus, ni moins."
+
+En le portant, une divergence est sortie ICI, et elle était déjà là.
+
+`inline()` existait dans `components/BonusDocument.tsx` ET dans
+`lib/bonus/printable.ts`, sous ce commentaire du second : "la MEME mise
+en forme qu'a l'ecran". **C'était faux, et c'est mesurable :** l'écran
+échappait `&`, `<` et `>` ; l'impression échappait aussi le guillemet
+double, via son `esc()`.
+
+Or ce texte vient d'un MODÈLE, donc d'ailleurs, et il finit dans un
+`innerHTML`. C'est une règle de sécurité : une copie qui prend du retard
+sur l'autre, c'est une porte ouverte d'un seul côté, et personne pour le
+dire.
+
+**Règle : `inline(texte, cible)` vit dans `lib/bonus/document.ts`, en un
+seul exemplaire.** `cible` est un PARAMÈTRE (`"ecran"` ajoute
+`target="_blank" rel="noopener noreferrer"`, `"impression"` non) : c'est
+le seul écart légitime entre les deux rendus, et le déduire de
+l'appelant marcherait aujourd'hui et casserait au premier troisième
+appelant.
+
+**ET LA VRAIE RAISON DU DÉPLACEMENT : une règle enfermée dans un `.tsx`
+n'est pas testable.** Les deux tests qui la surveillaient
+(`tests/logic/bonus-editor.test.mts`) lisaient la SOURCE du composant
+avec des regex, faute de pouvoir l'importer :
+
+```
+assert.match(ecran, /https\?:\\/\\//, "seuls http, https, mailto et les chemins passent");
+```
+
+Ils figeaient donc une ÉCRITURE, pas un comportement : rien ne vérifiait
+qu'un `javascript:` était vraiment refusé. Ils APPELLENT la fonction
+maintenant, sur les deux cibles, avec `data:` et `vbscript:` en plus.
+
+Les cinq fichiers du labo (`document.ts`, `accents.ts`,
+`markdownHtml.ts`, `printable.ts`, `BonusDocument.tsx`) sont désormais
+identiques à l'octet près dans les TROIS dépôts. Le garde-fou est une
+commande :
+
+```bash
+cmp lib/bonus/document.ts ../tiquiz/lib/bonus/document.ts
+```
+
+Toute évolution de l'un se porte dans les deux autres, sinon le rendu et
+le PDF finissent par ne plus se ressembler d'une app à l'autre.

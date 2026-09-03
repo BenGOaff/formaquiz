@@ -221,3 +221,75 @@ function pushBlocks(blocks: DocBlock[], out: string[], indent: string) {
     }
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────
+// LA MISE EN FORME EN LIGNE, ÉCRITE UNE SEULE FOIS
+// ─────────────────────────────────────────────────────────────────────
+//
+// Béné, 3 septembre 2026 : "je veux exactement la même chose sur
+// l'atelier et sur tiquiz. Pareil. Ni plus, ni moins."
+//
+// -- CE QUE LA MESURE A TROUVÉ ----------------------------------------
+//
+// Cette règle vivait en DEUX copies, `inline()` dans
+// components/BonusDocument.tsx et `inline()` dans lib/bonus/printable.ts,
+// et le commentaire du second annonçait "la MEME mise en forme qu'a
+// l'ecran". Elles avaient déjà divergé : l'écran n'échappait pas le
+// guillemet double, l'impression si.
+//
+// Le pire est que c'est une règle de SÉCURITÉ : ce texte vient d'un
+// modèle, donc d'ailleurs, et il finit dans un `innerHTML`. Une copie
+// qui prend du retard sur l'autre, c'est une porte ouverte d'un seul
+// côté, et personne pour le dire.
+//
+// -- ET UNE RÈGLE ENFERMÉE DANS UN COMPOSANT N'EST PAS TESTÉE ---------
+//
+// C'est la règle du 1er août, et c'est la vraie raison de ce
+// déplacement : `inline()` vivait dans un `.tsx`, donc le runner de
+// tests ne pouvait pas le charger, donc rien ne vérifiait qu'un
+// `javascript:` était refusé.
+
+/** Où le HTML produit va s'afficher. PARAMÈTRE, jamais deviné. */
+export type CibleInline = "ecran" | "impression";
+
+/**
+ * Échappe le texte, PUIS remet la mise en forme.
+ *
+ * L'ordre n'est pas négociable : remettre la mise en forme d'abord
+ * laisserait passer une balise écrite par le modèle.
+ *
+ * Le gras, l'italique, le code et les liens, et rien d'autre : la liste
+ * doit rester alignée sur `lib/bonus/markdownHtml.ts`, sinon la
+ * créatrice met un mot en italique dans l'éditeur et voit des
+ * astérisques chez son visiteur.
+ *
+ * `cible` décide du seul écart légitime entre les deux rendus : à
+ * l'écran un lien ouvre un onglet (un visiteur ne doit jamais perdre la
+ * page), sur une feuille imprimée ça ne veut rien dire.
+ */
+export function inline(text: string, cible: CibleInline): string {
+  const safe = String(text ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+  const onglet = cible === "ecran" ? ' target="_blank" rel="noopener noreferrer"' : "";
+  return safe
+    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, label: string, href: string) => {
+      // Un lien écrit par un modèle finit dans un `href` : `javascript:`
+      // et `data:` n'ont rien à y faire.
+      const url = urlSure(href);
+      return url ? `<a href="${url}"${onglet}>${label}</a>` : m;
+    })
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>")
+    .replace(/`([^`]+)`/g, "<code>$1</code>");
+}
+
+/** `null` si le schéma n'est pas de ceux qu'on accepte d'ouvrir. */
+export function urlSure(href: string): string | null {
+  const u = String(href ?? "").trim();
+  // Le guillemet est DÉJÀ échappé par `inline` ; on le refait ici pour
+  // que la fonction reste sûre si quelqu'un l'appelle seule.
+  return /^(https?:\/\/|mailto:|\/)/i.test(u) ? u.replace(/"/g, "&quot;") : null;
+}

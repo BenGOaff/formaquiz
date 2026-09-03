@@ -20,6 +20,10 @@
 // compilation ; un import de valeur, non.
 import type { BonusDoc, DocBlock } from "./document.ts";
 import { sectionAccent } from "./accents.ts";
+// LA MISE EN FORME EN LIGNE VIT DANS `document.ts`, en un seul
+// exemplaire : deux copies avaient deja diverge sur l'echappement du
+// guillemet, et c'est une regle de securite.
+import { inline } from "./document.ts";
 
 function esc(s: string): string {
   return String(s ?? "")
@@ -29,37 +33,18 @@ function esc(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-/**
- * La MEME mise en forme qu'a l'ecran (cf. `inline()` dans
- * components/BonusDocument.tsx). Deux listes ecrites separement
- * divergent : le PDF finirait par montrer des asterisques la ou l'ecran
- * montre de l'italique.
- */
-function inline(text: string): string {
-  return esc(text)
-    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, label: string, href: string) => {
-      const u = String(href ?? "").trim();
-      return /^(https?:\/\/|mailto:|\/)/i.test(u)
-        ? `<a href="${u.replace(/"/g, "&quot;")}">${label}</a>`
-        : m;
-    })
-    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-    .replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>")
-    .replace(/`([^`]+)`/g, "<code>$1</code>");
-}
-
 /** `n` est l'index de la section : il donne sa couleur au bloc, la MEME
  *  que celle de l'ecran (cf. lib/bonus/accents.ts). */
 function block(b: DocBlock, n: number): string {
-  if (b.kind === "para") return `<p>${inline(b.text)}</p>`;
+  if (b.kind === "para") return `<p>${inline(b.text, "impression")}</p>`;
   if (b.kind === "list") {
-    return `<ul class="a${n}">${b.items.map((i) => `<li>${inline(i)}</li>`).join("")}</ul>`;
+    return `<ul class="a${n}">${b.items.map((i) => `<li>${inline(i, "impression")}</li>`).join("")}</ul>`;
   }
   if (b.kind === "steps") {
     return `<div class="steps">${b.items
       .map(
         (i) =>
-          `<div class="step"><span class="badge a${n}">${esc(i.label)}</span><div>${inline(i.text)}</div></div>`,
+          `<div class="step"><span class="badge a${n}">${esc(i.label)}</span><div>${inline(i.text, "impression")}</div></div>`,
       )
       .join("")}</div>`;
   }
