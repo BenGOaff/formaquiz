@@ -17,6 +17,7 @@ import Link from "next/link";
 
 import type { LegalPage, LegalSlug } from "@/lib/legal";
 import { LEGAL_PATHS } from "@/lib/legal";
+import SansObfuscationEmail from "@/components/legal/SansObfuscationEmail";
 
 const AUTRES: { slug: LegalSlug; texte: string }[] = [
   { slug: "terms", texte: "Conditions générales de vente" },
@@ -44,6 +45,7 @@ export default function LegalPageView({
           <p className="mt-6 text-[15px] leading-relaxed text-[#3a3e5c]">{page.intro}</p>
         ) : null}
 
+        <SansObfuscationEmail>
         <div className="mt-10 space-y-9">
           {page.sections.map((section) => (
             <section key={section.h}>
@@ -66,6 +68,7 @@ export default function LegalPageView({
             </section>
           ))}
         </div>
+        </SansObfuscationEmail>
 
         {/* La navigation ENTRE pages légales reste interne, et c'est
             voulu : la règle du nouvel onglet (24 août) vise les liens
