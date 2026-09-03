@@ -1734,3 +1734,45 @@ cmp lib/bonus/document.ts ../tiquiz/lib/bonus/document.ts
 
 Toute évolution de l'un se porte dans les deux autres, sinon le rendu et
 le PDF finissent par ne plus se ressembler d'une app à l'autre.
+
+### Et le repli qui perdait la mise en forme (même jour)
+
+Béné, en lisant le portage : "ça ne va pas supprimer ce qui s'écrivait
+en markdown ? Les users doivent voir en beau, bien mis en forme comme
+sur l'atelier."
+
+**Elle avait raison de se méfier, et le trou était PLUS grave que ça,
+et il était ici.**
+
+`Rendered` branchait sur `hasStructure(doc)` : un document sans aucun
+titre de section retombait sur un rendu qui affichait `{b.text}` TEL
+QUEL. Mesuré sur un email réel :
+
+| ce qu'elle écrit | ce que le repli affichait |
+|---|---|
+| `Tu es **Team Capture**.` | `Tu es **Team Capture**.` |
+| `[le quiz](https://...)` | `[le quiz](https://...)` |
+| `- un point` puis `- deux` | **rien du tout** |
+
+La dernière ligne est la pire : un bloc qui n'était pas un paragraphe
+rendait la chaîne vide, donc la LISTE DISPARAISSAIT de l'écran.
+
+**Ça ne se voyait presque pas ici**, parce que les trois blocs d'un
+bonus portent toujours des `##`. Ça se voit tout de suite sur un email
+ou un post court, qui n'en ont pas : c'est le portage vers Tiquiz qui
+l'a révélé, et c'est la deuxième fois de la journée qu'un dépôt jumeau
+sert de révélateur.
+
+**Règle : `BonusDocument` est appelé SANS CONDITION.** Il rend déjà
+`doc.lead` avec le même moteur que les sections (gras, italique, liens,
+listes, étapes, code) et sans carte autour : le repli n'apportait rien,
+il retirait. `hasStructure` reste, avec un 🚨 dans son commentaire, pour
+dire au prochain passage de ne pas le rebrancher sur le rendu ; il ne
+sert plus qu'à un test qui dit que le parseur n'invente pas de structure.
+
+**LA LEÇON, ET ELLE VAUT AU DELÀ DE CE REPLI :** son commentaire disait
+"un texte sans aucune section retombe sur un rendu simple : forcer une
+carte unique qui contient tout n'apporterait rien". La phrase était
+plausible et fausse. `BonusDocument` ne force AUCUNE carte sur le lead,
+il ne fait que le mettre en forme. **Un repli se juge sur ce qu'il rend,
+jamais sur ce que son commentaire annonce.**
