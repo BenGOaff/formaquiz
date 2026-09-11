@@ -26,7 +26,11 @@
 import { Copy } from "lucide-react";
 import { toast } from "sonner";
 
-import type { BonusDoc, DocBlock } from "@/lib/bonus/document";
+// LA MISE EN FORME EN LIGNE VIT DANS `document.ts`, en un seul
+// exemplaire : elle finit dans un `innerHTML`, donc c'est une regle
+// de securite, et une regle enfermee dans un composant n'est pas
+// testee (regle du 1er aout).
+import { inline, type BonusDoc, type DocBlock } from "@/lib/bonus/document";
 import { sectionAccent, type SectionAccent } from "@/lib/bonus/accents";
 
 export function BonusDocument({ doc }: { doc: BonusDoc }) {
@@ -76,7 +80,7 @@ export function BonusDocument({ doc }: { doc: BonusDoc }) {
 
 function Block({ block, accent }: { block: DocBlock; accent: SectionAccent }) {
   if (block.kind === "para") {
-    return <p dangerouslySetInnerHTML={{ __html: inline(block.text) }} />;
+    return <p dangerouslySetInnerHTML={{ __html: inline(block.text, "ecran") }} />;
   }
 
   if (block.kind === "list") {
@@ -88,7 +92,7 @@ function Block({ block, accent }: { block: DocBlock; accent: SectionAccent }) {
               className={`mt-2 size-1.5 shrink-0 rounded-full ${accent.badge}`}
               aria-hidden
             />
-            <span dangerouslySetInnerHTML={{ __html: inline(it) }} />
+            <span dangerouslySetInnerHTML={{ __html: inline(it, "ecran") }} />
           </li>
         ))}
       </ul>
@@ -108,7 +112,7 @@ function Block({ block, accent }: { block: DocBlock; accent: SectionAccent }) {
             >
               {it.label}
             </span>
-            <span dangerouslySetInnerHTML={{ __html: inline(it.text) }} />
+            <span dangerouslySetInnerHTML={{ __html: inline(it.text, "ecran") }} />
           </li>
         ))}
       </ol>
@@ -162,38 +166,4 @@ function CodeBlock({ text }: { text: string }) {
       </pre>
     </div>
   );
-}
-
-/**
- * EXACTEMENT ce que la barre d'outils de l'éditeur peut produire.
- *
- * Le texte vient d'un modèle ou d'un `contentEditable`, donc il finit
- * dans un `innerHTML` : on échappe d'abord, on remet la mise en forme
- * ensuite. L'inverse laisserait passer une balise écrite par le modèle.
- *
- * Le gras, l'italique, le code et les liens : la liste doit rester
- * alignée sur `lib/bonus/markdownHtml.ts`, sinon la créatrice met un mot
- * en italique dans l'éditeur et voit des astérisques chez son visiteur.
- */
-export function inline(text: string): string {
-  const safe = String(text ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-  return safe
-    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, label: string, href: string) => {
-      // Un lien ecrit par un modele finit dans un `href` : `javascript:`
-      // et `data:` n'ont rien a y faire.
-      const url = safeUrl(href);
-      return url ? `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>` : m;
-    })
-    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-    .replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>")
-    .replace(/`([^`]+)`/g, "<code>$1</code>");
-}
-
-/** `null` si le schéma n'est pas de ceux qu'on accepte d'ouvrir. */
-function safeUrl(href: string): string | null {
-  const u = String(href ?? "").trim();
-  return /^(https?:\/\/|mailto:|\/)/i.test(u) ? u.replace(/"/g, "&quot;") : null;
 }

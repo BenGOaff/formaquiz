@@ -24,6 +24,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { grantAccessByEmail, revokeAccessByEmail } from "@/lib/access/grantAccess";
 import { annulerCommissionChezTipote, commissionnerVente } from "@/lib/affiliate/ownerSale";
+import { alerterVenteEncaissee } from "@/lib/email/venteEncaisseeAlerte";
 import { TAG_CLIENT_ATELIER, poserTagAcheteur } from "@/lib/sio/tagVente";
 import { refundCommissionByOrder } from "@/lib/affiliateTracking";
 import { findOwnerProduct, tierForOwnerProduct } from "@/lib/checkout/catalog";
@@ -276,6 +277,22 @@ async function traiterEvenement(
     amountTotalCents: totalCommission,
     amountTaxCents: taxe,
     product,
+  });
+
+  // ── ET BÉNÉ L'APPREND, EN DERNIER (11 septembre 2026) ──
+  //
+  // Même alerte que par carte : un achat unique, donc une nouvelle
+  // vente. Le montant est celui de la CAPTURE (ce qui a vraiment été
+  // payé), comme pour la commission juste au dessus.
+  await alerterVenteEncaissee({
+    moyen: "paypal",
+    nature: "premiere",
+    email,
+    produit: product.label,
+    montantCents: totalCommission,
+    devise: encaissement?.currency ?? product.currency,
+    reference: encaissement?.saleRef ?? (String(event.resource?.id ?? "").trim() || "capture"),
+    compteCree: octroi.created,
   });
 
   // ── L'ÉTIQUETTE SYSTEME.IO, APRÈS TOUT LE RESTE ──

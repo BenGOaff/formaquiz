@@ -50,7 +50,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { BonusDocument } from "@/components/BonusDocument";
 import { RichTextEditor } from "@/components/admin/RichTextEditor";
 import { failureCopy } from "@/lib/aiFailure";
-import { hasStructure, parseBonusDoc } from "@/lib/bonus/document";
+import { parseBonusDoc } from "@/lib/bonus/document";
 import { editorHtmlToMarkdown, markdownToEditorHtml } from "@/lib/bonus/markdownHtml";
 import {
   analyzeOfferCoverage,
@@ -1098,22 +1098,33 @@ export function BonusLabClient({
  * Le rendu d'un bloc généré.
  *
  * La STRUCTURE vient de `parseBonusDoc`, en fonction pure et testée ;
- * ce composant ne relit jamais le markdown lui-même. Un texte sans
- * aucune section retombe sur un rendu simple : forcer une carte unique
- * qui contient tout n'apporterait rien.
+ * ce composant ne relit jamais le markdown lui-même.
+ *
+ * -- LE REPLI A ÉTÉ RETIRÉ, ET IL PERDAIT DU CONTENU (3 septembre 2026)
+ *
+ * Béné : "ça ne va pas supprimer ce qui s'écrivait en markdown ? Les
+ * users doivent voir en beau, bien mis en forme."
+ *
+ * Elle avait raison de se méfier, et le trou était plus grave que ça.
+ * Un document sans aucun titre de section passait par un repli qui
+ * rendait `{b.text}` TEL QUEL : le gras ressortait en `**mot**`, un lien
+ * en `[texte](url)`, et une LISTE DISPARAISSAIT complètement (un bloc
+ * qui n'était pas un paragraphe rendait la chaîne vide).
+ *
+ * Ça ne se voyait presque pas ici, parce que les trois blocs d'un bonus
+ * portent toujours des `##`. Ça se voyait tout de suite sur un email ou
+ * un post court, qui n'en ont pas : c'est ce que le portage vers Tiquiz
+ * a révélé.
+ *
+ * `BonusDocument` rend DÉJÀ `doc.lead` avec le même moteur que les
+ * sections (gras, italique, liens, listes, étapes, code), et sans carte
+ * autour. Le repli n'apportait donc rien, il retirait.
  */
 function Rendered({ markdown }: { markdown: string }) {
-  const doc = parseBonusDoc(markdown);
-  if (!hasStructure(doc)) {
-    return (
-      <div className="flex flex-col gap-3 text-[15px] leading-relaxed">
-        {doc.lead.map((b, i) => (
-          <p key={i}>{b.kind === "para" ? b.text : ""}</p>
-        ))}
-      </div>
-    );
-  }
-  return <BonusDocument doc={doc} />;
+  // PAS DE REPLI : `BonusDocument` rend deja `doc.lead` avec le meme
+  // moteur que les sections, donc un texte sans section y est mis en
+  // forme comme le reste. Voir l'entete ci dessus.
+  return <BonusDocument doc={parseBonusDoc(markdown)} />;
 }
 
 /** Le gabarit commun aux trois écrans : titre, sous-titre, retour. */

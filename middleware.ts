@@ -10,6 +10,8 @@ import { salesSlugForHost } from "@/lib/sales/salesHosts";
 import { readSa, SA_COOKIE, SA_MAX_AGE_SECONDS, SA_PARAM } from "@/lib/affiliate/sa";
 import { readRef, REF_COOKIE, REF_MAX_AGE_SECONDS, REF_PARAM } from "@/lib/affiliate/refLien";
 import { CANAL_PARAM, clicASignaler, lireCanalBrut, signalerClic } from "@/lib/affiliate/signalerClic";
+import { signalerVue } from "@/lib/trafic/signalerVue";
+import { cheminPourStats, sourceDeLaVue, vueASignaler } from "@/lib/trafic/vueASignaler";
 
 // Routes accessibles sans être connecté.
 const PUBLIC_PREFIXES = [
@@ -91,6 +93,39 @@ export async function middleware(req: NextRequest, event: NextFetchEvent) {
         referrer: req.headers.get("referer"),
         userAgent: req.headers.get("user-agent"),
         ip: req.headers.get("x-forwarded-for"),
+      }),
+    );
+  }
+
+  // COMBIEN DE MONDE ARRIVE (Bene, 7 septembre 2026 : "il me faut aussi
+  // le compteur de l'Atelier").
+  //
+  // Le clic affilie juste au dessus ne compte QUE ceux qui viennent d'un
+  // lien affilie. Le denominateur de "combien achetent" doit compter
+  // TOUT LE MONDE, sinon le taux de conversion parle d'une population
+  // et pas de l'autre.
+  //
+  // Meme forme que le clic, pour les memes raisons : `waitUntil`, donc
+  // hors du chemin de la reponse, et une statistique ne fait jamais
+  // attendre une page de vente.
+  if (
+    vueASignaler({
+      host: req.headers.get("host"),
+      pathname,
+      accept: req.headers.get("accept"),
+      userAgent: req.headers.get("user-agent"),
+    })
+  ) {
+    event.waitUntil(
+      signalerVue(req.nextUrl.origin, {
+        hote: String(req.headers.get("host") ?? "").toLowerCase().split(":")[0],
+        chemin: cheminPourStats(pathname),
+        source: sourceDeLaVue({
+          referrer: req.headers.get("referer"),
+          canal: lireCanalBrut(req.nextUrl.searchParams.get(CANAL_PARAM)),
+          utmSource: req.nextUrl.searchParams.get("utm_source"),
+          host: req.headers.get("host"),
+        }),
       }),
     );
   }
