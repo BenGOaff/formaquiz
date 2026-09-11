@@ -34,7 +34,8 @@
 // seul encaissement. Le tag Systeme.io, lui, est branché depuis le
 // 31 août : voir le bloc en fin de `traiterVente`.
 
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
+import { rejouerCommissionsEnAttente } from "@/lib/affiliate/filetCommissionStore";
 
 import { readRefundOutcome } from "@/lib/checkout/refund";
 import { retrieveOwnerSessionByPaymentIntent } from "@/lib/checkout/stripeCheckout";
@@ -135,6 +136,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
   const reussi = reponse.status >= 200 && reponse.status < 300;
   await marquerTraite(SOURCE, eventId, reussi ? "processed" : "error", reussi ? null : `HTTP ${reponse.status}`);
+  // LE REJEU DES COMMISSIONS EN ATTENTE, APRES la reponse (11 septembre
+  // 2026). `after` tourne une fois la reponse partie : le fournisseur ne
+  // l'attend pas, et un rejeu qui echoue ne touche pas a cet evenement.
+  after(async () => {
+    const bilan = await rejouerCommissionsEnAttente({});
+    if (bilan.rejouees || bilan.echecs) {
+      console.log(`[commande/webhook] commissions en attente : ${bilan.rejouees} rejouee(s), ${bilan.echecs} echec(s), ${bilan.restantes} restante(s)`);
+    }
+  });
   return reponse;
 }
 

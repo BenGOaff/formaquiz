@@ -139,7 +139,11 @@ test("la vente Atelier part avec ce qui décide du taux et du payeur", () => {
   assert.match(src, /affiliate_ref: v\.sa/);
   // Un appel vers l'autre app tourne DANS le webhook : sans délai, une
   // panne de Tipote garde la requête ouverte jusqu'à ce qu'on la tue.
-  assert.match(src, /AbortSignal\.timeout\(/);
+  // Depuis le 11 septembre l'appel vit dans `posterTipote.ts` (une seule
+  // porte pour le webhook et le rejeu) : c'est le fichier qui fait le
+  // `fetch` qui porte le délai, et `ownerSale` n'en a plus à lui.
+  assert.match(lire("lib/affiliate/posterTipote.ts"), /AbortSignal\.timeout\(/);
+  assert.doesNotMatch(src, /\bfetch\(/);
 });
 
 test("un remboursement annule la commission DES DEUX CÔTÉS", () => {

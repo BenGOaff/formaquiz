@@ -1905,3 +1905,36 @@ Test : `tests/logic/alerte-vente-encaissee.test.mts`, qui lit la source
 avec `tests/logic/aide/sansCommentaires.mts` (porté de Tiquiz : les
 lignes `//` AVANT les blocs `/* */`, sinon un `/*` dans une ligne avale
 tout ce qui suit).
+
+## Une commission que Tipote n'a pas prise attend, elle n'est plus perdue (11 septembre 2026)
+
+Audit de Béné : "est-ce que je peux envoyer mes affiliés dessus sans
+risque ?" Le trou le plus cher, dans les deux dépôts qui encaissent :
+`attribuerChezTipote` tourne DANS le webhook de paiement, et un échec de
+l'appel vers le registre central (panne, déploiement, secret manquant,
+délai dépassé) était journalisé puis OUBLIÉ. Le webhook répondait 200,
+donc aucun réessai ne repassait. Ici le repli sur le registre historique
+adoucissait le cas d'un élève affilié dans les deux registres ; un
+affilié inscrit sur `affiliate.tipote.com` seulement n'était pas payé.
+
+**Règle : `lib/affiliate/filetCommission.ts` décide (identique à l'octet
+près à celui de Tiquiz, `cmp` le prouve), `filetCommissionStore.ts`
+écrit, `posterTipote.ts` parle au réseau.** Un appel qui échoue
+(attribution OU annulation) est rangé tel quel dans
+`commissions_en_attente` et rejoué après chaque webhook de paiement
+(`after()`) et par `POST /api/cron/rejouer-commissions`
+(`X-Cron-Secret`). Tipote répond `duplicate` sur une clé déjà connue :
+le rejeu ne paie jamais deux fois, et le registre historique n'entre
+dans aucun lot, donc il ne peut pas payer deux fois non plus.
+
+Une seule adresse de Tipote, dérivée de `TIPOTE_BASE_URL` dans
+`posterTipote.ts` : `ownerSale.ts` n'a plus de `fetch` à lui, et le test
+qui figeait cet emplacement a été remis sur le fait.
+
+🚨 Migration : `supabase/migrations/20260911_commissions_en_attente.sql`,
+sur le Supabase de **L'ATELIER**. Sans elle le filet crie dans le journal
+avec le corps de l'appel, et rien d'autre ne casse.
+
+Test : `tests/logic/filet-commission.test.mts`, vérifié en rejouant deux
+versions fautives (l'attribution sans filet, le rejeu hors `after`) :
+les deux rougissent.

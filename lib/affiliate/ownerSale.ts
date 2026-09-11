@@ -59,6 +59,8 @@ import "server-only";
 import { affiliateMatchFor, attributeQuizingSale } from "@/lib/affiliateTracking";
 import { commissionBaseCents } from "@/lib/checkout/commissionBase";
 import { readSa } from "./sa";
+import { marquerEnvoyee, mettreEnAttente } from "./filetCommissionStore";
+import { posterVersTipote } from "./posterTipote";
 
 export interface VenteACommissionner {
   /** Sert au préfixe de la référence et au journal. */
@@ -225,83 +227,59 @@ async function attribuerChezTipote(v: {
   sa: string | null;
   code: string | null;
 }): Promise<ReponseCentrale> {
-  const secret = process.env.AFFILIATE_INTERNAL_SECRET?.trim();
-  if (!secret) {
-    // L'ABSENCE FERME, mais elle ne se tait pas : sans ce secret on ne
-    // peut pas joindre le registre central, et se rabattre en silence
-    // sur l'autre paierait le mauvais registre sans que rien ne le dise.
+  const corps = {
+    customer_email: v.email,
+    sale_amount_cents: v.baseCents,
+    // `commissionBaseCents` a DÉJÀ retiré la TVA. Sans ce champ,
+    // Tipote la raboterait une deuxième fois (audit du 26 août).
+    base: "ht",
+    // C'est NOUS qui encaissons et NOUS qui virerons : sans ce
+    // champ la ligne serait comptée comme versée par Systeme.io,
+    // donc exclue des lots, donc jamais payée.
+    regle_par: "nous",
+    // `atelier` décide du TAUX (70 %) côté Tipote. C'est la seule
+    // chose qui le dit : un `source_app` faux paierait 40 %.
+    source_app: "atelier",
+    sio_order_id: v.reference,
+    product_name: v.produitLabel,
+    affiliate_ref: v.sa,
+    affiliate_code: v.code,
+    raw_payload: { source: "atelier_checkout", reference: v.reference },
+  };
+
+  const reponse = await posterVersTipote("attribuer", corps);
+  if (!reponse.ok) {
+    // ON NE PERD PLUS LA COMMISSION (11 septembre 2026). L'appel est
+    // rangé tel quel et rejoué plus tard : Tipote répond `duplicate`
+    // sur une clé déjà connue, donc le rejeu ne paie jamais deux fois.
+    // L'appelant garde son repli sur le registre historique : ce
+    // registre n'entre dans aucun lot, il ne peut donc pas payer deux
+    // fois non plus.
     console.error(
-      `[commission] AFFILIATE_INTERNAL_SECRET absente : le registre central ` +
-        `n'a pas ete interroge sur ${v.reference}.`,
+      `[commission] Tipote n'a pas pris ${v.reference} (${reponse.statut ?? "reseau"}) : ${reponse.detail}`,
     );
-    return "personne";
-  }
-
-  const base = (process.env.TIPOTE_BASE_URL ?? "https://app.tipote.com").trim().replace(/\/$/, "");
-
-  try {
-    // Un appel vers l'autre app tourne DANS le webhook de paiement : sans
-    // délai maximum, une panne de Tipote garderait la requête ouverte
-    // jusqu'à ce que la plateforme la tue, et le fournisseur ne recevrait
-    // jamais sa réponse (audit du 24 août, trou n°5).
-    const res = await fetch(`${base}/api/affiliate/attribute-sale`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Affiliate-Secret": secret },
-      signal: AbortSignal.timeout(8000),
-      body: JSON.stringify({
-        customer_email: v.email,
-        sale_amount_cents: v.baseCents,
-        // `commissionBaseCents` a DÉJÀ retiré la TVA. Sans ce champ,
-        // Tipote la raboterait une deuxième fois (audit du 26 août).
-        base: "ht",
-        // C'est NOUS qui encaissons et NOUS qui virerons : sans ce
-        // champ la ligne serait comptée comme versée par Systeme.io,
-        // donc exclue des lots, donc jamais payée.
-        regle_par: "nous",
-        // `atelier` décide du TAUX (70 %) côté Tipote. C'est la seule
-        // chose qui le dit : un `source_app` faux paierait 40 %.
-        source_app: "atelier",
-        sio_order_id: v.reference,
-        product_name: v.produitLabel,
-        affiliate_ref: v.sa,
-        affiliate_code: v.code,
-        raw_payload: { source: "atelier_checkout", reference: v.reference },
-      }),
-    });
-
-    if (!res.ok) {
-      const corps = await res.text().catch(() => "");
-      console.error(
-        `[commission] Tipote a refuse (${res.status}) sur ${v.reference} : ${corps.slice(0, 200)}`,
-      );
-      return "injoignable";
-    }
-
-    const data = (await res.json().catch(() => null)) as {
-      result?: { status?: string; commission_cents?: number; sa?: string };
-    } | null;
-    const r = data?.result;
-
-    if (r?.status === "attributed") {
-      console.log(
-        `[commission] (registre central) ${r.commission_cents} c pour ${r.sa} sur ${v.reference}`,
-      );
-      return "attribue";
-    }
-    // Un DOUBLON est un succès : la commission existe déjà chez Tipote,
-    // et repartir sur le registre local en créerait une seconde.
-    if (r?.status === "duplicate") {
-      console.log(`[commission] deja enregistree chez Tipote sur ${v.reference}`);
-      return "attribue";
-    }
-    return "personne";
-  } catch (e) {
-    console.error(
-      `[commission] appel a Tipote impossible sur ${v.reference} : ` +
-        `${e instanceof Error ? e.message : String(e)}`,
-    );
+    await mettreEnAttente({ action: "attribuer", reference: v.reference, corps, statut: reponse.statut, detail: reponse.detail });
     return "injoignable";
   }
+  await marquerEnvoyee("attribuer", v.reference);
+
+  const r = (reponse.json.result ?? undefined) as
+    | { status?: string; commission_cents?: number; sa?: string }
+    | undefined;
+
+  if (r?.status === "attributed") {
+    console.log(
+      `[commission] (registre central) ${r.commission_cents} c pour ${r.sa} sur ${v.reference}`,
+    );
+    return "attribue";
+  }
+  // Un DOUBLON est un succès : la commission existe déjà chez Tipote,
+  // et repartir sur le registre local en créerait une seconde.
+  if (r?.status === "duplicate") {
+    console.log(`[commission] deja enregistree chez Tipote sur ${v.reference}`);
+    return "attribue";
+  }
+  return "personne";
 }
 
 /**
@@ -324,36 +302,26 @@ export async function annulerCommissionChezTipote(
   reference: string,
   motif: "remboursement" | "impaye" | "fraude" = "remboursement",
 ): Promise<void> {
-  const secret = process.env.AFFILIATE_INTERNAL_SECRET?.trim();
   const cle = String(reference ?? "").trim();
-  if (!secret || !cle) {
-    console.error(
-      `[commission] annulation centrale impossible ` +
-        `(${!secret ? "secret absent" : "aucune reference"}) : a verifier a la main.`,
-    );
+  if (!cle) {
+    console.error(`[commission] annulation centrale impossible (aucune reference) : a verifier a la main.`);
     return;
   }
 
-  const base = (process.env.TIPOTE_BASE_URL ?? "https://app.tipote.com").trim().replace(/\/$/, "");
-  try {
-    const res = await fetch(`${base}/api/affiliate/cancel-sale`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Affiliate-Secret": secret },
-      signal: AbortSignal.timeout(8000),
-      body: JSON.stringify({ source_app: "atelier", sio_order_id: cle, motif }),
-    });
-    if (!res.ok) {
-      console.error(
-        `[commission] Tipote a refuse l'annulation (${res.status}) sur ${cle} : ` +
-          `la commission peut encore partir en virement.`,
-      );
-      return;
-    }
-    console.log(`[commission] annulation centrale demandee sur ${cle} (${motif})`);
-  } catch (e) {
+  const corps = { source_app: "atelier", sio_order_id: cle, motif };
+  const reponse = await posterVersTipote("annuler", corps);
+  if (!reponse.ok) {
+    // MEME FILET QUE L'ATTRIBUTION : une annulation qui ne passe pas
+    // laisserait la commission murir et partir au lot. Elle attend, et
+    // elle est rejouee avant la maturation (30 jours), tant que Tipote
+    // finit par repondre.
     console.error(
-      `[commission] annulation centrale impossible sur ${cle} : ` +
-        `${e instanceof Error ? e.message : String(e)}`,
+      `[commission] annulation NON prise (${reponse.statut ?? "reseau"}) sur ${cle} : ${reponse.detail}. ` +
+        `Mise en attente : sans rejeu, la commission peut encore partir en virement.`,
     );
+    await mettreEnAttente({ action: "annuler", reference: cle, corps, statut: reponse.statut, detail: reponse.detail });
+    return;
   }
+  await marquerEnvoyee("annuler", cle);
+  console.log(`[commission] annulation centrale demandee sur ${cle} (${motif})`);
 }
