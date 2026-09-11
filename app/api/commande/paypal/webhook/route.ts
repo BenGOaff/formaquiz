@@ -20,7 +20,8 @@
 // et écarté déclencherait des réessais en boucle. Une erreur n'est
 // renvoyée que sur une VRAIE panne, où le réessai est ce qu'on veut.
 
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
+import { rejouerCommissionsEnAttente } from "@/lib/affiliate/filetCommissionStore";
 
 import { grantAccessByEmail, revokeAccessByEmail } from "@/lib/access/grantAccess";
 import { annulerCommissionChezTipote, commissionnerVente } from "@/lib/affiliate/ownerSale";
@@ -147,6 +148,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
   const reussi = reponse.status >= 200 && reponse.status < 300;
   await marquerTraite(SOURCE, eventId, reussi ? "processed" : "error", reussi ? null : `HTTP ${reponse.status}`);
+  // LE REJEU DES COMMISSIONS EN ATTENTE, APRES la reponse (11 septembre
+  // 2026). `after` tourne une fois la reponse partie : le fournisseur ne
+  // l'attend pas, et un rejeu qui echoue ne touche pas a cet evenement.
+  after(async () => {
+    const bilan = await rejouerCommissionsEnAttente({});
+    if (bilan.rejouees || bilan.echecs) {
+      console.log(`[commande/paypal/webhook] commissions en attente : ${bilan.rejouees} rejouee(s), ${bilan.echecs} echec(s), ${bilan.restantes} restante(s)`);
+    }
+  });
   return reponse;
 }
 

@@ -126,43 +126,12 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       };
     });
 
-    // LE TRAFIC VOYAGE DANS LE MEME APPEL QUE LES VENTES.
-    //
-    // Bene, 7 septembre : "il me faut aussi le compteur de l'Atelier."
-    // Une deuxieme porte voudrait dire un deuxieme secret a poser, un
-    // deuxieme delai maximum, et surtout un deuxieme `reachable` : le
-    // pilotage pourrait alors afficher les ventes de l'Atelier sans son
-    // trafic, donc un taux de conversion calcule sur un denominateur
-    // absent. Un seul appel, un seul verdict.
-    //
-    // La periode est CELLE QUE LE PILOTAGE DEMANDE. Sans bornes, on rend
-    // tout : c'est l'appelant qui sait de quelle periode il parle, et
-    // deux periodes differentes des deux cotes diviseraient des pommes
-    // par des poires.
-    const debut = (req.nextUrl.searchParams.get("debut") ?? "").trim();
-    const fin = (req.nextUrl.searchParams.get("fin") ?? "").trim();
-    let q = supabaseAdmin
-      .from("trafic_jour")
-      .select("jour, chemin, source, vues")
-      .order("jour", { ascending: true })
-      .limit(20000);
-    if (/^\d{4}-\d{2}-\d{2}$/.test(debut)) q = q.gte("jour", debut);
-    if (/^\d{4}-\d{2}-\d{2}$/.test(fin)) q = q.lte("jour", fin);
-    const trafic = await q;
-
     return NextResponse.json({
       ok: true,
       people,
       // Les MEMES ventes que l'ecran Eleves, pliees par la meme fonction
       // testee. Deux lecteurs de la meme donnee finissent par diverger.
       sales: buildSales((events ?? []) as unknown as EventRow[]),
-      // `lisible: false` = LA TABLE N'A PAS PU ETRE LUE (migration pas
-      // encore passee, base muette). Ce n'est PAS zero vue, et
-      // l'appelant doit pouvoir dire la difference : un site annonce
-      // desert fait prendre des decisions (regle du 23 aout).
-      trafic: trafic.error
-        ? { lisible: false as const, raison: trafic.error.message.slice(0, 200) }
-        : { lisible: true as const, lignes: trafic.data ?? [] },
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
