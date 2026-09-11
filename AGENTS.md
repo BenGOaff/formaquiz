@@ -1685,6 +1685,200 @@ est posée, que la raison reste écrite à côté, et **que les écrans
 surveillés portent encore une adresse** : un test qui ne peut plus
 échouer ment.
 
+## La mise en forme en ligne vivait en DEUX copies (3 septembre 2026)
+
+Béné, en portant le labo bonus vers Tiquiz : "je veux exactement la même
+chose sur l'atelier et sur tiquiz. Pareil. Ni plus, ni moins."
+
+En le portant, une divergence est sortie ICI, et elle était déjà là.
+
+`inline()` existait dans `components/BonusDocument.tsx` ET dans
+`lib/bonus/printable.ts`, sous ce commentaire du second : "la MEME mise
+en forme qu'a l'ecran". **C'était faux, et c'est mesurable :** l'écran
+échappait `&`, `<` et `>` ; l'impression échappait aussi le guillemet
+double, via son `esc()`.
+
+Or ce texte vient d'un MODÈLE, donc d'ailleurs, et il finit dans un
+`innerHTML`. C'est une règle de sécurité : une copie qui prend du retard
+sur l'autre, c'est une porte ouverte d'un seul côté, et personne pour le
+dire.
+
+**Règle : `inline(texte, cible)` vit dans `lib/bonus/document.ts`, en un
+seul exemplaire.** `cible` est un PARAMÈTRE (`"ecran"` ajoute
+`target="_blank" rel="noopener noreferrer"`, `"impression"` non) : c'est
+le seul écart légitime entre les deux rendus, et le déduire de
+l'appelant marcherait aujourd'hui et casserait au premier troisième
+appelant.
+
+**ET LA VRAIE RAISON DU DÉPLACEMENT : une règle enfermée dans un `.tsx`
+n'est pas testable.** Les deux tests qui la surveillaient
+(`tests/logic/bonus-editor.test.mts`) lisaient la SOURCE du composant
+avec des regex, faute de pouvoir l'importer :
+
+```
+assert.match(ecran, /https\?:\\/\\//, "seuls http, https, mailto et les chemins passent");
+```
+
+Ils figeaient donc une ÉCRITURE, pas un comportement : rien ne vérifiait
+qu'un `javascript:` était vraiment refusé. Ils APPELLENT la fonction
+maintenant, sur les deux cibles, avec `data:` et `vbscript:` en plus.
+
+Les cinq fichiers du labo (`document.ts`, `accents.ts`,
+`markdownHtml.ts`, `printable.ts`, `BonusDocument.tsx`) sont désormais
+identiques à l'octet près dans les TROIS dépôts. Le garde-fou est une
+commande :
+
+```bash
+cmp lib/bonus/document.ts ../tiquiz/lib/bonus/document.ts
+```
+
+Toute évolution de l'un se porte dans les deux autres, sinon le rendu et
+le PDF finissent par ne plus se ressembler d'une app à l'autre.
+
+### Et le repli qui perdait la mise en forme (même jour)
+
+Béné, en lisant le portage : "ça ne va pas supprimer ce qui s'écrivait
+en markdown ? Les users doivent voir en beau, bien mis en forme comme
+sur l'atelier."
+
+**Elle avait raison de se méfier, et le trou était PLUS grave que ça,
+et il était ici.**
+
+`Rendered` branchait sur `hasStructure(doc)` : un document sans aucun
+titre de section retombait sur un rendu qui affichait `{b.text}` TEL
+QUEL. Mesuré sur un email réel :
+
+| ce qu'elle écrit | ce que le repli affichait |
+|---|---|
+| `Tu es **Team Capture**.` | `Tu es **Team Capture**.` |
+| `[le quiz](https://...)` | `[le quiz](https://...)` |
+| `- un point` puis `- deux` | **rien du tout** |
+
+La dernière ligne est la pire : un bloc qui n'était pas un paragraphe
+rendait la chaîne vide, donc la LISTE DISPARAISSAIT de l'écran.
+
+**Ça ne se voyait presque pas ici**, parce que les trois blocs d'un
+bonus portent toujours des `##`. Ça se voit tout de suite sur un email
+ou un post court, qui n'en ont pas : c'est le portage vers Tiquiz qui
+l'a révélé, et c'est la deuxième fois de la journée qu'un dépôt jumeau
+sert de révélateur.
+
+**Règle : `BonusDocument` est appelé SANS CONDITION.** Il rend déjà
+`doc.lead` avec le même moteur que les sections (gras, italique, liens,
+listes, étapes, code) et sans carte autour : le repli n'apportait rien,
+il retirait. `hasStructure` reste, avec un 🚨 dans son commentaire, pour
+dire au prochain passage de ne pas le rebrancher sur le rendu ; il ne
+sert plus qu'à un test qui dit que le parseur n'invente pas de structure.
+
+**LA LEÇON, ET ELLE VAUT AU DELÀ DE CE REPLI :** son commentaire disait
+"un texte sans aucune section retombe sur un rendu simple : forcer une
+carte unique qui contient tout n'apporterait rien". La phrase était
+plausible et fausse. `BonusDocument` ne force AUCUNE carte sur le lead,
+il ne fait que le mettre en forme. **Un repli se juge sur ce qu'il rend,
+jamais sur ce que son commentaire annonce.**
+
+## Le compteur de trafic de l'Atelier (Béné, 7 septembre 2026)
+
+"Il me faut aussi le compteur de l'Atelier."
+
+Tiquiz compte son trafic depuis le 7 septembre, et son centre de
+pilotage montre le trafic et les ventes ensemble. `atelierduquiz.fr`
+restait la seule page de vente dont personne ne savait combien de monde
+la lit.
+
+### LE PILOTAGE VIENT LIRE, L'ATELIER NE POUSSE PAS
+
+C'est le motif déjà établi par `fetchAtelier` (21 août) : Tiquiz va
+chercher chez nous avec `PARTNER_SHARED_SECRET`, et dit honnêtement s'il
+a pu lire.
+
+**Pousser vers Tiquiz à chaque vue serait plus court à écrire et
+STRICTEMENT moins bon** : une panne de Tiquiz ferait perdre nos vues
+POUR TOUJOURS, en silence. En gardant les vues dans notre base, une
+panne de Tiquiz ne coûte que l'affichage.
+
+**Et le trafic voyage dans la porte QUI EXISTE DÉJÀ**
+(`GET /api/partner/pilotage`), à côté des élèves et des ventes. Une
+deuxième porte voudrait dire un deuxième secret à poser, un deuxième
+délai maximum, et surtout un deuxième `reachable` : le pilotage
+pourrait alors afficher nos ventes sans notre trafic, donc un taux de
+conversion calculé sur un dénominateur absent.
+
+**La période est CELLE QUE L'APPELANT DEMANDE** (`?debut=&fin=`). Sans
+bornes on rend tout : c'est le pilotage qui sait de quelle période il
+parle, et deux périodes différentes des deux côtés diviseraient des
+pommes par des poires.
+
+### CE QU'ON NE STOCKE PAS, ET C'EST LA CONDITION
+
+Ni adresse IP, ni cookie, ni identifiant, ni empreinte. Un compteur par
+**(jour, hôte, chemin, source)**. Rien dans cette table ne désigne une
+personne, donc rien n'y demande de consentement, donc le compteur voit
+AUSSI ceux qui refusent le bandeau cookies et ceux qui ont un bloqueur,
+que GA4 ne voit pas.
+
+**Corollaire assumé : on compte des VUES DE PAGE, jamais des
+visiteurs**, et l'écran l'écrit. Sans cookie, on ne distingue pas une
+personne de deux pages qu'elle ouvre.
+
+### CE QUI EST COMPTÉ, ET CE QUI NE L'EST PAS
+
+`vueASignaler` (module PUR, la seule décision) : l'hôte doit être un
+hôte de vente, le chemin n'est ni une API ni un fichier, l'`accept`
+contient `text/html`, et l'agent n'est pas un robot.
+
+**`quizing.tipote.com` n'est PAS compté**, et c'est le point propre à ce
+dépôt : l'app derrière connexion n'est pas du trafic de vente. La
+compter gonflerait le dénominateur avec des élèves déjà clients, donc
+écraserait le taux de conversion sans rien dire. Le test l'exige.
+
+**Un agent VIDE est traité comme un robot.** Un navigateur qui affiche
+une page en envoie toujours un ; un robot compté est une erreur
+invisible, un humain raté est une vue en moins, visible seulement si le
+total s'effondre.
+
+### RIEN DE CE QUE LE MIDDLEWARE IMPORTE NE TOUCHE LA BASE
+
+L'écriture passe par `POST /api/interne/trafic` (runtime `nodejs`),
+appelé dans un `event.waitUntil` : la réponse part sans l'attendre.
+`signalerVue.ts` n'a **aucun import**, et `compterVue.ts` (qui porte
+`supabaseAdmin`) n'est atteint que par cette route.
+
+C'est la leçon du `node:fs` du 6 septembre, côté Tiquiz : un module du
+middleware qui tire un module serveur casse le bundle, et `tsc` répond
+exit 0 dessus. Le test le fige.
+
+**On réutilise `CRON_SECRET`** : une variable NEUVE est une variable qui
+peut ne jamais être posée sur le serveur, et le compteur resterait alors
+à zéro en silence pendant des semaines (drame `SALES_PREVIEW_TOKEN`,
+19 août). La comparaison passe par `timingSafeEqual`, jamais `!==`.
+
+### L'INCRÉMENT EST ATOMIQUE, ET LA TABLE EST FERMÉE
+
+`on conflict (jour, hote, chemin, source) do update set vues = vues + 1`
+dans une fonction SQL. Lire puis écrire perdrait des vues dès que deux
+requêtes arrivent en même temps, c'est à dire exactement les jours qui
+comptent. RLS activée, fonction révoquée pour `anon` : un compteur qu'on
+peut remplir depuis un navigateur ne vaut rien.
+
+🚨 Migration : `supabase/migrations/20260907_trafic_pages_publiques.sql`,
+**sur le Supabase de L'ATELIER**.
+
+Test : `tests/logic/trafic-atelier.test.mts` (8 cas), vérifié en
+rejouant CINQ versions fautives : les cinq rougissent.
+
+### ET MA FAUTE EN L'ÉCRIVANT, LA TREIZIÈME
+
+Le cinquième rejeu est d'abord sorti **VERT sur une porte partenaire
+cassée**. Mon assertion cherchait `lisible: false` dans le fichier, et
+elle tombait sur **le commentaire que je venais d'écrire au dessus du
+code**.
+
+La règle existe dans ce dépôt depuis le 3 septembre : un test qui mesure
+la présence ou l'ordre de quelque chose dans un fichier retire d'abord
+les commentaires. Le helper `code()` du test le fait maintenant, et sa
+raison est écrite à côté.
+
 ## Une vente encaissée chez nous prévient Béné par email (11 septembre 2026)
 
 Béné : "il me faut aussi une alerte quand je fais une nouvelle vente via
