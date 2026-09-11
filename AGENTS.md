@@ -1938,3 +1938,23 @@ avec le corps de l'appel, et rien d'autre ne casse.
 Test : `tests/logic/filet-commission.test.mts`, vérifié en rejouant deux
 versions fautives (l'attribution sans filet, le rejeu hors `after`) :
 les deux rougissent.
+
+## Un paiement sans accès prévient Béné, un tag non posé aussi (11 septembre 2026, suite)
+
+Porté de Tiquiz le même jour : un octroi raté répondait 502 et se
+taisait, un tag Systeme.io non posé vivait dans `pm2 logs`. Un
+garde-fou qui ne protège qu'un des jumeaux ne protège personne.
+
+`lib/ventes/alerteAcces.ts` (pur, identique à l'octet près à celui de
+Tiquiz : `cmp lib/ventes/alerteAcces.ts ../tiquiz/lib/ventes/alerteAcces.ts`)
+décide ; `lib/email/accesAlerte.ts` envoie. Les deux webhooks (Stripe,
+PayPal) alertent AVANT le 502 d'octroi, et APRÈS l'octroi quand le tag
+n'a pas été posé : le résultat de `poserTagAcheteur` est LU, il n'est
+plus jeté.
+
+**L'Atelier ne dit pas si son email d'accès est parti** (`GrantResult`
+n'a pas ce champ) : on passe `null`, et on n'alerte pas sur un doute.
+Le jour où `grantAccessByEmail` rend ce fait, il entre dans l'alerte
+sans autre changement.
+
+Test : `tests/logic/alerte-acces.test.mts`.
