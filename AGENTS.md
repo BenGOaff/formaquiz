@@ -1878,3 +1878,30 @@ La règle existe dans ce dépôt depuis le 3 septembre : un test qui mesure
 la présence ou l'ordre de quelque chose dans un fichier retire d'abord
 les commentaires. Le helper `code()` du test le fait maintenant, et sa
 raison est écrite à côté.
+
+## Une vente encaissée chez nous prévient Béné par email (11 septembre 2026)
+
+Béné : "il me faut aussi une alerte quand je fais une nouvelle vente via
+notre système, par email."
+
+Systeme.io la prévenait de chaque vente faite sur ses tunnels. Sur notre
+bon de commande, une vente ouvrait l'accès, émettait la facture,
+commissionnait l'affilié, posait le tag... et personne ne le lui disait.
+
+**Le CONTENU vit dans `lib/ventes/alerteVente.ts`, module PUR, identique
+à l'octet près dans Tiquiz et ici** (`cmp` des deux fichiers). L'ENVOI vit
+dans `lib/email/venteEncaisseeAlerte.ts`, qui passe par `alerterAdmins`
+(UN email, jamais deux : c'est sa remarque du 25 août). L'alerte part
+APRÈS la commission, en dernier, et ne lève jamais.
+
+**L'Atelier vend un achat unique : chaque encaissement est une nouvelle
+vente** (`nature: "premiere"`), par carte comme par PayPal. Le montant
+est celui de la session Stripe ou de la CAPTURE PayPal, jamais le prix
+du catalogue. Côté Tiquiz, les abonnements ont trois natures (première,
+échéance, mois offert) et PayPal dit qu'il ne sait pas : le détail vit
+dans SON `AGENTS.md`.
+
+Test : `tests/logic/alerte-vente-encaissee.test.mts`, qui lit la source
+avec `tests/logic/aide/sansCommentaires.mts` (porté de Tiquiz : les
+lignes `//` AVANT les blocs `/* */`, sinon un `/*` dans une ligne avale
+tout ce qui suit).

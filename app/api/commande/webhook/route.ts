@@ -47,6 +47,7 @@ import { readOwnerStripe, readOwnerStripeWebhookSecret } from "@/lib/checkout/ow
 import { retrieveOwnerSession, verifyStripeSignature } from "@/lib/checkout/stripeCheckout";
 import { marquerTraite, prendreLeVerrou } from "@/lib/webhooks/log";
 import { annulerCommissionChezTipote, commissionnerVente } from "@/lib/affiliate/ownerSale";
+import { alerterVenteEncaissee } from "@/lib/email/venteEncaisseeAlerte";
 import { TAG_CLIENT_ATELIER, poserTagAcheteur } from "@/lib/sio/tagVente";
 import { refundCommissionByOrder } from "@/lib/affiliateTracking";
 import { completerFacturation } from "@/lib/facture/store";
@@ -292,6 +293,24 @@ async function traiterEvenement(
     amountTotalCents: vente.amountTotalCents,
     amountTaxCents: vente.amountTaxCents,
     product,
+  });
+
+  // ── ET BÉNÉ L'APPREND, EN DERNIER (11 septembre 2026) ──
+  //
+  // "il me faut aussi une alerte quand je fais une nouvelle vente via
+  // notre système, par email." L'Atelier vend un achat unique : chaque
+  // encaissement est une nouvelle vente. Best-effort, après la
+  // commission, jamais avant.
+  await alerterVenteEncaissee({
+    moyen: "stripe",
+    nature: "premiere",
+    email: vente.email,
+    nom: vente.name ?? null,
+    produit: product.label,
+    montantCents: vente.amountTotalCents,
+    devise: product.currency,
+    reference: vente.paymentRef ?? sessionId,
+    compteCree: octroi.created,
   });
 
   // ── L'ÉTIQUETTE SYSTEME.IO, APRÈS TOUT LE RESTE ──
