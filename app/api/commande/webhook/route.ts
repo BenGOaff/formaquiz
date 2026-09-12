@@ -49,6 +49,7 @@ import { retrieveOwnerSession, verifyStripeSignature } from "@/lib/checkout/stri
 import { marquerTraite, prendreLeVerrou } from "@/lib/webhooks/log";
 import { annulerCommissionChezTipote, commissionnerVente } from "@/lib/affiliate/ownerSale";
 import { alerterVenteEncaissee } from "@/lib/email/venteEncaisseeAlerte";
+import { alerterAccesIncomplet } from "@/lib/email/accesAlerte";
 import { TAG_CLIENT_ATELIER, poserTagAcheteur } from "@/lib/sio/tagVente";
 import { refundCommissionByOrder } from "@/lib/affiliateTracking";
 import { completerFacturation } from "@/lib/facture/store";
@@ -275,6 +276,12 @@ async function traiterEvenement(
     console.error(
       `[commande/webhook] acces NON ouvert pour ${vente.email} (${octroi.reason ?? "raison inconnue"})`,
     );
+    // ET BÉNÉ LE SAIT (11 septembre) : quand Stripe aura fini de
+    // réessayer, quelqu'un aura payé sans accès. Best-effort, AVANT le 502.
+    await alerterAccesIncomplet({
+      moyen: "stripe", email: vente.email, produit: product.label, reference: sessionId,
+      octroi: { ok: false, raison: octroi.reason ?? "grant_failed" },
+    });
     // 502 : on veut que Stripe réessaie, parce qu'une cliente a payé.
     return NextResponse.json({ ok: false, reason: octroi.reason ?? "grant_failed" }, { status: 502 });
   }
@@ -330,10 +337,18 @@ async function traiterEvenement(
   // Systeme.io : un acheteur non taggé sort de toutes les séquences,
   // sans que rien ne le signale, puisque son accès et sa facture, eux,
   // arrivent. Trou trouvé le 31 août, en auditant l'Atelier.
-  await poserTagAcheteur({
+  const tagPose = await poserTagAcheteur({
     email: vente.email,
     tag: TAG_CLIENT_ATELIER,
     acheteur: vente.facturation ?? null,
+  });
+
+  // L'accès est ouvert ; un tag non posé, c'est quelqu'un qui a payé
+  // et ne reçoit aucune séquence. L'Atelier ne dit pas si son email
+  // d'accès est parti : `null`, et on n'alerte pas sur un doute.
+  await alerterAccesIncomplet({
+    moyen: "stripe", email: vente.email, produit: product.label, reference: sessionId,
+    octroi: { ok: true, compteCree: octroi.created, emailAccesEnvoye: null, tagsPoses: tagPose },
   });
 
   return NextResponse.json({ ok: true, granted: true });

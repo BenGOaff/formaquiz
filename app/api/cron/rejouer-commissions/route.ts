@@ -8,8 +8,11 @@
 // doit repasser AVANT que la commission ne murisse (30 jours), ventes
 // ou pas.
 //
-//   ( set -a; . ~/formaquiz/.env; set +a; \
-//     curl -sS -H "X-Cron-Secret: $CRON_SECRET" https://quizing.tipote.com/api/cron/rejouer-commissions )
+//   curl -fsS -X POST -H "X-Cron-Secret: $(grep -m1 -h '^CRON_SECRET=' /home/tipote/formaquiz/.env.local /home/tipote/formaquiz/.env 2>/dev/null | head -1 | cut -d= -f2- | tr -d '"\r')" https://quizing.tipote.com/api/cron/rejouer-commissions
+//
+// C'est la forme de la crontab du serveur (11 septembre 2026) : elle
+// tourne sous `sh`, qui ne sait pas faire `. .env`, et elle ne lit que
+// la seule cle dont elle a besoin, `.env.local` devant `.env` comme Next.
 //
 // Il repond ce qu'il a fait, et distingue "je n'ai pas pu lire" de
 // "il n'y avait rien" (regle du 23 aout).

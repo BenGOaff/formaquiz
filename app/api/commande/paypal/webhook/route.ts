@@ -26,6 +26,7 @@ import { rejouerCommissionsEnAttente } from "@/lib/affiliate/filetCommissionStor
 import { grantAccessByEmail, revokeAccessByEmail } from "@/lib/access/grantAccess";
 import { annulerCommissionChezTipote, commissionnerVente } from "@/lib/affiliate/ownerSale";
 import { alerterVenteEncaissee } from "@/lib/email/venteEncaisseeAlerte";
+import { alerterAccesIncomplet } from "@/lib/email/accesAlerte";
 import { TAG_CLIENT_ATELIER, poserTagAcheteur } from "@/lib/sio/tagVente";
 import { refundCommissionByOrder } from "@/lib/affiliateTracking";
 import { findOwnerProduct, tierForOwnerProduct } from "@/lib/checkout/catalog";
@@ -216,6 +217,13 @@ async function traiterEvenement(
     console.error(
       `[commande/paypal/webhook] acces NON ouvert pour ${email} (${octroi.reason ?? "raison inconnue"})`,
     );
+    // Béné le sait AVANT le 502 (11 septembre) : PayPal réessaie, puis
+    // s'arrête, et quelqu'un a payé sans accès.
+    await alerterAccesIncomplet({
+      moyen: "paypal", email, produit: product.label,
+      reference: String(event.resource?.id ?? "").trim() || "capture",
+      octroi: { ok: false, raison: octroi.reason ?? "grant_failed" },
+    });
     // 502 : on VEUT que PayPal réessaie, parce qu'un client a payé.
     return NextResponse.json({ ok: false, reason: octroi.reason ?? "grant_failed" }, { status: 502 });
   }
@@ -312,10 +320,18 @@ async function traiterEvenement(
   // la FACTURE qu'on vient d'émettre, donc de ce qui a été figé, jamais
   // d'un profil relu à côté : c'est la même donnée que celle imprimée
   // sur sa pièce comptable.
-  await poserTagAcheteur({
+  const tagPose = await poserTagAcheteur({
     email,
     tag: TAG_CLIENT_ATELIER,
     acheteur: facture?.acheteur ?? null,
+  });
+
+  // Même alerte que par carte : un tag non posé se dit, un email dont
+  // on ne sait rien ne fait pas crier.
+  await alerterAccesIncomplet({
+    moyen: "paypal", email, produit: product.label,
+    reference: encaissement?.saleRef ?? (String(event.resource?.id ?? "").trim() || "capture"),
+    octroi: { ok: true, compteCree: octroi.created, emailAccesEnvoye: null, tagsPoses: tagPose },
   });
 
   return NextResponse.json({ ok: true, granted: true });

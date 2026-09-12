@@ -17,7 +17,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 import { editorHtmlToMarkdown, markdownToEditorHtml } from "../../lib/bonus/markdownHtml.ts";
-import { parseBonusDoc } from "../../lib/bonus/document.ts";
+import { parseBonusDoc, inline, urlSure } from "../../lib/bonus/document.ts";
 
 const REEL = `## Ce que tu vas produire
 
@@ -192,21 +192,53 @@ test("l'édition ne montre plus de markdown brut", () => {
 
 test("le rendu sait afficher tout ce que l'éditeur produit", () => {
   // Sinon elle met un mot en italique et voit des asterisques chez son
-  // visiteur. Les deux rendus (ecran et PDF) doivent couvrir la meme
-  // liste.
-  const ecran = readFileSync(new URL("../../components/BonusDocument.tsx", import.meta.url), "utf8");
-  const pdf = readFileSync(new URL("../../lib/bonus/printable.ts", import.meta.url), "utf8");
-  for (const src of [ecran, pdf]) {
-    assert.match(src, /<strong>\$1<\/strong>/);
-    assert.match(src, /<em>\$2<\/em>/);
-    assert.match(src, /\\\[\(\[\^\\\]\]\+\)\\\]/, "les liens sont rendus");
+  // visiteur.
+  //
+  // -- ON APPELLE LA FONCTION, ON NE RELIT PLUS LA SOURCE -------------
+  //
+  // Ces deux tests lisaient `components/BonusDocument.tsx` avec des
+  // regex, faute de pouvoir l'importer : ils figeaient donc une
+  // ECRITURE, pas un comportement. `inline()` vit maintenant dans
+  // `lib/bonus/document.ts`, en fonction pure, et l'ecran comme le PDF
+  // l'appellent : une seule regle, vraiment exercee.
+  for (const cible of ["ecran", "impression"] as const) {
+    assert.match(inline("un **mot** en gras", cible), /<strong>mot<\/strong>/);
+    assert.match(inline("un *mot* en italique", cible), /<em>mot<\/em>/);
+    assert.match(inline("du `code` ici", cible), /<code>code<\/code>/);
+    assert.match(inline("[le quiz](https://tiquiz.fr/q/x)", cible), /<a href="https:\/\/tiquiz\.fr\/q\/x"/);
   }
+  // LE SEUL ECART LEGITIME entre les deux : a l'ecran un lien ouvre un
+  // onglet, sur une feuille imprimee ca ne veut rien dire.
+  assert.match(inline("[a](https://x.fr)", "ecran"), /target="_blank" rel="noopener noreferrer"/);
+  assert.doesNotMatch(inline("[a](https://x.fr)", "impression"), /target="_blank"/);
 });
 
 test("un lien écrit par un modèle ne peut pas exécuter de script", () => {
-  const ecran = readFileSync(new URL("../../components/BonusDocument.tsx", import.meta.url), "utf8");
-  assert.match(ecran, /https\?:\\\/\\\//, "seuls http, https, mailto et les chemins passent");
-  assert.match(ecran, /safeUrl/);
+  // Ce texte vient d'un modele, donc d'ailleurs, et il finit dans un
+  // `innerHTML`. C'est une regle de SECURITE : elle vivait en deux
+  // copies qui avaient deja diverge sur l'echappement du guillemet.
+  for (const cible of ["ecran", "impression"] as const) {
+    for (const mauvais of [
+      "javascript:alert(1)",
+      "JavaScript:alert(1)",
+      "data:text/html,<script>",
+      "vbscript:msgbox(1)",
+    ]) {
+      const html = inline(`[clique](${mauvais})`, cible);
+      assert.doesNotMatch(html, /<a /, `${mauvais} est devenu un lien`);
+    }
+    // Une balise ecrite par le modele est ECHAPPEE, jamais rendue.
+    const html = inline('Attention <script>alert("x")</script>', cible);
+    assert.doesNotMatch(html, /<script/);
+    assert.match(html, /&lt;script&gt;/);
+    // Et le guillemet aussi, des DEUX cotes : c'est exactement ce que
+    // l'ecran ne faisait pas.
+    assert.match(inline('il a dit "oui"', cible), /&quot;oui&quot;/);
+  }
+  assert.equal(urlSure("javascript:alert(1)"), null);
+  assert.equal(urlSure("https://tiquiz.fr"), "https://tiquiz.fr");
+  assert.equal(urlSure("mailto:hello@tiquiz.fr"), "mailto:hello@tiquiz.fr");
+  assert.equal(urlSure("/legal"), "/legal");
 });
 
 test("le sélecteur de schémas ne s'affiche pas hors du parcours", () => {
