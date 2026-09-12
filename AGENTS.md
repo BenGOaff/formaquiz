@@ -801,6 +801,30 @@ Une commande donnée à Béné doit être sûre même mal replacée.
   cosmétique. Sans lui, un build REFUSÉ se déployait quand même, et c'est
   exactement ce qui a mis Tipote par terre. Ne jamais donner ces deux
   commandes sur deux lignes séparées.
+- **ET JAMAIS `. .env` DANS UNE CRONTAB (mesuré le 11 septembre 2026).**
+  La crontab tourne sous `sh`, pas sous bash, et `sh` ne cherche pas
+  `.env` dans le dossier courant : `/bin/sh: 1: .: .env: not found`. Les
+  lignes écrites ainsi (le récap hebdo, les spotlights, le rejeu des
+  commissions) n'avaient JAMAIS tourné. La crontab du serveur a été
+  réécrite le 11 septembre : une ligne lit la SEULE clé dont elle a
+  besoin, dans l'ordre que Next utilise (`.env.local` passe devant
+  `.env`, et l'Atelier en porte un aussi) :
+
+  ```bash
+  curl -fsS -H "Authorization: Bearer $(grep -m1 -h '^CRON_SECRET=' /home/tipote/formaquiz/.env.local /home/tipote/formaquiz/.env 2>/dev/null | head -1 | cut -d= -f2- | tr -d '"\r')" https://quizing.tipote.com/api/cron/...
+  ```
+
+  Aucun secret ne s'écrit en clair dans la crontab : un `crontab -l`
+  collé dans une conversation les expose, et c'est ce qui a fait changer
+  les secrets de Tipote et de l'Atelier le 12 septembre.
+- **Changer `CRON_SECRET` ne demande PAS de rebuild** (l'Atelier tourne
+  en `next start`, qui relit les fichiers d'env au démarrage), mais PM2
+  peut garder l'ANCIENNE valeur en mémoire et elle gagne sur le fichier
+  (panne du 22 août). Le geste sûr, depuis le dossier du dépôt :
+  `( export CRON_SECRET="$(grep -m1 -h '^CRON_SECRET=' .env.local .env 2>/dev/null | head -1 | cut -d= -f2- | tr -d '"\r')" ; pm2 restart formaquiz-prod --update-env )`.
+  La parenthèse est un sous-shell, rien ne reste dans le terminal. On
+  prouve ensuite avec DEUX appels : le bon secret répond 200, un faux
+  répond 401. Un contrôle qui ne rend que le premier ne distingue rien.
 
 ## Le support de l'Atelier passe par le centre d'aide commun (23 août 2026)
 

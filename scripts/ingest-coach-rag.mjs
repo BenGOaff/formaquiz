@@ -12,7 +12,10 @@
 // dans une réponse du coach.
 //
 // Usage (sur le serveur, après un déploiement ou une modif de contenu) :
-//   cd ~/quizing && set -a; . .env; set +a && npm run rag:ingest
+//   cd /home/tipote/formaquiz && npm run rag:ingest
+// (il lit le .env lui meme : jamais de `set -a; . .env; set +a` dans un
+// terminal qui servira ensuite a un build ou a un `pm2 restart`, panne
+// du 22 aout 2026)
 // Le script charge aussi le .env tout seul (best-effort).
 //
 // Env : SUPABASE_URL (ou NEXT_PUBLIC_SUPABASE_URL) + SUPABASE_SERVICE_ROLE_KEY.
