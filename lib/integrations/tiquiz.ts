@@ -9,6 +9,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { earnedBadgeCodes, badgeByCode } from "@/lib/gamification";
 import { snapshotFromDays, getDaysWithProgress } from "@/lib/parcours";
 import type { TiquizMetrics, TiquizReadout } from "@/lib/types";
+import { stripTiquizHtml } from "./texteTiquiz";
 
 const TIQUIZ_BASE = (process.env.TIQUIZ_BASE_URL ?? "https://quiz.tipote.com").trim();
 // Pont Atelier <-> Tipote (retour Maurice, 28 juillet 2026) : les eleves
@@ -33,24 +34,10 @@ export function providerLabel(provider: unknown): string {
   return normalizeProvider(provider) === "tipote" ? "Tipote" : "Tiquiz";
 }
 
-/**
- * Les titres de quiz Tiquiz sont stockés en HTML riche (spans colorés,
- * alignement). Dans l'Atelier on les affiche en TEXTE seul, sinon le user
- * voit le balisage brut (drame Gwenn 19 juil 2026 : "Ton meilleur quiz :
- * <div style=...>"). On nettoie à l'ingestion, une seule fois.
- */
-export function stripTiquizHtml(input: string | null | undefined): string {
-  return String(input ?? "")
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&quot;/gi, '"')
-    .replace(/&#0*39;|&apos;|&rsquo;/gi, "'")
-    .replace(/\s+/g, " ")
-    .trim();
-}
+// `stripTiquizHtml` vit dans un module PUR (`texteTiquiz.ts`) pour
+// pouvoir etre testee : ce fichier-ci importe `server-only`, donc aucun
+// test ne peut le charger. On la reexporte, les appels ne changent pas.
+export { stripTiquizHtml } from "./texteTiquiz";
 
 // La page de consentement cote Tiquiz est servie a /connect/formaquiz
 // (app/connect/formaquiz). Le rebrand "quizing" du 18 juin a pointe ce

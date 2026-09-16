@@ -1982,3 +1982,51 @@ Le jour où `grantAccessByEmail` rend ce fait, il entre dans l'alerte
 sans autre changement.
 
 Test : `tests/logic/alerte-acces.test.mts`.
+
+## Le texte qui arrive de Tiquiz : on le décode, on ne le fabrique pas (16 septembre 2026)
+
+Retour d'un client via Béné : « j'ai encore des putains de "Quelle note
+donneriez-vous à la structure de l'entreprise&nbsp;?" !!! Il faut
+vraiment faire le tour et supprimer ça aussi bien côté users que
+visiteurs, **sans nicker les espaces nécessaires en français**. »
+
+**L'ATELIER N'EST PAS DANS LE MÊME CAS QUE SES DEUX JUMEAUX, ET C'EST
+MESURÉ.** Chez Tiquiz et Tipote, c'est le sérialiseur de DOMPurify qui
+FABRIQUE l'entité, en réencodant l'espace insécable que
+`lib/frenchTypography.ts` vient d'insérer. Ici il n'y a **ni DOMPurify,
+ni `frenchTypography.ts`** : rien ne peut fabriquer l'entité. L'Atelier
+ne fait qu'INGÉRER le titre d'un quiz que Tiquiz lui envoie.
+
+**C'est pour ça qu'il ne porte PAS `lib/texteBrut.ts`**, le module de
+porte unique des deux autres. La raison est écrite à côté de la
+fonction : une exemption sans raison est une exemption que le prochain
+passage prend pour un oubli.
+
+**Ce qui manquait quand même : les formes NUMÉRIQUES.** `&#160;` et
+`&#x00a0;` sont le MÊME caractère que `&nbsp;`, et `&#233;` la même
+lettre que `&eacute;`. La liste d'entités de `stripTiquizHtml` était
+recopiée à la main, donc elle en oubliait : c'est la mécanique même du
+« ça revient toujours ». Un titre de quiz s'affichait alors avec son
+entité en clair, à un élève.
+
+**Et la fonction est sortie dans un module PUR**
+(`lib/integrations/texteTiquiz.ts`). Elle vivait dans `tiquiz.ts`, qui
+importe `server-only` ET `supabaseAdmin` : **aucun test ne pouvait la
+charger**, donc aucun ne l'exerçait, et c'est exactement là que les bugs
+s'installent (règle du 1er août). `tiquiz.ts` la réexporte, les cinq
+appels existants ne changent pas.
+
+**L'ordre de décodage compte** : les entités nommées, puis les
+numériques, puis `&amp;` EN DERNIER. Sinon on double-décode, et une
+créatrice qui écrit vraiment le texte `&nbsp;` dans son titre le verrait
+disparaître.
+
+Test : `tests/logic/texte-de-tiquiz.test.mts` (6 cas), vérifié en
+rejouant la version sans les formes numériques (2 tests rougissent).
+
+**Et mon propre contrôle est tombé sur sa PROPRE explication** : il
+cherchait la chaîne `"server-only"` dans la source pour prouver que le
+module est pur, et il l'a trouvée... dans le commentaire qui dit « ni
+`server-only`, ni `supabaseAdmin` ». Il passe maintenant par
+`sansCommentaires`. Un test qui mesure la présence de quelque chose dans
+un fichier retire d'abord les commentaires.
