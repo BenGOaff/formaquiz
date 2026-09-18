@@ -2075,3 +2075,58 @@ Quelqu'un a payé et attend un cadeau qu'on lui a annoncé.
 La source est écrite en clair dans l'enrollment (`tiquiz_upgrade:<motif>`).
 Le jour où on se demandera pourquoi cette personne a l'Atelier sans
 l'avoir acheté, c'est cette ligne qui répondra.
+
+## Le compteur de trafic n'a JAMAIS rien compté : Cloudflare répondait avant nous (18 septembre 2026)
+
+Trouvé chez Tiquiz, et ce dépôt portait exactement le même défaut, né le
+même jour (7 septembre) de la même mécanique.
+
+```
+curl -sS -o /dev/null -D - https://atelierduquiz.fr/ -H "accept: text/html"
+-> cache-control: max-age=300
+-> cf-cache-status: HIT
+```
+
+**Cloudflare sert la page publique depuis SON cache.** La requête
+n'atteint pas notre serveur, le middleware ne tourne pas, `signalerVue`
+n'est jamais appelé, la vue n'existe nulle part. Le reste de la chaîne
+était sain, et c'est ce qui rendait la panne invisible.
+
+C'est la règle du 31 août (les images en 403) : quand un changement
+déplace l'endroit d'où quelque chose est SERVI, la dernière étape est
+d'aller chercher l'URL et de lire le code de réponse.
+
+**Le correctif :** le comptage passe dans le navigateur.
+`components/site/CompteurDeVue.tsx` -> `POST /api/public/vue`. Le HTML
+vient du cache, la balise part quand même (un POST n'est jamais mis en
+cache), donc on garde la vitesse ET on compte.
+
+Posé dans le layout **RACINE**, pas dans un cadre de section : le bon de
+commande n'est sous aucun cadre commun, et c'est justement sa vue qui
+manquait. Une balise à recopier page par page est une balise qu'on
+oublie sur la suivante.
+
+**Et on n'en garde qu'un seul.** Le comptage du middleware est retiré
+dans le même geste (`lib/trafic/signalerVue.ts` et
+`app/api/interne/trafic/` supprimés) : garder les deux compterait deux
+fois chaque page dynamique, et un chiffre faux dans un tableau de bord
+fait prendre des décisions.
+
+**Deux preuves d'origine, et il en faut une.** `sec-fetch-site:
+same-origin`, ou `origin` qui désigne notre hôte. Le premier jet
+n'acceptait que `sec-fetch-site` : Safari ne le pose que depuis la
+version 16.4, donc tous les visiteurs d'un iPhone un peu ancien auraient
+été refusés en silence. Le défaut qu'on répare, réintroduit dans le
+correctif.
+
+**Les jumeaux, vérifiés à l'octet** (`cmp`) : `lib/trafic/vueNavigateur.ts`,
+`app/api/public/vue/route.ts`, `lib/rateLimit/parIp.ts`. Le filet est
+`tests/logic/trafic-cloudflare.test.mts`, ici et là-bas. Le bandeau
+rouge "ce chiffre n'est pas fiable", lui, vit dans l'écran de pilotage,
+donc chez Tiquiz, et il couvre les deux sites.
+
+```bash
+cmp lib/trafic/vueNavigateur.ts ../tiquiz/lib/trafic/vueNavigateur.ts
+cmp app/api/public/vue/route.ts ../tiquiz/app/api/public/vue/route.ts
+cmp lib/rateLimit/parIp.ts ../tiquiz/lib/rateLimit/parIp.ts
+```

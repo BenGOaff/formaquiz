@@ -88,26 +88,37 @@ test("une navigation interne compte comme vue mais n'a amené personne", () => {
   assert.equal(sourceDeLaVue({ referrer: "pas-une-url", canal: null, utmSource: null, host: h }), "direct");
 });
 
-test("le middleware appelle le module pur, il ne décide rien lui même", () => {
+test("le middleware NE COMPTE PLUS les vues, et c'est le correctif", () => {
   const mw = code("middleware.ts");
-  assert.match(mw, /vueASignaler\(\{/, "le middleware doit appeler la décision, pas la réécrire");
-  // `waitUntil` et pas `await` : une statistique ne fait JAMAIS attendre
-  // une page de vente.
-  assert.match(mw, /event\.waitUntil\(\s*signalerVue\(/, "l'écriture doit rester hors du chemin de la réponse");
+  // Mesure du 18 septembre : `curl -D - https://atelierduquiz.fr/` rend
+  // `cf-cache-status: HIT`. Cloudflare sert la page publique depuis son
+  // cache, donc ce middleware ne tourne pas et ne peut RIEN compter. Il
+  // l'a fait croire pendant onze jours, ici comme chez Tiquiz.
+  assert.equal(/signalerVue\(/.test(mw), false, "le middleware ne voit pas les pages du cache");
+  assert.equal(/vueASignaler\(\{/.test(mw), false, "la décision de compter n'est plus prise ici");
+  // Le clic affilié, lui, RESTE : il ne mesure pas une audience, il
+  // rattache une personne, et il doit tourner avant la réponse.
+  assert.match(mw, /event\.waitUntil\(\s*signalerClic\(/, "le clic affilié reste hors du chemin de la réponse");
+});
+
+test("la porte publique ne décide rien, et elle est jumelle de celle de Tiquiz", () => {
+  const src = code("app/api/public/vue/route.ts");
+  assert.match(src, /vueNavigateurASignaler\(/, "la décision vient du module pur");
+  assert.match(src, /sourceDeLaVue\(/, "la source vient du module pur");
+  assert.match(src, /creerLimiteur\(/, "une porte publique qui écrit se limite");
+  // Un refus lu par un NAVIGATEUR répond 200 avec une RAISON :
+  // Cloudflare remplace le corps d'un 5xx.
+  assert.equal(/status:\s*(4|5)\d\d/.test(src), false, "aucun code d'erreur : le navigateur lit la raison");
 });
 
 test("rien de ce que le middleware importe ne touche la base ni le disque", () => {
   // C'est la leçon du `node:fs` du 6 septembre : un composant du
   // middleware qui tire un module serveur casse le bundle, et `tsc`
   // répond exit 0 dessus.
-  const signaler = code("lib/trafic/signalerVue.ts");
-  assert.equal(
-    /^import /m.test(signaler),
-    false,
-    "signalerVue ne doit RIEN importer : il est dans la chaîne du middleware",
-  );
   const vue = code("lib/trafic/vueASignaler.ts");
   assert.equal(/supabaseAdmin|node:fs|server-only/.test(vue), false);
+  const nav = code("lib/trafic/vueNavigateur.ts");
+  assert.equal(/supabaseAdmin|node:fs|server-only/.test(nav), false);
 
   // Et l'écriture, elle, vit dans un module qui n'est atteint que par la
   // route Node.

@@ -10,8 +10,6 @@ import { salesSlugForHost } from "@/lib/sales/salesHosts";
 import { readSa, SA_COOKIE, SA_MAX_AGE_SECONDS, SA_PARAM } from "@/lib/affiliate/sa";
 import { readRef, REF_COOKIE, REF_MAX_AGE_SECONDS, REF_PARAM } from "@/lib/affiliate/refLien";
 import { CANAL_PARAM, clicASignaler, lireCanalBrut, signalerClic } from "@/lib/affiliate/signalerClic";
-import { signalerVue } from "@/lib/trafic/signalerVue";
-import { cheminPourStats, sourceDeLaVue, vueASignaler } from "@/lib/trafic/vueASignaler";
 
 // Routes accessibles sans être connecté.
 const PUBLIC_PREFIXES = [
@@ -98,37 +96,31 @@ export async function middleware(req: NextRequest, event: NextFetchEvent) {
   }
 
   // COMBIEN DE MONDE ARRIVE (Bene, 7 septembre 2026 : "il me faut aussi
-  // le compteur de l'Atelier").
+  // le compteur de l'Atelier"), ET POURQUOI CE N'EST PLUS ICI.
   //
   // Le clic affilie juste au dessus ne compte QUE ceux qui viennent d'un
   // lien affilie. Le denominateur de "combien achetent" doit compter
   // TOUT LE MONDE, sinon le taux de conversion parle d'une population
   // et pas de l'autre.
   //
-  // Meme forme que le clic, pour les memes raisons : `waitUntil`, donc
-  // hors du chemin de la reponse, et une statistique ne fait jamais
-  // attendre une page de vente.
-  if (
-    vueASignaler({
-      host: req.headers.get("host"),
-      pathname,
-      accept: req.headers.get("accept"),
-      userAgent: req.headers.get("user-agent"),
-    })
-  ) {
-    event.waitUntil(
-      signalerVue(req.nextUrl.origin, {
-        hote: String(req.headers.get("host") ?? "").toLowerCase().split(":")[0],
-        chemin: cheminPourStats(pathname),
-        source: sourceDeLaVue({
-          referrer: req.headers.get("referer"),
-          canal: lireCanalBrut(req.nextUrl.searchParams.get(CANAL_PARAM)),
-          utmSource: req.nextUrl.searchParams.get("utm_source"),
-          host: req.headers.get("host"),
-        }),
-      }),
-    );
-  }
+  // Mesure du jour : `curl -D - https://atelierduquiz.fr/` rend
+  // `cf-cache-status: HIT`, `cache-control: max-age=300`. Cloudflare
+  // sert la page publique depuis son cache, donc la requete n'atteint
+  // pas ce serveur, donc ce middleware ne tourne pas, donc la vue
+  // n'existe nulle part. Idem sur `tiquiz.fr`, ou la panne a ete
+  // trouvee.
+  //
+  // Le compteur vit maintenant dans le NAVIGATEUR
+  // (`components/site/CompteurDeVue.tsx` -> `/api/public/vue`), qui lui
+  // est appele meme quand le HTML vient du cache.
+  //
+  // ET ON N'EN GARDE QU'UN SEUL : rebrancher celui ci compterait DEUX
+  // FOIS chaque page dynamique. Un chiffre faux dans un tableau de bord
+  // fait prendre des decisions.
+  //
+  // Le signalement du CLIC AFFILIE reste ici : il ne mesure pas une
+  // audience, il rattache une personne.
+
   const poseSa = (res: NextResponse): NextResponse => {
     // Lisibles par le bon de commande : c'est LUI qui doit les
     // transmettre à Stripe et à PayPal. `httpOnly` les rendrait
