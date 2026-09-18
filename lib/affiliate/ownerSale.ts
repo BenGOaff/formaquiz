@@ -58,6 +58,7 @@ import "server-only";
 
 import { affiliateMatchFor, attributeQuizingSale } from "@/lib/affiliateTracking";
 import { commissionBaseCents } from "@/lib/checkout/commissionBase";
+import { statutDepuisTipote, type VerdictCommission } from "@/lib/ventes/verdictCommission";
 import { readSa } from "./sa";
 import { marquerEnvoyee, mettreEnAttente } from "./filetCommissionStore";
 import { posterVersTipote } from "./posterTipote";
@@ -108,7 +109,23 @@ export interface VenteACommissionner {
   product: { id: string; label: string; affiliateApp: "quizing" | "tiquiz" };
 }
 
-export async function commissionnerVente(vente: VenteACommissionner): Promise<void> {
+/**
+ * ON REND LE VERDICT, ON NE LE JETTE PLUS DANS UN LOG (18 septembre 2026).
+ *
+ * Béné : "dans l'email que je reçois, je voudrais savoir en plus si la
+ * vente est liée à un affilié, et si oui lequel."
+ *
+ * Cette fonction était la seule à connaître la réponse des DEUX
+ * registres, et elle l'écrivait dans la sortie standard du serveur,
+ * c'est à dire nulle part de consultable. Le jumeau Tiquiz a reçu
+ * exactement la même correction le 17.
+ *
+ * Elle ne jette toujours jamais et ne bloque toujours rien : un
+ * appelant qui ignore le retour se comporte exactement comme avant.
+ */
+export async function commissionnerVente(
+  vente: VenteACommissionner,
+): Promise<VerdictCommission> {
   try {
     const email = (vente.email ?? "").trim();
     const reference = (vente.reference ?? "").trim();
@@ -117,7 +134,12 @@ export async function commissionnerVente(vente: VenteACommissionner): Promise<vo
         `[commission] vente ${vente.moyen} sans ${!email ? "adresse" : "reference"} : ` +
           `aucune commission possible.`,
       );
-      return;
+      return {
+        statut: "non_tentee",
+        cents: null,
+        affilie: null,
+        detail: `${!email ? "adresse" : "reference"} manquante`,
+      };
     }
 
     const base = commissionBaseCents(vente.amountTotalCents, vente.amountTaxCents);
@@ -129,7 +151,12 @@ export async function commissionnerVente(vente: VenteACommissionner): Promise<vo
         `[commission] vente ${vente.moyen} ${reference} sans montant exploitable ` +
           `(encaisse ${vente.amountTotalCents} c, taxe ${vente.amountTaxCents} c) : aucune commission.`,
       );
-      return;
+      return {
+        statut: "non_tentee",
+        cents: null,
+        affilie: null,
+        detail: "montant HT nul ou illisible",
+      };
     }
 
     // Prefixe par moyen de paiement : ce n'est PAS un numero de commande
@@ -147,16 +174,18 @@ export async function commissionnerVente(vente: VenteACommissionner): Promise<vo
       code: vente.affiliateCode,
     });
 
-    if (central === "attribue") return;
-    if (central === "injoignable") {
-      // On ne bascule PAS sur le registre local : une panne réseau ferait
-      // partir l'argent dans l'autre système, et deux registres qui
-      // paient la même vente, c'est deux fois le même virement.
-      console.error(
-        `[commission] Tipote injoignable sur ${ref} : rien n'a ete ecrit, ` +
-          `NI ici NI la-bas. A rattraper a la main.`,
-      );
-      return;
+    // ON NE BASCULE PAS sur le registre local quand Tipote a tranché,
+    // ni quand il est injoignable : une panne réseau ferait partir
+    // l'argent dans l'autre système, et deux registres qui paient la
+    // même vente, c'est deux fois le même virement.
+    if (centralATranche(central)) {
+      if (central.statut === "en_attente") {
+        console.error(
+          `[commission] Tipote injoignable sur ${ref} : rien n'a ete ecrit, ` +
+            `NI ici NI la-bas. Le rejeu s'en chargera.`,
+        );
+      }
+      return central;
     }
 
     // ── 2. LE REGISTRE HISTORIQUE DE L'ATELIER ──
@@ -182,20 +211,48 @@ export async function commissionnerVente(vente: VenteACommissionner): Promise<vo
         `[commission] (registre Atelier) ${resultat.commission_cents} c pour ${resultat.sa} ` +
           `sur ${ref} (base ${base} c, encaisse ${vente.amountTotalCents} c)`,
       );
-      return;
+      return {
+        statut: "attribuee",
+        cents: Number(resultat.commission_cents) || null,
+        affilie: resultat.sa ?? null,
+        detail: "registre historique de l'Atelier",
+        baseHtCents: base,
+      };
     }
     if (resultat.status === "error") {
       console.error(`[commission] NON creee sur ${ref} : ${resultat.error}`);
-      return;
+      return {
+        statut: "non_tentee",
+        cents: null,
+        affilie: null,
+        detail: String(resultat.error ?? "").slice(0, 200),
+        baseHtCents: base,
+      };
     }
     // Les autres cas sont normaux et frequents (pas d'affiliee, doublon,
     // affiliee inconnue). On les trace quand meme : le jour ou une
     // affiliee dit "je n'ai pas ete payee", c'est cette ligne qui repond.
     console.log(`[commission] ${resultat.status} sur ${ref} (aucun des deux registres)`);
+    // AUCUN DES DEUX n'a trouvé quelqu'un : c'est une vraie réponse, pas
+    // une panne. Le central a déjà répondu `personne` juste au dessus.
+    return {
+      statut: statutDepuisTipote(resultat.status),
+      cents: null,
+      affilie: null,
+      detail: "aucun des deux registres",
+      baseHtCents: base,
+    };
   } catch (e) {
-    console.error(
-      `[commission] attribution impossible : ${e instanceof Error ? e.message : String(e)}`,
-    );
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`[commission] attribution impossible : ${message}`);
+    return {
+      // Une exception ici est un cas qu'on n'a pas compris : il demande
+      // un humain, et c'est ce statut qui le fait remonter.
+      statut: "non_tentee",
+      cents: null,
+      affilie: null,
+      detail: message.slice(0, 200),
+    };
   }
 }
 
@@ -217,7 +274,24 @@ export async function commissionnerVente(vente: VenteACommissionner): Promise<vo
  *                     "je n'ai rien trouvé" et "je n'ai pas pu regarder"
  *                     sont deux réponses différentes).
  */
-type ReponseCentrale = "attribue" | "personne" | "injoignable";
+/**
+ * CE QUE LE REGISTRE CENTRAL A RÉPONDU (18 septembre 2026).
+ *
+ * Ce type valait trois mots : `attribue`, `personne`, `injoignable`.
+ * Il suffisait pour DÉCIDER (continuer vers le registre historique ou
+ * non), et pas pour DIRE : l'email de vente doit nommer l'affilié et
+ * son montant, et les deux étaient perdus ici.
+ *
+ * Le vocabulaire est celui de `lib/ventes/verdictCommission.ts`,
+ * identique à l'octet près chez Tiquiz : les deux app appellent le même
+ * registre, elles doivent en dire la même chose.
+ */
+type ReponseCentrale = VerdictCommission;
+
+/** Le registre central a tranché : on ne va pas voir ailleurs. */
+function centralATranche(v: VerdictCommission): boolean {
+  return v.statut === "attribuee" || v.statut === "doublon" || v.statut === "en_attente";
+}
 
 async function attribuerChezTipote(v: {
   email: string;
@@ -259,7 +333,16 @@ async function attribuerChezTipote(v: {
       `[commission] Tipote n'a pas pris ${v.reference} (${reponse.statut ?? "reseau"}) : ${reponse.detail}`,
     );
     await mettreEnAttente({ action: "attribuer", reference: v.reference, corps, statut: reponse.statut, detail: reponse.detail });
-    return "injoignable";
+    return {
+      // `en_attente` et pas `non_tentee` : l'appel vient d'être rangé
+      // pour rejeu, donc rien n'est perdu. Dire "non tentée" ferait
+      // chercher une panne qui n'existe pas.
+      statut: "en_attente",
+      cents: null,
+      affilie: null,
+      detail: `Tipote n'a pas repondu (${reponse.statut ?? "reseau"}), rejeu programme`,
+      baseHtCents: v.baseCents,
+    };
   }
   await marquerEnvoyee("attribuer", v.reference);
 
@@ -271,15 +354,27 @@ async function attribuerChezTipote(v: {
     console.log(
       `[commission] (registre central) ${r.commission_cents} c pour ${r.sa} sur ${v.reference}`,
     );
-    return "attribue";
+    return {
+      statut: "attribuee",
+      cents: Number(r.commission_cents) || null,
+      affilie: r.sa ?? null,
+      detail: null,
+      baseHtCents: v.baseCents,
+    };
   }
   // Un DOUBLON est un succès : la commission existe déjà chez Tipote,
   // et repartir sur le registre local en créerait une seconde.
   if (r?.status === "duplicate") {
     console.log(`[commission] deja enregistree chez Tipote sur ${v.reference}`);
-    return "attribue";
+    return { statut: "doublon", cents: null, affilie: r?.sa ?? null, detail: null, baseHtCents: v.baseCents };
   }
-  return "personne";
+  return {
+    statut: statutDepuisTipote(r?.status),
+    cents: null,
+    affilie: r?.sa ?? null,
+    detail: null,
+    baseHtCents: v.baseCents,
+  };
 }
 
 /**

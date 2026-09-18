@@ -33,6 +33,9 @@ test("le contenu nomme l'Atelier, le montant et le produit, sans tiret cadratin"
     devise: "eur",
     reference: "CAP-1",
     compteCree: true,
+    // Le cas le plus frequent : la personne est arrivee seule, et
+    // l'email le DIT au lieu de se taire (18 septembre 2026).
+    affiliation: { etat: "aucun" },
     lienAdmin: "https://quizing.tipote.com/admin/eleves",
   });
   assert.match(c.subject, /^Nouvelle vente L'Atelier du Quiz/);

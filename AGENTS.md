@@ -1982,3 +1982,57 @@ Le jour où `grantAccessByEmail` rend ce fait, il entre dans l'alerte
 sans autre changement.
 
 Test : `tests/logic/alerte-acces.test.mts`.
+
+## L'email de vente dit enfin qui est l'affilié (Béné, 18 septembre 2026)
+
+*« Dans l'email que je reçois, je voudrais savoir en plus si la vente
+est liée à un affilié, et si oui lequel. »*
+
+Le chantier est côté Tiquiz (le récit complet vit dans
+`tiquiz/AGENTS_HISTORIQUE.md`, section « Le live de Greg »). Ce dépôt
+suit, parce que ses ventes partent dans le MÊME email et le MÊME
+registre.
+
+### CE QUI A BOUGÉ ICI
+
+`commissionnerVente` **rend** son verdict au lieu de l'écrire dans la
+sortie standard du serveur. Elle était la seule à connaître la réponse
+des DEUX registres (Tipote d'abord, le registre historique de l'Atelier
+ensuite), et elle la perdait.
+
+`ReponseCentrale` valait trois mots (`attribue`, `personne`,
+`injoignable`). Ça suffisait pour DÉCIDER (aller voir le registre local
+ou non) et pas pour DIRE : le nom de l'affilié et son montant étaient
+jetés. C'est maintenant un `VerdictCommission`.
+
+**La décision, elle, n'a pas bougé d'un pouce** : `centralATranche()`
+dit quand on ne va PAS écrire dans le registre local, injoignable
+compris. Deux bases sans contrainte d'unicité commune paieraient deux
+fois le même affilié, dans deux tableaux de bord différents.
+
+### LE VOCABULAIRE EST UN JUMEAU, À L'OCTET PRÈS
+
+`lib/ventes/verdictCommission.ts` est identique à celui de Tiquiz,
+comme `lib/ventes/alerteVente.ts` juste à côté :
+
+```bash
+cmp lib/ventes/verdictCommission.ts ../tiquiz/lib/ventes/verdictCommission.ts
+cmp lib/ventes/alerteVente.ts ../tiquiz/lib/ventes/alerteVente.ts
+```
+
+Les deux app appellent le même registre chez Tipote, reçoivent les mêmes
+réponses, et doivent les dire de la même façon dans la même boîte de
+réception. Deux traductions séparées finiraient par diverger : c'est la
+leçon des deux versions de `pdf-parse` (7 août).
+
+### `affiliation` EST UN PARAMÈTRE OBLIGATOIRE
+
+Comme `nature`. Un appelant qui se tait laisserait l'email muet sur la
+question, c'est à dire exactement l'état qu'elle vient de faire
+corriger, et rien ne le dirait. Le compilateur a attrapé les deux
+appelants de ce dépôt et le fixture du test.
+
+Le CODE du lien part même quand aucune commission n'a été créée : un
+code présent sur une commission absente désigne le problème (le code
+n'est pas au registre), son absence dit l'inverse (personne n'a cliqué
+sur un lien affilié).

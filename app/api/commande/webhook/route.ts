@@ -48,6 +48,7 @@ import { readOwnerStripe, readOwnerStripeWebhookSecret } from "@/lib/checkout/ow
 import { retrieveOwnerSession, verifyStripeSignature } from "@/lib/checkout/stripeCheckout";
 import { marquerTraite, prendreLeVerrou } from "@/lib/webhooks/log";
 import { annulerCommissionChezTipote, commissionnerVente } from "@/lib/affiliate/ownerSale";
+import { affiliationPourAlerte } from "@/lib/ventes/verdictCommission";
 import { alerterVenteEncaissee } from "@/lib/email/venteEncaisseeAlerte";
 import { alerterAccesIncomplet } from "@/lib/email/accesAlerte";
 import { TAG_CLIENT_ATELIER, poserTagAcheteur } from "@/lib/sio/tagVente";
@@ -301,7 +302,9 @@ async function traiterEvenement(
   // personne. Le tunnel Systeme.io, lui, attribuait bien (via
   // `/api/affiliate/sio-sale`) : on avait donc déplacé la vente sans
   // déplacer la commission, et le symptôme était l'absence de symptôme.
-  await commissionnerVente({
+  // LE VERDICT PASSE DE MAIN EN MAIN, il ne se recalcule pas : c'est la
+  // commission qui vient d'être créée (ou pas) que l'email annonce.
+  const verdict = await commissionnerVente({
     moyen: "stripe",
     email: vente.email,
     reference: vente.paymentRef,
@@ -328,6 +331,15 @@ async function traiterEvenement(
     devise: product.currency,
     reference: vente.paymentRef ?? sessionId,
     compteCree: octroi.created,
+    // LE CODE PART MÊME SANS COMMISSION : un code présent sur une
+    // commission absente désigne le problème (le code n'est pas au
+    // registre) ; son absence dit l'inverse (personne n'a cliqué).
+    affiliation: affiliationPourAlerte({
+      verdict,
+      code: vente.affiliateCode,
+      ref: vente.affiliateRef,
+      rienADevoir: Number(vente.amountTotalCents) <= 0,
+    }),
   });
 
   // ── L'ÉTIQUETTE SYSTEME.IO, APRÈS TOUT LE RESTE ──
