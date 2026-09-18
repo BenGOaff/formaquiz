@@ -2036,3 +2036,42 @@ Le CODE du lien part même quand aucune commission n'a été créée : un
 code présent sur une commission absente désigne le problème (le code
 n'est pas au registre), son absence dit l'inverse (personne n'a cliqué
 sur un lien affilié).
+
+## L'Atelier s'ouvre sur une porte, pas sur une écriture croisée (18 septembre 2026)
+
+Béné, le 18 : "s'il upgrade sur la version payante (n'importe laquelle)
+il reçoit en plus l'Atelier du Quiz gratos... on lui ouvre les accès à
+l'Atelier (accès ouverts + envoi d'un email avec lien etc.)".
+
+La décision se prend chez Tiquiz (c'est là que vit la date d'inscription
+gratuite, le plan d'avant et le plan d'après), l'ouverture se fait ICI.
+D'où `POST /api/partner/acces-offert`, qui ne fait qu'une chose :
+appeler `grantAccessByEmail(email, source, null, "plus")`.
+
+**Ce qu'elle ne fait PAS, et c'est le point.** Elle ne recalcule pas la
+fenêtre (7 jours après l'inscription gratuite, puis 2 jours aux relances
+de 6 mois et 1 an). Ce calcul vit dans `lib/cadeau/atelierOffert.ts`
+chez Tiquiz, en fonction pure et testée, avec les seules données qui
+permettent de le faire. Le refaire ici avec des données qu'on n'a pas,
+c'est se donner deux réponses à la même question : celle qui ouvre
+l'accès et celle qui décide qu'il est dû. Elles finiraient par diverger,
+et la personne qui a payé serait celle qui s'en apercevrait.
+
+**Trois choix à ne pas défaire :**
+
+- Le secret est comparé en TEMPS CONSTANT, et le refus est un 401 muet.
+  `/api/partner/enrollment` existait déjà, mais il ne fait que LIRE.
+  Celle ci ÉCRIT : elle ouvre une formation payante à une adresse email.
+- **`"plus"` est écrit en toutes lettres**, alors que c'est déjà le
+  défaut de `grantAccessByEmail`. Un défaut qui change un jour changerait
+  ce cadeau sans que ça se voie sur une seule ligne de diff.
+- Elle est **idempotente** : `previousTier === "plus"` veut dire que
+  l'accès existait déjà, et elle répond `dejaEleve` sans renvoyer un
+  deuxième email de bienvenue à quelqu'un qui suit déjà la formation.
+
+Un échec répond **502**, pas 200 : Tiquiz doit pouvoir redemander.
+Quelqu'un a payé et attend un cadeau qu'on lui a annoncé.
+
+La source est écrite en clair dans l'enrollment (`tiquiz_upgrade:<motif>`).
+Le jour où on se demandera pourquoi cette personne a l'Atelier sans
+l'avoir acheté, c'est cette ligne qui répondra.
