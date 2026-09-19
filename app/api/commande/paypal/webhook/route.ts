@@ -25,6 +25,7 @@ import { rejouerCommissionsEnAttente } from "@/lib/affiliate/filetCommissionStor
 
 import { grantAccessByEmail, revokeAccessByEmail } from "@/lib/access/grantAccess";
 import { annulerCommissionChezTipote, commissionnerVente } from "@/lib/affiliate/ownerSale";
+import { affiliationPourAlerte } from "@/lib/ventes/verdictCommission";
 import { alerterVenteEncaissee } from "@/lib/email/venteEncaisseeAlerte";
 import { alerterAccesIncomplet } from "@/lib/email/accesAlerte";
 import { TAG_CLIENT_ATELIER, poserTagAcheteur } from "@/lib/sio/tagVente";
@@ -286,7 +287,8 @@ async function traiterEvenement(
         `au taux du pays du vendeur. A verifier sur sa fiche client.`,
     );
   }
-  await commissionnerVente({
+  // Le verdict passe de main en main, il ne se recalcule pas.
+  const verdict = await commissionnerVente({
     moyen: "paypal",
     email,
     reference: commande?.captureId ?? (String(event.resource?.id ?? "").trim() || null),
@@ -311,6 +313,15 @@ async function traiterEvenement(
     devise: encaissement?.currency ?? product.currency,
     reference: encaissement?.saleRef ?? (String(event.resource?.id ?? "").trim() || "capture"),
     compteCree: octroi.created,
+    // LES MEMES DEUX CHAMPS que ceux passes a la commission, lus au
+    // meme endroit : deux lectures separees finiraient par designer
+    // deux affilies differents sur la meme vente.
+    affiliation: affiliationPourAlerte({
+      verdict,
+      code: commande?.affiliateCode ?? depuisCapture.affiliateCode,
+      ref: commande?.affiliateRef ?? depuisCapture.affiliateRef,
+      rienADevoir: Number(totalCommission) <= 0,
+    }),
   });
 
   // ── L'ÉTIQUETTE SYSTEME.IO, APRÈS TOUT LE RESTE ──

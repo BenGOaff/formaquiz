@@ -124,10 +124,24 @@ test("une panne réseau ne fait PAS basculer l'argent sur l'autre registre", () 
   // dans les deux paierait deux fois le même affilié, dans deux
   // tableaux de bord différents.
   const src = lire("lib/affiliate/ownerSale.ts");
-  assert.match(src, /if \(central === "injoignable"\)/);
-  assert.match(src, /"attribue" \| "personne" \| "injoignable"/);
+  // LA DÉCISION N'A PAS BOUGÉ, SA FORME OUI (18 septembre 2026).
+  //
+  // `ReponseCentrale` valait trois mots (`attribue` / `personne` /
+  // `injoignable`). Ça suffisait pour DÉCIDER, et pas pour DIRE :
+  // l'email de vente doit nommer l'affilié et son montant, et les deux
+  // étaient perdus ici. C'est maintenant un VerdictCommission, partagé
+  // à l'octet près avec Tiquiz.
+  //
+  // Ce que ce test protège est le même, et il le vise mieux : quand le
+  // registre central a tranché (y compris "je n'ai pas pu"), on ne va
+  // PAS écrire dans le registre local. Deux bases sans contrainte
+  // commune paieraient deux fois le même affilié.
+  assert.match(src, /function centralATranche\(/);
+  assert.match(src, /statut === "en_attente"/, "une panne ne retient plus l'argent d'un cote");
+  assert.match(src, /if \(centralATranche\(central\)\) \{[\s\S]{0,400}?return central;/);
   // Un DOUBLON chez Tipote vaut succès : sinon on en créerait une seconde.
   assert.match(src, /r\?\.status === "duplicate"/);
+  assert.match(src, /statut: "doublon"/);
 });
 
 test("la vente Atelier part avec ce qui décide du taux et du payeur", () => {

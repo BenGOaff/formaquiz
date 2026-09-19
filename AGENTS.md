@@ -1982,3 +1982,151 @@ Le jour où `grantAccessByEmail` rend ce fait, il entre dans l'alerte
 sans autre changement.
 
 Test : `tests/logic/alerte-acces.test.mts`.
+
+## L'email de vente dit enfin qui est l'affilié (Béné, 18 septembre 2026)
+
+*« Dans l'email que je reçois, je voudrais savoir en plus si la vente
+est liée à un affilié, et si oui lequel. »*
+
+Le chantier est côté Tiquiz (le récit complet vit dans
+`tiquiz/AGENTS_HISTORIQUE.md`, section « Le live de Greg »). Ce dépôt
+suit, parce que ses ventes partent dans le MÊME email et le MÊME
+registre.
+
+### CE QUI A BOUGÉ ICI
+
+`commissionnerVente` **rend** son verdict au lieu de l'écrire dans la
+sortie standard du serveur. Elle était la seule à connaître la réponse
+des DEUX registres (Tipote d'abord, le registre historique de l'Atelier
+ensuite), et elle la perdait.
+
+`ReponseCentrale` valait trois mots (`attribue`, `personne`,
+`injoignable`). Ça suffisait pour DÉCIDER (aller voir le registre local
+ou non) et pas pour DIRE : le nom de l'affilié et son montant étaient
+jetés. C'est maintenant un `VerdictCommission`.
+
+**La décision, elle, n'a pas bougé d'un pouce** : `centralATranche()`
+dit quand on ne va PAS écrire dans le registre local, injoignable
+compris. Deux bases sans contrainte d'unicité commune paieraient deux
+fois le même affilié, dans deux tableaux de bord différents.
+
+### LE VOCABULAIRE EST UN JUMEAU, À L'OCTET PRÈS
+
+`lib/ventes/verdictCommission.ts` est identique à celui de Tiquiz,
+comme `lib/ventes/alerteVente.ts` juste à côté :
+
+```bash
+cmp lib/ventes/verdictCommission.ts ../tiquiz/lib/ventes/verdictCommission.ts
+cmp lib/ventes/alerteVente.ts ../tiquiz/lib/ventes/alerteVente.ts
+```
+
+Les deux app appellent le même registre chez Tipote, reçoivent les mêmes
+réponses, et doivent les dire de la même façon dans la même boîte de
+réception. Deux traductions séparées finiraient par diverger : c'est la
+leçon des deux versions de `pdf-parse` (7 août).
+
+### `affiliation` EST UN PARAMÈTRE OBLIGATOIRE
+
+Comme `nature`. Un appelant qui se tait laisserait l'email muet sur la
+question, c'est à dire exactement l'état qu'elle vient de faire
+corriger, et rien ne le dirait. Le compilateur a attrapé les deux
+appelants de ce dépôt et le fixture du test.
+
+Le CODE du lien part même quand aucune commission n'a été créée : un
+code présent sur une commission absente désigne le problème (le code
+n'est pas au registre), son absence dit l'inverse (personne n'a cliqué
+sur un lien affilié).
+
+## L'Atelier s'ouvre sur une porte, pas sur une écriture croisée (18 septembre 2026)
+
+Béné, le 18 : "s'il upgrade sur la version payante (n'importe laquelle)
+il reçoit en plus l'Atelier du Quiz gratos... on lui ouvre les accès à
+l'Atelier (accès ouverts + envoi d'un email avec lien etc.)".
+
+La décision se prend chez Tiquiz (c'est là que vit la date d'inscription
+gratuite, le plan d'avant et le plan d'après), l'ouverture se fait ICI.
+D'où `POST /api/partner/acces-offert`, qui ne fait qu'une chose :
+appeler `grantAccessByEmail(email, source, null, "plus")`.
+
+**Ce qu'elle ne fait PAS, et c'est le point.** Elle ne recalcule pas la
+fenêtre (7 jours après l'inscription gratuite, puis 2 jours aux relances
+de 6 mois et 1 an). Ce calcul vit dans `lib/cadeau/atelierOffert.ts`
+chez Tiquiz, en fonction pure et testée, avec les seules données qui
+permettent de le faire. Le refaire ici avec des données qu'on n'a pas,
+c'est se donner deux réponses à la même question : celle qui ouvre
+l'accès et celle qui décide qu'il est dû. Elles finiraient par diverger,
+et la personne qui a payé serait celle qui s'en apercevrait.
+
+**Trois choix à ne pas défaire :**
+
+- Le secret est comparé en TEMPS CONSTANT, et le refus est un 401 muet.
+  `/api/partner/enrollment` existait déjà, mais il ne fait que LIRE.
+  Celle ci ÉCRIT : elle ouvre une formation payante à une adresse email.
+- **`"plus"` est écrit en toutes lettres**, alors que c'est déjà le
+  défaut de `grantAccessByEmail`. Un défaut qui change un jour changerait
+  ce cadeau sans que ça se voie sur une seule ligne de diff.
+- Elle est **idempotente** : `previousTier === "plus"` veut dire que
+  l'accès existait déjà, et elle répond `dejaEleve` sans renvoyer un
+  deuxième email de bienvenue à quelqu'un qui suit déjà la formation.
+
+Un échec répond **502**, pas 200 : Tiquiz doit pouvoir redemander.
+Quelqu'un a payé et attend un cadeau qu'on lui a annoncé.
+
+La source est écrite en clair dans l'enrollment (`tiquiz_upgrade:<motif>`).
+Le jour où on se demandera pourquoi cette personne a l'Atelier sans
+l'avoir acheté, c'est cette ligne qui répondra.
+
+## Le compteur de trafic n'a JAMAIS rien compté : Cloudflare répondait avant nous (18 septembre 2026)
+
+Trouvé chez Tiquiz, et ce dépôt portait exactement le même défaut, né le
+même jour (7 septembre) de la même mécanique.
+
+```
+curl -sS -o /dev/null -D - https://atelierduquiz.fr/ -H "accept: text/html"
+-> cache-control: max-age=300
+-> cf-cache-status: HIT
+```
+
+**Cloudflare sert la page publique depuis SON cache.** La requête
+n'atteint pas notre serveur, le middleware ne tourne pas, `signalerVue`
+n'est jamais appelé, la vue n'existe nulle part. Le reste de la chaîne
+était sain, et c'est ce qui rendait la panne invisible.
+
+C'est la règle du 31 août (les images en 403) : quand un changement
+déplace l'endroit d'où quelque chose est SERVI, la dernière étape est
+d'aller chercher l'URL et de lire le code de réponse.
+
+**Le correctif :** le comptage passe dans le navigateur.
+`components/site/CompteurDeVue.tsx` -> `POST /api/public/vue`. Le HTML
+vient du cache, la balise part quand même (un POST n'est jamais mis en
+cache), donc on garde la vitesse ET on compte.
+
+Posé dans le layout **RACINE**, pas dans un cadre de section : le bon de
+commande n'est sous aucun cadre commun, et c'est justement sa vue qui
+manquait. Une balise à recopier page par page est une balise qu'on
+oublie sur la suivante.
+
+**Et on n'en garde qu'un seul.** Le comptage du middleware est retiré
+dans le même geste (`lib/trafic/signalerVue.ts` et
+`app/api/interne/trafic/` supprimés) : garder les deux compterait deux
+fois chaque page dynamique, et un chiffre faux dans un tableau de bord
+fait prendre des décisions.
+
+**Deux preuves d'origine, et il en faut une.** `sec-fetch-site:
+same-origin`, ou `origin` qui désigne notre hôte. Le premier jet
+n'acceptait que `sec-fetch-site` : Safari ne le pose que depuis la
+version 16.4, donc tous les visiteurs d'un iPhone un peu ancien auraient
+été refusés en silence. Le défaut qu'on répare, réintroduit dans le
+correctif.
+
+**Les jumeaux, vérifiés à l'octet** (`cmp`) : `lib/trafic/vueNavigateur.ts`,
+`app/api/public/vue/route.ts`, `lib/rateLimit/parIp.ts`. Le filet est
+`tests/logic/trafic-cloudflare.test.mts`, ici et là-bas. Le bandeau
+rouge "ce chiffre n'est pas fiable", lui, vit dans l'écran de pilotage,
+donc chez Tiquiz, et il couvre les deux sites.
+
+```bash
+cmp lib/trafic/vueNavigateur.ts ../tiquiz/lib/trafic/vueNavigateur.ts
+cmp app/api/public/vue/route.ts ../tiquiz/app/api/public/vue/route.ts
+cmp lib/rateLimit/parIp.ts ../tiquiz/lib/rateLimit/parIp.ts
+```
